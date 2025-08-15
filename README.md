@@ -124,13 +124,13 @@ Execute `publish.sh` script to build the application for the remote. This will p
 Execute the following from the root of the repository:
 
 ```sh
-docker build -f src/UnfoldedCircle.Server/Dockerfile -t adbtv .
+docker build -f src/UnfoldedCircle.AdbTv/Dockerfile -t adbtv .
 ```
 
 ### dotnet CLI
 
 ```sh
-dotnet publish ./src/UnfoldedCircle.Server/UnfoldedCircle.Server.csproj -c Release --self-contained -o ./publish
+dotnet publish ./src/UnfoldedCircle.AdbTv/UnfoldedCircle.AdbTv.csproj -c Release --self-contained -o ./publish
 ```
 
 This will produce a self-contained binary in the `publish` directory in the root of the repository.
