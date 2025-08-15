@@ -5,7 +5,7 @@ using UnfoldedCircle.AdbTv.WebSocket;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
-builder.AddUnfoldedCircleServer<AdbWebSocketHandler, AdbConfigurationService, AdbConfigurationItem>();
+builder.AddUnfoldedCircleServer<AdbWebSocketHandler, AdbConfigurationService, AdbConfigurationItem>(static options => options.DisableEntityIdPrefixing = true);
 builder.Services.AddSingleton<AdbTvClientFactory>();
 
 builder.Services.AddHostedService<AdbBackgroundService>();
