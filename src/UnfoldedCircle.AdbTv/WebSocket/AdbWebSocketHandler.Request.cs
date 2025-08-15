@@ -46,30 +46,30 @@ internal sealed partial class AdbWebSocketHandler
     {
         ButtonMapping =
         [
-            new DeviceButtonMapping { Button = RemoteButton.Home, ShortPress = new EntityCommand { CmdId = AdbTvConstants.Home } },
-            new DeviceButtonMapping { Button = RemoteButton.Back, ShortPress = new EntityCommand { CmdId = AdbTvConstants.Back } },
-            new DeviceButtonMapping { Button = RemoteButton.DpadDown, ShortPress = new EntityCommand { CmdId = AdbTvConstants.DpadDown } },
-            new DeviceButtonMapping { Button = RemoteButton.DpadUp, ShortPress = new EntityCommand { CmdId = AdbTvConstants.DpadUp } },
-            new DeviceButtonMapping { Button = RemoteButton.DpadLeft, ShortPress = new EntityCommand { CmdId = AdbTvConstants.DpadLeft } },
-            new DeviceButtonMapping { Button = RemoteButton.ChannelUp, ShortPress = new EntityCommand { CmdId = AdbTvConstants.ChannelUp } },
-            new DeviceButtonMapping { Button = RemoteButton.ChannelDown, ShortPress = new EntityCommand { CmdId = AdbTvConstants.ChannelDown } },
-            new DeviceButtonMapping { Button = RemoteButton.DpadRight, ShortPress = new EntityCommand { CmdId = AdbTvConstants.DpadRight } },
-            new DeviceButtonMapping { Button = RemoteButton.DpadMiddle, ShortPress = new EntityCommand { CmdId = AdbTvConstants.DpadCenter } },
-            new DeviceButtonMapping { Button = RemoteButton.VolumeUp, ShortPress = new EntityCommand { CmdId = AdbTvConstants.VolumeUp } },
-            new DeviceButtonMapping { Button = RemoteButton.VolumeDown, ShortPress = new EntityCommand { CmdId = AdbTvConstants.VolumeDown } },
-            new DeviceButtonMapping { Button = RemoteButton.Power, ShortPress = new EntityCommand { CmdId = AdbTvConstants.Power } },
-            new DeviceButtonMapping { Button = RemoteButton.Mute, ShortPress = new EntityCommand { CmdId = AdbTvConstants.Mute } }
+            new DeviceButtonMapping { Button = RemoteButton.Home, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Home } },
+            new DeviceButtonMapping { Button = RemoteButton.Back, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Back } },
+            new DeviceButtonMapping { Button = RemoteButton.DpadDown, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.DpadDown } },
+            new DeviceButtonMapping { Button = RemoteButton.DpadUp, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.DpadUp } },
+            new DeviceButtonMapping { Button = RemoteButton.DpadLeft, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.DpadLeft } },
+            new DeviceButtonMapping { Button = RemoteButton.ChannelUp, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.ChannelUp } },
+            new DeviceButtonMapping { Button = RemoteButton.ChannelDown, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.ChannelDown } },
+            new DeviceButtonMapping { Button = RemoteButton.DpadRight, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.DpadRight } },
+            new DeviceButtonMapping { Button = RemoteButton.DpadMiddle, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.DpadMiddle } },
+            new DeviceButtonMapping { Button = RemoteButton.VolumeUp, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.VolumeUp } },
+            new DeviceButtonMapping { Button = RemoteButton.VolumeDown, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.VolumeDown } },
+            new DeviceButtonMapping { Button = RemoteButton.Power, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Power } },
+            new DeviceButtonMapping { Button = RemoteButton.Mute, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Mute } }
         ],
         SimpleCommands =
         [
-            AdbTvRemoteCommands.Home, AdbTvRemoteCommands.Back, AdbTvRemoteCommands.Digit0,
+            RemoteButtonConstants.Home, RemoteButtonConstants.Back, AdbTvRemoteCommands.Digit0,
             AdbTvRemoteCommands.Digit1, AdbTvRemoteCommands.Digit2, AdbTvRemoteCommands.Digit3,
             AdbTvRemoteCommands.Digit4, AdbTvRemoteCommands.Digit5, AdbTvRemoteCommands.Digit6,
             AdbTvRemoteCommands.Digit7, AdbTvRemoteCommands.Digit8, AdbTvRemoteCommands.Digit9,
-            AdbTvRemoteCommands.CursorUp, AdbTvRemoteCommands.CursorDown, AdbTvRemoteCommands.CursorLeft,
-            AdbTvRemoteCommands.CursorRight, AdbTvRemoteCommands.CursorEnter, AdbTvRemoteCommands.VolumeUp,
-            AdbTvRemoteCommands.VolumeDown, AdbTvRemoteCommands.MuteToggle, AdbTvRemoteCommands.Info,
-            AdbTvRemoteCommands.ChannelUp, AdbTvRemoteCommands.ChannelDown, AdbTvRemoteCommands.Settings,
+            RemoteButtonConstants.DpadUp, RemoteButtonConstants.DpadDown, RemoteButtonConstants.DpadLeft,
+            RemoteButtonConstants.DpadRight, RemoteButtonConstants.DpadMiddle, RemoteButtonConstants.VolumeUp,
+            RemoteButtonConstants.VolumeDown, RemoteButtonConstants.Mute, AdbTvRemoteCommands.Info,
+            RemoteButtonConstants.ChannelUp, RemoteButtonConstants.ChannelDown, AdbTvRemoteCommands.Settings,
             AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3,
             AdbTvRemoteCommands.InputHdmi4, ..AppNames.SupportedApps
         ],

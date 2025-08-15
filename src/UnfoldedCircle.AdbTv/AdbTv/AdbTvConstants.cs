@@ -39,8 +39,6 @@ public static class AdbTvConstants
 
 public static class AdbTvRemoteCommands
 {
-    public const string Home = "HOME";
-    public const string Back = "BACK";
     public const string Digit0 = "DIGIT_0";
     public const string Digit1 = "DIGIT_1";
     public const string Digit2 = "DIGIT_2";
@@ -51,17 +49,7 @@ public static class AdbTvRemoteCommands
     public const string Digit7 = "DIGIT_7";
     public const string Digit8 = "DIGIT_8";
     public const string Digit9 = "DIGIT_9";
-    public const string CursorUp = "CURSOR_UP";
-    public const string CursorDown = "CURSOR_DOWN";
-    public const string CursorLeft = "CURSOR_LEFT";
-    public const string CursorRight = "CURSOR_RIGHT";
-    public const string CursorEnter = "CURSOR_ENTER";
-    public const string VolumeUp = "VOLUME_UP";
-    public const string VolumeDown = "VOLUME_DOWN";
-    public const string MuteToggle = "MUTE_TOGGLE";
     public const string Info = "INFO";
-    public const string ChannelUp = "CHANNEL_UP";
-    public const string ChannelDown = "CHANNEL_DOWN";
     public const string Settings = "SETTINGS";
     public const string InputHdmi1 = "INPUT_HDMI1";
     public const string InputHdmi2 = "INPUT_HDMI2";
