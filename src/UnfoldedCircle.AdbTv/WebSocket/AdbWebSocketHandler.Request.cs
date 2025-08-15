@@ -3,13 +3,10 @@ using System.Collections.Concurrent;
 using UnfoldedCircle.AdbTv.AdbTv;
 using UnfoldedCircle.AdbTv.Configuration;
 using UnfoldedCircle.Models.Events;
+using UnfoldedCircle.Models.Shared;
 using UnfoldedCircle.Models.Sync;
 using UnfoldedCircle.Server.Extensions;
 using UnfoldedCircle.Server.Response;
-
-using AdbTvConstants = UnfoldedCircle.AdbTv.AdbTv.AdbTvConstants;
-using EntityType = UnfoldedCircle.Models.Shared.EntityType;
-using GetAvailableEntitiesMsg = UnfoldedCircle.Models.Sync.GetAvailableEntitiesMsg;
 
 namespace UnfoldedCircle.AdbTv.WebSocket;
 
