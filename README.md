@@ -1,4 +1,4 @@
-# Unfolded Circle ADB TV Integration Driver
+# Unfolded Circle ADB and Fire TV Integration Driver
 
 [![Release](https://img.shields.io/github/actions/workflow/status/henrikwidlund/unfoldedcircle-adbtv/github-release.yml?label=Release&logo=github)](https://github.com/henrikwidlund/unfoldedcircle-adbtv/actions/workflows/github-release.yml)
 [![CI](https://img.shields.io/github/actions/workflow/status/henrikwidlund/unfoldedcircle-adbtv/ci.yml?label=CI&logo=github)](https://github.com/henrikwidlund/unfoldedcircle-adbtv/actions/workflows/ci.yml)
@@ -24,6 +24,8 @@ This is a limitation of the ADB protocol, where it is not possible to query the 
 - IP and MAC address of the device you want to control.
 - When installing on the remote, the remote must be on firmware version 2.6.3 or later or the driver will crash
 because it can't start adb.
+- Developer Settings enabled on the device you want to control. This is usually done by taping 7 times on your device name.
+Please search for device specific instructions on how to enable Developer Settings.
 
 ### Running
 
