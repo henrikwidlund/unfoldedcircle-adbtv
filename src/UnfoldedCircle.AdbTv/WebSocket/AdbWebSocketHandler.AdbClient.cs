@@ -31,7 +31,7 @@ internal sealed partial class AdbWebSocketHandler
                 : configuration.Entities[0],
             IdentifierType.EntityId => !string.IsNullOrWhiteSpace(identifier)
                 ? configuration.Entities.Find(x => string.Equals(x.EntityId, identifier, StringComparison.Ordinal))
-            :null,
+            : null,
             _ => throw new ArgumentOutOfRangeException(nameof(identifierType), identifierType, null)
         };
 

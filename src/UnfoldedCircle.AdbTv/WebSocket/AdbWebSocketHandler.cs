@@ -56,12 +56,7 @@ internal sealed partial class AdbWebSocketHandler(
                 {
                     CommandType.KeyEvent when command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase) => EntityCommandResult.PowerOn,
                     CommandType.KeyEvent when command.Equals(RemoteButtonConstants.Off, StringComparison.OrdinalIgnoreCase) => EntityCommandResult.PowerOff,
-                    CommandType.KeyEvent when command.Equals(RemoteButtonConstants.Toggle, StringComparison.OrdinalIgnoreCase) => RemoteStates[adbTvClientHolder.ClientKey] switch
-                    {
-                        RemoteState.On => EntityCommandResult.PowerOff,
-                        RemoteState.Off => EntityCommandResult.PowerOn,
-                        _ => EntityCommandResult.Other
-                    },
+                    CommandType.KeyEvent when command.Equals(RemoteButtonConstants.Toggle, StringComparison.OrdinalIgnoreCase) => HandleToggleResult(adbTvClientHolder.ClientKey),
                     _ => EntityCommandResult.Other
                 };
 
@@ -86,6 +81,23 @@ internal sealed partial class AdbWebSocketHandler(
                 logger.LogWarning("Unknown command '{Command}'", command);
                 return EntityCommandResult.Failure;
         }
+
+        static EntityCommandResult HandleToggleResult(in AdbTvClientKey adbTvClientKey)
+        {
+            if (RemoteStates.TryGetValue(adbTvClientKey, out var remoteState))
+            {
+                return remoteState switch
+                {
+                    RemoteState.On => EntityCommandResult.PowerOff,
+                    RemoteState.Off or RemoteState.Unknown => EntityCommandResult.PowerOn,
+                    _ => EntityCommandResult.Other
+                };
+            }
+
+            RemoteStates[adbTvClientKey] = RemoteState.On;
+            return EntityCommandResult.PowerOn;
+
+        }
     }
 
     protected override async ValueTask<bool> IsEntityReachable(string wsId, string entityId, CancellationToken cancellationToken)
@@ -97,8 +109,15 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationTokenWrapper cancellationTokenWrapper)
         => ValueTask.FromResult(EntityCommandResult.Failure);
 
-    protected override ValueTask OnConnect(ConnectEvent payload, string wsId, CancellationToken cancellationToken)
-        => ValueTask.CompletedTask;
+    protected override async ValueTask OnConnect(ConnectEvent payload, string wsId, CancellationToken cancellationToken)
+    {
+        var adbTvClientKeys = await TryGetAdbTvClientKeys(wsId, null, cancellationToken);
+        if (adbTvClientKeys is { Length: > 0 })
+        {
+            foreach (var adbTvClientKey in adbTvClientKeys)
+                RemoteStates[adbTvClientKey] = RemoteState.Off;
+        }
+    }
 
     protected override ValueTask<bool> OnDisconnect(DisconnectEvent payload, string wsId, CancellationToken cancellationToken)
         => TryDisconnectAdbClients(wsId, payload.MsgData?.DeviceId, cancellationToken);

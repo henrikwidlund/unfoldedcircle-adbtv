@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 
 using AdvancedSharpAdbClient;
 using AdvancedSharpAdbClient.DeviceCommands;
@@ -27,7 +28,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             } while (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase));
 
             var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
-                x.Serial.Equals($"{adbTvClientKey.IpAddress}:{adbTvClientKey.Port}", StringComparison.InvariantCulture));
+                x.Serial.Equals($"{adbTvClientKey.IpAddress}:{adbTvClientKey.Port.ToString(NumberFormatInfo.InvariantInfo)}", StringComparison.InvariantCulture));
             var deviceClient = deviceData.CreateDeviceClient();
             _clients[adbTvClientKey] = deviceClient;
             return deviceClient;
