@@ -57,7 +57,7 @@ internal sealed partial class AdbWebSocketHandler
             new DeviceButtonMapping { Button = RemoteButton.DpadMiddle, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.DpadMiddle } },
             new DeviceButtonMapping { Button = RemoteButton.VolumeUp, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.VolumeUp } },
             new DeviceButtonMapping { Button = RemoteButton.VolumeDown, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.VolumeDown } },
-            new DeviceButtonMapping { Button = RemoteButton.Power, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Power } },
+            new DeviceButtonMapping { Button = RemoteButton.Power, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Toggle } },
             new DeviceButtonMapping { Button = RemoteButton.Mute, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Mute } }
         ],
         SimpleCommands =
