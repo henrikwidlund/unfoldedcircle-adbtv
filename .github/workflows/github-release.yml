@@ -61,7 +61,7 @@ jobs:
 
               cp publish/driver driverdir/bin/
 
-              tar -czvf unfoldedcircle-adbtv.tar.gz -C ./driverdir .
+              tar -czvf unfolded-circle-adbtv-$tag-remote.tar.gz -C ./driverdir .
 
               # Delete output directory
               rm -r "./driverdir"
@@ -96,6 +96,5 @@ jobs:
           files: |
             unfolded-circle-adbtv*.zip
             unfolded-circle-adbtv*.tar.gz
-            unfoldedcircle-adbtv.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

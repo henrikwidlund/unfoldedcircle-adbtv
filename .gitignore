@@ -361,6 +361,6 @@ filter.txt
 
 publish
 driver
-unfoldedcircle-adbtv.tar.gz
+unfolded-circle-adbtv*.tar.gz
 .run
 configured_entities.json

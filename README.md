@@ -65,11 +65,11 @@ Also make sure that you do not have any spaces between the prefix and the comman
 
 ## Installing on the remote
 
-1. Download `unfoldedcircle-adbtv.tar.gz` from the release page
+1. Download `unfolded-circle-adbtv-[version]-remote.tar.gz` from the release page
 2. Open the remote's Web Configurator
 3. Click on `Integrations`
 4. Click on `Add new` and then `Install custom` 
-5. Choose the file in step 1 (`unfoldedcircle-adbtv.tar.gz`)
+5. Choose the file in step 1 (`unfolded-circle-adbtv-[version]-remote.tar.gz`)
 6. Make sure that your device is turned on
 7. Click on the newly installed integration and follow the on-screen instructions
 

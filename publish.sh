@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Remove old unfoldedcircle-adbtv.tar.gz if it exists
-rm -f ./unfoldedcircle-adbtv.tar.gz
+# Remove old unfolded-circle-adbtv.tar.gz if it exists
+rm -f ./unfolded-circle-adbtv.tar.gz
 
 # Remove old publish directory if it exists
 rm -rf ./publish
@@ -40,7 +40,7 @@ mv adb driverdir/bin/
 
 # Package the driver directory into a tarball
 cd ./driverdir || exit
-tar -czvf ../../unfoldedcircle-adbtv.tar.gz ./*
+tar -czvf ../../unfolded-circle-adbtv.tar.gz ./*
 
 # Remove the output directory
 rm -rf ../../publish
