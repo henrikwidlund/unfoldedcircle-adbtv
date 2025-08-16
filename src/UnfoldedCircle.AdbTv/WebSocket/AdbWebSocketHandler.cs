@@ -137,17 +137,12 @@ internal sealed partial class AdbWebSocketHandler(
     protected override Task HandleEventUpdates(System.Net.WebSockets.WebSocket socket, string entityId, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
         => Task.CompletedTask;
 
-    protected override async ValueTask<DeviceState> OnGetDeviceState(GetDeviceStateMsg payload, string wsId, CancellationToken cancellationToken)
-    {
-        var adbTvClientHolder = await TryGetAdbTvClientHolder(wsId, payload.MsgData.DeviceId, IdentifierType.DeviceId, cancellationToken);
-        return GetDeviceState(adbTvClientHolder);
-    }
+    protected override ValueTask<DeviceState> OnGetDeviceState(GetDeviceStateMsg payload, string wsId, CancellationToken cancellationToken)
+            => ValueTask.FromResult(DeviceState.Connected);
 
-    protected override async ValueTask<DeviceState> GetDeviceState(AdbConfigurationItem entity, string wsId, CancellationToken cancellationToken)
-    {
-        var adbTvClientHolder = await TryGetAdbTvClientHolder(wsId, entity.EntityId, IdentifierType.EntityId, cancellationToken);
-        return GetDeviceState(adbTvClientHolder);
-    }
+    protected override async ValueTask<EntityState> GetEntityState(AdbConfigurationItem entity, string wsId, CancellationToken cancellationToken) =>
+        await TryGetAdbTvClientHolder(wsId, entity.EntityId, IdentifierType.EntityId, cancellationToken) is null
+            ? EntityState.Disconnected : EntityState.Connected;
 
     protected override async ValueTask<IReadOnlyCollection<AvailableEntity>> OnGetAvailableEntities(GetAvailableEntitiesMsg payload, string wsId, CancellationToken cancellationToken)
     {

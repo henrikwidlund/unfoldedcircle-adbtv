@@ -8,8 +8,8 @@
           "name": "QDNETC",
           "organization": "JetBrains, Inc",
           "fullName": "Qodana Community for .NET",
-          "version": "2025.1.61.87",
-          "semanticVersion": "251.0.20250604.2353",
+          "version": "2025.2.3529.109",
+          "semanticVersion": "253.0.20250811.185505-eap01d",
           "informationUri": "http://www.jetbrains.com/resharper/features/command-line.html",
           "rules": [
             {
@@ -1631,6 +1631,33 @@
               ]
             },
             {
+              "id": "AsyncVoidEventHandlerMethod",
+              "shortDescription": {
+                "text": "Avoid using 'async' for methods and functions with the 'void' return type and a parameter of type 'System.EventArgs'"
+              },
+              "fullDescription": {
+                "text": "Prefer Task methods over methods returning 'void': any exceptions unhandled by the 'async void' method might lead to the process crash"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/AsyncVoidEventHandlerMethod.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/AsyncVoidEventHandlerMethod.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
               "id": "AsyncVoidLambda",
               "shortDescription": {
                 "text": "Avoid using 'async' lambda when delegate type returns 'void'"
@@ -1660,7 +1687,7 @@
             {
               "id": "AsyncVoidMethod",
               "shortDescription": {
-                "text": "Avoid using 'async' for methods and functions with the 'void' return type"
+                "text": "Avoid using 'async' for methods and functions with the 'void' return type but without a parameter of type 'System.EventArgs'"
               },
               "fullDescription": {
                 "text": "Prefer Task methods over methods returning 'void': any exceptions unhandled by the 'async void' method might lead to the process crash"
@@ -1668,6 +1695,37 @@
               "defaultConfiguration": {
                 "enabled": true,
                 "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/AsyncVoidMethod.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/AsyncVoidMethod.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "AsyncVoidThrowException",
+              "shortDescription": {
+                "text": "Do not rethrow exception in 'async void' methods and functions"
+              },
+              "fullDescription": {
+                "text": "Prefer Task methods over methods returning 'void': any exceptions unhandled by the 'async void' method might lead to the process crash"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/AsyncVoidThrowException.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/AsyncVoidThrowException.html"
               },
               "relationships": [
                 {
@@ -2623,6 +2681,60 @@
               ]
             },
             {
+              "id": "BothContextCallDeclaration.Global",
+              "shortDescription": {
+                "text": "Method is called from both CQRS contexts: Show on declarations"
+              },
+              "fullDescription": {
+                "text": "Method is called from both CQRS contexts"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/BothContextCallDeclaration.Global.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/BothContextCallDeclaration.Global.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "BothContextCallUsage.Global",
+              "shortDescription": {
+                "text": "Method is called from both CQRS contexts: Show on usages"
+              },
+              "fullDescription": {
+                "text": "Method is called from both CQRS contexts"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/BothContextCallUsage.Global.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/BothContextCallUsage.Global.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
               "id": "BuiltInTypeReferenceStyle",
               "shortDescription": {
                 "text": "Replace built-in type reference with a CLR type name or a keyword"
@@ -2806,6 +2918,10 @@
               "defaultConfiguration": {
                 "enabled": true,
                 "level": "warning"
+              },
+              "helpUri": "https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca2254",
+              "help": {
+                "text": "https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca2254"
               },
               "relationships": [
                 {
@@ -7953,6 +8069,33 @@
               ]
             },
             {
+              "id": "CSharpWarnings::SYSLIB1014",
+              "shortDescription": {
+                "text": "A template in the logging message doesn't have a matching parameter in the logging method definition"
+              },
+              "fullDescription": {
+                "text": "A template in the logging message doesn't have a matching parameter in the logging method definition"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://learn.microsoft.com/en-us/dotnet/fundamentals/syslib-diagnostics/syslib1014",
+              "help": {
+                "text": "https://learn.microsoft.com/en-us/dotnet/fundamentals/syslib-diagnostics/syslib1014"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CompilerWarnings"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
               "id": "CSharpWarnings::WME006",
               "shortDescription": {
                 "text": "Namespace should be default namespace of this project"
@@ -8969,6 +9112,60 @@
               ]
             },
             {
+              "id": "CommandInvasionDeclaration.Global",
+              "shortDescription": {
+                "text": "CQRS context intersection. Command is called from the Query context.: Show on declarations"
+              },
+              "fullDescription": {
+                "text": "CQRS context intersection. Command is called from the Query context."
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/CommandInvasionDeclaration.Global.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/CommandInvasionDeclaration.Global.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "CommandInvasionUsage.Global",
+              "shortDescription": {
+                "text": "CQRS context intersection. Command is called from the Query context.: Show on usages"
+              },
+              "fullDescription": {
+                "text": "CQRS context intersection. Command is called from the Query context."
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/CommandInvasionUsage.Global.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/CommandInvasionUsage.Global.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
               "id": "CompareNonConstrainedGenericWithNull",
               "shortDescription": {
                 "text": "Possible comparison of value type with 'null'"
@@ -9151,6 +9348,33 @@
               ]
             },
             {
+              "id": "ConflictCqrsAttribute",
+              "shortDescription": {
+                "text": "Conflicting CQRS attribute"
+              },
+              "fullDescription": {
+                "text": "CQRS entity is annotated with conflicting attribute"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/ConflictCqrsAttribute.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/ConflictCqrsAttribute.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
               "id": "ConfusingCharAsIntegerInConstructor",
               "shortDescription": {
                 "text": "Char is possibly unintentionally used as integer"
@@ -9189,6 +9413,29 @@
                 {
                   "target": {
                     "id": "CSHARP.CodeRedundancy"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "ConstantExpected",
+              "shortDescription": {
+                "text": " The parameter expects a constant for optimal performance"
+              },
+              "fullDescription": {
+                "text": "An invalid argument is passed to a parameter that's annotated with ConstantExpectedAttribute"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
                   },
                   "kinds": [
                     "superset"
@@ -45442,6 +45689,29 @@
               ]
             },
             {
+              "id": "CppDefinitionsOrder",
+              "shortDescription": {
+                "text": "Use preferred declaration style: Order of definitions does not match the order of declaration"
+              },
+              "fullDescription": {
+                "text": "Order of definitions does not match the order of declaration"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CPP.CodeStyleIssues"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
               "id": "CppDeletingVoidPointer",
               "shortDescription": {
                 "text": "Deleting a void pointer"
@@ -47010,6 +47280,29 @@
                 {
                   "target": {
                     "id": "CPP.FormattingIssues"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "CppModulePartitionWithSeveralPartitionUnits",
+              "shortDescription": {
+                "text": "Module partition with several partition units"
+              },
+              "fullDescription": {
+                "text": "A module partition cannot have several partition units according to the C++ standard"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CPP.CodeSmell"
                   },
                   "kinds": [
                     "superset"
@@ -50607,6 +50900,19 @@
               }
             },
             {
+              "id": "CqrsNamingRecommendation",
+              "shortDescription": {
+                "text": "Inconsistent naming of CQRS entity"
+              },
+              "fullDescription": {
+                "text": "CQRS entities that follow the naming convention can be identified without relying on attributes"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              }
+            },
+            {
               "id": "DefaultStructEqualityIsUsed.Global",
               "shortDescription": {
                 "text": "Struct with default equality members is used for comparison: Non-private accessibility"
@@ -50777,6 +51083,41 @@
               ]
             },
             {
+              "id": "DuplicateItemInLoggerTemplate",
+              "shortDescription": {
+                "text": "Structured log message items are duplicated or differ only in case"
+              },
+              "fullDescription": {
+                "text": "Items in a structured log message should not be duplicated or differ only in case, because this can cause issues during processing. For example, items might be lost, automatically renamed, excluded from search indexes, or incorrectly grouped."
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/DuplicateItemInLoggerTemplate.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/DuplicateItemInLoggerTemplate.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                },
+                {
+                  "target": {
+                    "id": "VBASIC.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
               "id": "DuplicateKeyCollectionInitialization",
               "shortDescription": {
                 "text": "Duplicate keys in dictionary/set initialization"
@@ -50890,7 +51231,7 @@
                 "text": "Duplicated statements"
               },
               "fullDescription": {
-                "text": "Remove statements inside conditional branches or 'switch' cases if an identical sequence is already executed afterward."
+                "text": "Remove statements from conditional branches or 'switch' cases if an identical sequence is executed afterward"
               },
               "defaultConfiguration": {
                 "enabled": true,
@@ -50912,12 +51253,39 @@
               ]
             },
             {
-              "id": "DuplicatedSwitchSectionBodies",
+              "id": "DuplicatedSwitchExpressionArms",
               "shortDescription": {
-                "text": "Duplicated switch branches"
+                "text": "Duplicated 'switch' arms"
               },
               "fullDescription": {
-                "text": "Duplicated switch branches. Consider merging them into a single branch to improve readability and reduce code duplication."
+                "text": "Duplicated 'switch' arms. Consider merging them into a single arm to improve readability and reduce code duplication."
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/DuplicatedSwitchExpressionArms.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/DuplicatedSwitchExpressionArms.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "DuplicatedSwitchSectionBodies",
+              "shortDescription": {
+                "text": "Duplicated 'switch' branches"
+              },
+              "fullDescription": {
+                "text": "Duplicated 'switch' branches. Consider merging them into a single branch to improve readability and reduce code duplication."
               },
               "defaultConfiguration": {
                 "enabled": true,
@@ -52740,6 +53108,29 @@
                 {
                   "target": {
                     "id": "CSHARP.FormattingIssues"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "IncorrectConstantExpectedAnnotation",
+              "shortDescription": {
+                "text": "Incorrect usage of ConstantExpected attribute"
+              },
+              "fullDescription": {
+                "text": "The ConstantExpectedAttribute is not applied correctly on a parameter"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
                   },
                   "kinds": [
                     "superset"
@@ -54776,6 +55167,33 @@
                 {
                   "target": {
                     "id": "CSHARP.LanguageUsage"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "MultipleCqrsEntity",
+              "shortDescription": {
+                "text": "Unidentified CQRS entity"
+              },
+              "fullDescription": {
+                "text": "CQRS entity cannot be identified because there are conflicts between its name, implemented interfaces, or attributes"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/MultipleCqrsEntity.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/MultipleCqrsEntity.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
                   },
                   "kinds": [
                     "superset"
@@ -57974,6 +58392,60 @@
               ]
             },
             {
+              "id": "QueryInvasionDeclaration.Global",
+              "shortDescription": {
+                "text": "CQRS context intersection. Query is called from the Command context.: Show on declarations"
+              },
+              "fullDescription": {
+                "text": "CQRS context intersection. Query is called from the Command context."
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/QueryInvasionDeclaration.Global.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/QueryInvasionDeclaration.Global.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "QueryInvasionUsage.Global",
+              "shortDescription": {
+                "text": "CQRS context intersection. Query is called from the Command context.: Show on usages"
+              },
+              "fullDescription": {
+                "text": "CQRS context intersection. Query is called from the Command context."
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/QueryInvasionUsage.Global.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/QueryInvasionUsage.Global.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
               "id": "RawStringCanBeSimplified",
               "shortDescription": {
                 "text": "Raw string can be simplified"
@@ -58763,6 +59235,33 @@
               "helpUri": "https://www.jetbrains.com/help/resharper/RedundantConfigureAwait.html",
               "help": {
                 "text": "https://www.jetbrains.com/help/resharper/RedundantConfigureAwait.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeRedundancy"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "RedundantCqrsAttribute",
+              "shortDescription": {
+                "text": "CQRS attribute is redundant and can be removed"
+              },
+              "fullDescription": {
+                "text": "CQRS attribute is redundant and can be removed"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/RedundantCqrsAttribute.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/RedundantCqrsAttribute.html"
               },
               "relationships": [
                 {
@@ -60229,6 +60728,33 @@
               ]
             },
             {
+              "id": "RedundantSetsRequiredMembersAttribute",
+              "shortDescription": {
+                "text": "Redundant attribute [SetsRequiredMembers]"
+              },
+              "fullDescription": {
+                "text": "[SetsRequiredMembers] attribute is redundant because there are no 'required' members"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/RedundantSetsRequiredMembersAttribute.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/RedundantSetsRequiredMembersAttribute.html"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.DeclarationRedundancy"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
               "id": "RedundantSetterValueParameterDeclaration",
               "shortDescription": {
                 "text": "Explicit 'value' parameter declaration is redundant"
@@ -60439,7 +60965,7 @@
             {
               "id": "RedundantSwitchExpressionArms",
               "shortDescription": {
-                "text": "Redundant switch expression arms"
+                "text": "Redundant 'switch' expression arms"
               },
               "fullDescription": {
                 "text": "Arms before and with content of the catch-all arm '_ =>' are redundant"
@@ -63206,6 +63732,33 @@
               "defaultConfiguration": {
                 "enabled": true,
                 "level": "warning"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CSHARP.CodeSmell"
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "ShebangDirectiveBadPlacement",
+              "shortDescription": {
+                "text": "Move the shebang directive to the beginning of the file"
+              },
+              "fullDescription": {
+                "text": "Move the shebang directive (which starts with '#!') to the very beginning of the file so the Unix-compatible program loader can determine how to run it"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "helpUri": "https://www.jetbrains.com/help/resharper/ShebangDirectiveBadPlacement.html",
+              "help": {
+                "text": "https://www.jetbrains.com/help/resharper/ShebangDirectiveBadPlacement.html"
               },
               "relationships": [
                 {
@@ -73240,7 +73793,7 @@
       "versionControlProvenance": [
         {
           "repositoryUri": "https://github.com/henrikwidlund/unfoldedcircle-adbtv.git",
-          "revisionId": "e1a5cf6ca75673a3d58c4e9f4bfa81a382f67e69",
+          "revisionId": "b90c6cefb626519e8e341f3e675469ce66f9744c",
           "branch": "main",
           "properties": {
             "repoUrl": "https://github.com/henrikwidlund/unfoldedcircle-adbtv.git",
@@ -73254,63 +73807,14 @@
       "artifacts": [
         {
           "location": {
-            "uri": "src/UnfoldedCircle.Models/Sync/AuthRequestMsgData.cs",
+            "uri": "src/UnfoldedCircle.AdbTv/AdbTv/AdbTvClientFactory.cs",
             "uriBaseId": "solutionDir"
           },
           "hashes": {}
         },
         {
           "location": {
-            "uri": "src/UnfoldedCircle.Models/Sync/MediaPlayerEntityCommandParams.cs",
-            "uriBaseId": "solutionDir"
-          },
-          "hashes": {}
-        },
-        {
-          "location": {
-            "uri": "src/UnfoldedCircle.AdbTv/AdbTvClientFactory.cs",
-            "uriBaseId": "solutionDir"
-          },
-          "hashes": {}
-        },
-        {
-          "location": {
-            "uri": "src/UnfoldedCircle.Server/BackgroundServices/MDnsBackgroundService.cs",
-            "uriBaseId": "solutionDir"
-          },
-          "hashes": {}
-        },
-        {
-          "location": {
-            "uri": "src/UnfoldedCircle.Server/Configuration/ConfigurationService.cs",
-            "uriBaseId": "solutionDir"
-          },
-          "hashes": {}
-        },
-        {
-          "location": {
-            "uri": "src/UnfoldedCircle.Server/WebSocket/UnfoldedCircleMiddleware.cs",
-            "uriBaseId": "solutionDir"
-          },
-          "hashes": {}
-        },
-        {
-          "location": {
-            "uri": "src/UnfoldedCircle.Server/WebSocket/UnfoldedCircleWebSocketHandler.cs",
-            "uriBaseId": "solutionDir"
-          },
-          "hashes": {}
-        },
-        {
-          "location": {
-            "uri": "src/UnfoldedCircle.Models/Sync/AuthRequestMsg.cs",
-            "uriBaseId": "solutionDir"
-          },
-          "hashes": {}
-        },
-        {
-          "location": {
-            "uri": "src/UnfoldedCircle.Models/Sync/EntityCommandMsg.cs",
+            "uri": "src/UnfoldedCircle.AdbTv/WebSocket/AdbWebSocketHandler.cs",
             "uriBaseId": "solutionDir"
           },
           "hashes": {}
@@ -73318,831 +73822,37 @@
       ],
       "results": [
         {
-          "ruleId": "ClassNeverInstantiated.Global",
-          "ruleIndex": 329,
+          "ruleId": "ReplaceWithPrimaryConstructorParameter",
+          "ruleIndex": 2589,
           "kind": "fail",
           "level": "note",
           "message": {
-            "text": "Record 'AuthRequestMsgData' is never instantiated"
+            "text": "Replace with primary constructor parameter"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/AuthRequestMsgData.cs",
+                  "uri": "src/UnfoldedCircle.AdbTv/AdbTv/AdbTvClientFactory.cs",
                   "uriBaseId": "solutionDir"
                 },
                 "region": {
-                  "startLine": 3,
-                  "startColumn": 15,
-                  "endLine": 3,
-                  "endColumn": 33,
-                  "charOffset": 53,
-                  "charLength": 18,
-                  "snippet": {
-                    "text": "AuthRequestMsgData"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 2,
-                  "startColumn": 1,
-                  "endLine": 4,
-                  "endColumn": 2,
-                  "charOffset": 38,
-                  "charLength": 35,
-                  "snippet": {
-                    "text": "\npublic record AuthRequestMsgData\n{"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "D5454B9779E4967E6799D1E7053C02ACD9325A039A22A414044BC364111C16F7"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ClassNeverInstantiated.Global",
-          "ruleIndex": 329,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Record 'MediaPlayerEntityCommandParams' is never instantiated"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/MediaPlayerEntityCommandParams.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 1
-                },
-                "region": {
-                  "startLine": 5,
-                  "startColumn": 15,
-                  "endLine": 5,
-                  "endColumn": 45,
-                  "charOffset": 90,
-                  "charLength": 30,
-                  "snippet": {
-                    "text": "MediaPlayerEntityCommandParams"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 4,
-                  "startColumn": 1,
-                  "endLine": 6,
-                  "endColumn": 2,
-                  "charOffset": 75,
-                  "charLength": 47,
-                  "snippet": {
-                    "text": "\npublic record MediaPlayerEntityCommandParams\n{"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "4C30AF4C39DE9DFA7128905CA97AA401B64446CD9D7F2D817521CBEFF15EEE0F"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "UnusedMember.Global",
-          "ruleIndex": 2717,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Property 'MediaPosition' is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/MediaPlayerEntityCommandParams.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 1
-                },
-                "region": {
                   "startLine": 11,
-                  "startColumn": 18,
+                  "startColumn": 5,
                   "endLine": 11,
-                  "endColumn": 31,
-                  "charOffset": 260,
-                  "charLength": 13,
-                  "snippet": {
-                    "text": "MediaPosition"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 10,
-                  "startColumn": 1,
-                  "endLine": 12,
-                  "endColumn": 5,
-                  "charOffset": 202,
-                  "charLength": 91,
-                  "snippet": {
-                    "text": "    [JsonPropertyName(\"media_position\")]\n    public uint? MediaPosition { get; init; }\n    "
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "EA0C944CEEC19EA629C3EFD7108DD75321EEE266918389F12EE3C0F99DF64A30"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "UnusedMember.Global",
-          "ruleIndex": 2717,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Property 'Mode' is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/MediaPlayerEntityCommandParams.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 1
-                },
-                "region": {
-                  "startLine": 20,
-                  "startColumn": 20,
-                  "endLine": 20,
-                  "endColumn": 24,
-                  "charOffset": 506,
-                  "charLength": 4,
-                  "snippet": {
-                    "text": "Mode"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 19,
-                  "startColumn": 1,
-                  "endLine": 21,
-                  "endColumn": 5,
-                  "charOffset": 456,
-                  "charLength": 74,
-                  "snippet": {
-                    "text": "    [JsonPropertyName(\"mode\")]\n    public string? Mode { get; init; }\n    "
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "BAB782C597AB46009C88BB96F91F8FA2D175E07F38FD759201A525E96CC2009D"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "UnusedMember.Global",
-          "ruleIndex": 2717,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Property 'Repeat' is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/MediaPlayerEntityCommandParams.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 1
-                },
-                "region": {
-                  "startLine": 14,
-                  "startColumn": 24,
-                  "endLine": 14,
-                  "endColumn": 30,
-                  "charOffset": 350,
-                  "charLength": 6,
-                  "snippet": {
-                    "text": "Repeat"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 13,
-                  "startColumn": 1,
-                  "endLine": 15,
-                  "endColumn": 5,
-                  "charOffset": 294,
-                  "charLength": 82,
-                  "snippet": {
-                    "text": "    [JsonPropertyName(\"repeat\")]\n    public RepeatMode? Repeat { get; init; }\n    "
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "6F29B8C8EE064215C018ED7A603363F882D9EED98C132F325C3D2360C0F159EC"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "UnusedMember.Global",
-          "ruleIndex": 2717,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Property 'Shuffle' is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/MediaPlayerEntityCommandParams.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 1
-                },
-                "region": {
-                  "startLine": 17,
-                  "startColumn": 18,
-                  "endLine": 17,
-                  "endColumn": 25,
-                  "charOffset": 428,
-                  "charLength": 7,
-                  "snippet": {
-                    "text": "Shuffle"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 16,
-                  "startColumn": 1,
-                  "endLine": 18,
-                  "endColumn": 5,
-                  "charOffset": 377,
-                  "charLength": 78,
-                  "snippet": {
-                    "text": "    [JsonPropertyName(\"shuffle\")]\n    public bool? Shuffle { get; init; }\n    "
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "316A217E388BF3372335832433E1ED5BEB10C4A7915806DEDC4444E228386B21"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "UnusedMember.Global",
-          "ruleIndex": 2717,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Property 'Source' is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/MediaPlayerEntityCommandParams.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 1
-                },
-                "region": {
-                  "startLine": 23,
-                  "startColumn": 20,
-                  "endLine": 23,
-                  "endColumn": 26,
-                  "charOffset": 583,
-                  "charLength": 6,
-                  "snippet": {
-                    "text": "Source"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 22,
-                  "startColumn": 1,
-                  "endLine": 24,
-                  "endColumn": 2,
-                  "charOffset": 531,
-                  "charLength": 75,
-                  "snippet": {
-                    "text": "    [JsonPropertyName(\"source\")]\n    public string? Source { get; init; }\n}"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "B1AE6835B87FE5AA7ED73037F190E3460A228C88AC9C85B1231709D4D60C368C"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "UnusedMember.Global",
-          "ruleIndex": 2717,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Property 'Token' is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/AuthRequestMsgData.cs",
-                  "uriBaseId": "solutionDir"
-                },
-                "region": {
-                  "startLine": 6,
-                  "startColumn": 28,
-                  "endLine": 6,
-                  "endColumn": 33,
-                  "charOffset": 133,
-                  "charLength": 5,
-                  "snippet": {
-                    "text": "Token"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 5,
-                  "startColumn": 1,
-                  "endLine": 7,
-                  "endColumn": 2,
-                  "charOffset": 74,
-                  "charLength": 81,
-                  "snippet": {
-                    "text": "    [JsonPropertyName(\"token\")]\n    public required string Token { get; init; }\n}"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "E856F6DF5462FB6E76F6DE31FC288570B9049D91BDD2A65AB4105259E4566F08"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "UnusedMember.Global",
-          "ruleIndex": 2717,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Property 'Volume' is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/MediaPlayerEntityCommandParams.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 1
-                },
-                "region": {
-                  "startLine": 8,
-                  "startColumn": 20,
-                  "endLine": 8,
-                  "endColumn": 26,
-                  "charOffset": 175,
-                  "charLength": 6,
-                  "snippet": {
-                    "text": "Volume"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 7,
-                  "startColumn": 1,
-                  "endLine": 9,
-                  "endColumn": 5,
-                  "charOffset": 123,
-                  "charLength": 78,
-                  "snippet": {
-                    "text": "    [JsonPropertyName(\"volume\")]\n    public ushort? Volume { get; init; }\n    "
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "4A000C184C99EDB023E507C4A8C954C57BCB1B8D05116583F4836D958DFD30B8"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "UnusedType.Global",
-          "ruleIndex": 2731,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Record 'AuthRequestMsg' is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/AuthRequestMsg.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 7
-                },
-                "region": {
-                  "startLine": 3,
-                  "startColumn": 15,
-                  "endLine": 3,
-                  "endColumn": 29,
-                  "charOffset": 53,
-                  "charLength": 14,
-                  "snippet": {
-                    "text": "AuthRequestMsg"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 2,
-                  "startColumn": 1,
-                  "endLine": 3,
-                  "endColumn": 62,
-                  "charOffset": 38,
-                  "charLength": 62,
-                  "snippet": {
-                    "text": "\npublic record AuthRequestMsg : CommonReq<AuthRequestMsgData>;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "10473B037E28C709C736E55AE5E27D12A29E6CACAE8485DC3603C942246C5038"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "UnusedType.Global",
-          "ruleIndex": 2731,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Record 'MediaPlayerEntityCommandMsgData' is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Models/Sync/EntityCommandMsg.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 8
-                },
-                "region": {
-                  "startLine": 3,
-                  "startColumn": 15,
-                  "endLine": 3,
-                  "endColumn": 46,
-                  "charOffset": 53,
-                  "charLength": 31,
-                  "snippet": {
-                    "text": "MediaPlayerEntityCommandMsgData"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 2,
-                  "startColumn": 1,
-                  "endLine": 4,
-                  "endColumn": 37,
-                  "charOffset": 38,
-                  "charLength": 173,
-                  "snippet": {
-                    "text": "\npublic record MediaPlayerEntityCommandMsgData<TCommandId> : CommonReq<EntityCommandMsgData<TCommandId, MediaPlayerEntityCommandParams>>\n    where TCommandId : struct, Enum;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "065BF461FB2046366A62B2393EF2748237FA2C26603402A1CB6F970C86827625"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/WebSocket/UnfoldedCircleMiddleware.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 5
-                },
-                "region": {
-                  "startLine": 12,
-                  "startColumn": 5,
-                  "endLine": 12,
-                  "endColumn": 118,
-                  "charOffset": 367,
-                  "charLength": 113,
-                  "snippet": {
-                    "text": "private readonly UnfoldedCircleWebSocketHandler _unfoldedCircleWebSocketHandler = unfoldedCircleWebSocketHandler;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 11,
-                  "startColumn": 1,
-                  "endLine": 13,
-                  "endColumn": 90,
-                  "charOffset": 361,
-                  "charLength": 209,
-                  "snippet": {
-                    "text": "{\n    private readonly UnfoldedCircleWebSocketHandler _unfoldedCircleWebSocketHandler = unfoldedCircleWebSocketHandler;\n    private readonly IHostApplicationLifetime _applicationLifetime = applicationLifetime;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "594DE124CD91156583ECCF54B25748E62DA6ADA745C76E56948AE529027785FF"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/WebSocket/UnfoldedCircleMiddleware.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 5
-                },
-                "region": {
-                  "startLine": 13,
-                  "startColumn": 5,
-                  "endLine": 13,
-                  "endColumn": 90,
-                  "charOffset": 485,
-                  "charLength": 85,
-                  "snippet": {
-                    "text": "private readonly IHostApplicationLifetime _applicationLifetime = applicationLifetime;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 12,
-                  "startColumn": 1,
-                  "endLine": 14,
-                  "endColumn": 68,
-                  "charOffset": 363,
-                  "charLength": 275,
-                  "snippet": {
-                    "text": "    private readonly UnfoldedCircleWebSocketHandler _unfoldedCircleWebSocketHandler = unfoldedCircleWebSocketHandler;\n    private readonly IHostApplicationLifetime _applicationLifetime = applicationLifetime;\n    private readonly ILoggerFactory _loggerFactory = loggerFactory;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "93C769A9EA220597D6B56B68439023EE1B275681F780454DF688425BBDCC4859"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/WebSocket/UnfoldedCircleMiddleware.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 5
-                },
-                "region": {
-                  "startLine": 14,
-                  "startColumn": 5,
-                  "endLine": 14,
-                  "endColumn": 68,
-                  "charOffset": 575,
-                  "charLength": 63,
-                  "snippet": {
-                    "text": "private readonly ILoggerFactory _loggerFactory = loggerFactory;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 13,
-                  "startColumn": 1,
-                  "endLine": 15,
-                  "endColumn": 73,
-                  "charOffset": 481,
-                  "charLength": 230,
-                  "snippet": {
-                    "text": "    private readonly IHostApplicationLifetime _applicationLifetime = applicationLifetime;\n    private readonly ILoggerFactory _loggerFactory = loggerFactory;\n    private readonly ILogger<UnfoldedCircleMiddleware> _logger = logger;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "841322F1108944A62DBD9CC94A48691198C866917C4CADC07DA69808F8018F39"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/WebSocket/UnfoldedCircleMiddleware.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 5
-                },
-                "region": {
-                  "startLine": 15,
-                  "startColumn": 5,
-                  "endLine": 15,
-                  "endColumn": 73,
-                  "charOffset": 643,
-                  "charLength": 68,
-                  "snippet": {
-                    "text": "private readonly ILogger<UnfoldedCircleMiddleware> _logger = logger;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 14,
-                  "startColumn": 1,
-                  "endLine": 16,
-                  "endColumn": 1,
-                  "charOffset": 571,
-                  "charLength": 141,
-                  "snippet": {
-                    "text": "    private readonly ILoggerFactory _loggerFactory = loggerFactory;\n    private readonly ILogger<UnfoldedCircleMiddleware> _logger = logger;\n"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "1D39DDBE7D719D65CB3DA0FF515D172594C988E7EBA9A751E770AF537C6378CA"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.AdbTv/AdbTvClientFactory.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 2
-                },
-                "region": {
-                  "startLine": 12,
-                  "startColumn": 5,
-                  "endLine": 12,
                   "endColumn": 67,
-                  "charOffset": 258,
+                  "charOffset": 255,
                   "charLength": 62,
                   "snippet": {
                     "text": "private readonly ILogger<AdbTvClientFactory> _logger = logger;"
                   }
                 },
                 "contextRegion": {
-                  "startLine": 11,
+                  "startLine": 10,
                   "startColumn": 1,
-                  "endLine": 13,
+                  "endLine": 12,
                   "endColumn": 90,
-                  "charOffset": 252,
+                  "charOffset": 249,
                   "charLength": 158,
                   "snippet": {
                     "text": "{\n    private readonly ILogger<AdbTvClientFactory> _logger = logger;\n    private readonly ConcurrentDictionary<AdbTvClientKey, DeviceClient> _clients = new();"
@@ -74154,218 +73864,6 @@
           "partialFingerprints": {
             "equalIndicator/v1": "FE20A618B7C8F19D75B12BB1CD3418CF11498FD5158EB4B3E78A42A4F7D46764"
           },
-          "baselineState": "new",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/BackgroundServices/MDnsBackgroundService.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 3
-                },
-                "region": {
-                  "startLine": 10,
-                  "startColumn": 5,
-                  "endLine": 10,
-                  "endColumn": 68,
-                  "charOffset": 304,
-                  "charLength": 63,
-                  "snippet": {
-                    "text": "private readonly IConfiguration _configuration = configuration;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 9,
-                  "startColumn": 1,
-                  "endLine": 11,
-                  "endColumn": 68,
-                  "charOffset": 298,
-                  "charLength": 137,
-                  "snippet": {
-                    "text": "{\n    private readonly IConfiguration _configuration = configuration;\n    private readonly ILoggerFactory _loggerFactory = loggerFactory;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "5A417B24A973736BFEE20552A9B9CCAB91C6276D9B710E017E2C08FC87A0C80D"
-          },
-          "baselineState": "new",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/BackgroundServices/MDnsBackgroundService.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 3
-                },
-                "region": {
-                  "startLine": 11,
-                  "startColumn": 5,
-                  "endLine": 11,
-                  "endColumn": 68,
-                  "charOffset": 372,
-                  "charLength": 63,
-                  "snippet": {
-                    "text": "private readonly ILoggerFactory _loggerFactory = loggerFactory;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 10,
-                  "startColumn": 1,
-                  "endLine": 12,
-                  "endColumn": 89,
-                  "charOffset": 300,
-                  "charLength": 224,
-                  "snippet": {
-                    "text": "    private readonly IConfiguration _configuration = configuration;\n    private readonly ILoggerFactory _loggerFactory = loggerFactory;\n    private readonly IConfigurationService _configurationService = configurationService;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "F2740AEA4E84659C0DE5CE106016DA515F16052052312B562C61BB25EEFC650B"
-          },
-          "baselineState": "new",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/BackgroundServices/MDnsBackgroundService.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 3
-                },
-                "region": {
-                  "startLine": 12,
-                  "startColumn": 5,
-                  "endLine": 12,
-                  "endColumn": 89,
-                  "charOffset": 440,
-                  "charLength": 84,
-                  "snippet": {
-                    "text": "private readonly IConfigurationService _configurationService = configurationService;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 11,
-                  "startColumn": 1,
-                  "endLine": 13,
-                  "endColumn": 45,
-                  "charOffset": 368,
-                  "charLength": 201,
-                  "snippet": {
-                    "text": "    private readonly ILoggerFactory _loggerFactory = loggerFactory;\n    private readonly IConfigurationService _configurationService = configurationService;\n    private ServiceProfile? _serviceProfile;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "3FB75947B15383EDB5A80D2FCC1636899D00654AF469975D2D8FA19FBA149022"
-          },
-          "baselineState": "new",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/Configuration/ConfigurationService.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 4
-                },
-                "region": {
-                  "startLine": 10,
-                  "startColumn": 5,
-                  "endLine": 10,
-                  "endColumn": 68,
-                  "charOffset": 266,
-                  "charLength": 63,
-                  "snippet": {
-                    "text": "private readonly IConfiguration _configuration = configuration;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 9,
-                  "startColumn": 1,
-                  "endLine": 11,
-                  "endColumn": 69,
-                  "charOffset": 260,
-                  "charLength": 138,
-                  "snippet": {
-                    "text": "{\n    private readonly IConfiguration _configuration = configuration;\n    private readonly ILogger<ConfigurationService> _logger = logger;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "7798A87D0910DDF44D675216BECEC4B2F0B6E82F781F478A7E280743BFF324BB"
-          },
           "baselineState": "unchanged",
           "properties": {
             "qodanaSeverity": "Moderate",
@@ -74377,7 +73875,7 @@
         },
         {
           "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
+          "ruleIndex": 2589,
           "kind": "fail",
           "level": "note",
           "message": {
@@ -74387,198 +73885,39 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/Configuration/ConfigurationService.cs",
+                  "uri": "src/UnfoldedCircle.AdbTv/WebSocket/AdbWebSocketHandler.cs",
                   "uriBaseId": "solutionDir",
-                  "index": 4
+                  "index": 1
                 },
                 "region": {
-                  "startLine": 11,
+                  "startLine": 30,
                   "startColumn": 5,
-                  "endLine": 11,
-                  "endColumn": 69,
-                  "charOffset": 334,
-                  "charLength": 64,
-                  "snippet": {
-                    "text": "private readonly ILogger<ConfigurationService> _logger = logger;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 10,
-                  "startColumn": 1,
-                  "endLine": 12,
-                  "endColumn": 35,
-                  "charOffset": 262,
-                  "charLength": 171,
-                  "snippet": {
-                    "text": "    private readonly IConfiguration _configuration = configuration;\n    private readonly ILogger<ConfigurationService> _logger = logger;\n    private string? _ucConfigHome;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "8F7F3CFD609B0FDCE3DC7E703C833100E9DF54A5C979CF7A1F90AB7F351B0F60"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/WebSocket/UnfoldedCircleWebSocketHandler.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 6
-                },
-                "region": {
-                  "startLine": 17,
-                  "startColumn": 5,
-                  "endLine": 17,
-                  "endColumn": 89,
-                  "charOffset": 471,
-                  "charLength": 84,
-                  "snippet": {
-                    "text": "private readonly IConfigurationService _configurationService = configurationService;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 16,
-                  "startColumn": 1,
-                  "endLine": 18,
+                  "endLine": 30,
                   "endColumn": 82,
-                  "charOffset": 465,
-                  "charLength": 172,
-                  "snippet": {
-                    "text": "{\n    private readonly IConfigurationService _configurationService = configurationService;\n    private readonly AdbTvClientFactory _adbTvClientFactory = adbTvClientFactory;"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "60ED7F0D9928C534F6D8787AC85FC90E6967A971A1017D1D87AF32F1F090C685"
-          },
-          "baselineState": "unchanged",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/WebSocket/UnfoldedCircleWebSocketHandler.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 6
-                },
-                "region": {
-                  "startLine": 18,
-                  "startColumn": 5,
-                  "endLine": 18,
-                  "endColumn": 82,
-                  "charOffset": 560,
+                  "charOffset": 1039,
                   "charLength": 77,
                   "snippet": {
                     "text": "private readonly AdbTvClientFactory _adbTvClientFactory = adbTvClientFactory;"
                   }
                 },
                 "contextRegion": {
-                  "startLine": 17,
+                  "startLine": 29,
                   "startColumn": 1,
-                  "endLine": 19,
-                  "endColumn": 79,
-                  "charOffset": 467,
-                  "charLength": 249,
+                  "endLine": 31,
+                  "endColumn": 1,
+                  "charOffset": 1033,
+                  "charLength": 84,
                   "snippet": {
-                    "text": "    private readonly IConfigurationService _configurationService = configurationService;\n    private readonly AdbTvClientFactory _adbTvClientFactory = adbTvClientFactory;\n    private readonly ILogger<UnfoldedCircleWebSocketHandler> _logger = logger;"
+                    "text": "{\n    private readonly AdbTvClientFactory _adbTvClientFactory = adbTvClientFactory;\n"
                   }
                 }
               }
             }
           ],
           "partialFingerprints": {
-            "equalIndicator/v1": "68A64E8F05693904AF15072C7C015B28F6F0B72441CE4ABCCF93CC8A04D55620"
+            "equalIndicator/v1": "289BB6A9687BA6915D27112857C4CF21592AEF7936C1644EFC42904D35986B8F"
           },
           "baselineState": "new",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 9.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2569,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/UnfoldedCircle.Server/WebSocket/UnfoldedCircleWebSocketHandler.cs",
-                  "uriBaseId": "solutionDir",
-                  "index": 6
-                },
-                "region": {
-                  "startLine": 19,
-                  "startColumn": 5,
-                  "endLine": 19,
-                  "endColumn": 79,
-                  "charOffset": 642,
-                  "charLength": 74,
-                  "snippet": {
-                    "text": "private readonly ILogger<UnfoldedCircleWebSocketHandler> _logger = logger;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 18,
-                  "startColumn": 1,
-                  "endLine": 20,
-                  "endColumn": 1,
-                  "charOffset": 556,
-                  "charLength": 161,
-                  "snippet": {
-                    "text": "    private readonly AdbTvClientFactory _adbTvClientFactory = adbTvClientFactory;\n    private readonly ILogger<UnfoldedCircleWebSocketHandler> _logger = logger;\n"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "A298D23E918006E133F2323FBFA514CE0E786599B64AB2986F1D53789FD19CD5"
-          },
-          "baselineState": "unchanged",
           "properties": {
             "qodanaSeverity": "Moderate",
             "tags": [
@@ -74589,10 +73928,10 @@
         }
       ],
       "automationDetails": {
-        "id": "QDNETC/qodana/2025-08-09",
-        "guid": "ec43f7f3-dd63-4c34-ba26-177ae959cf80",
+        "id": "QDNETC/qodana/2025-08-16",
+        "guid": "2adeb255-70ed-443e-80cd-d8c67321c706",
         "properties": {
-          "jobUrl": "https://github.com/henrikwidlund/unfoldedcircle-adbtv/actions/runs/16852300876"
+          "jobUrl": "https://github.com/henrikwidlund/unfoldedcircle-adbtv/actions/runs/17007717366"
         }
       },
       "newlineSequences": [
