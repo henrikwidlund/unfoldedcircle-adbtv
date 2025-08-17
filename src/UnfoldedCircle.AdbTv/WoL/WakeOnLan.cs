@@ -5,7 +5,7 @@ namespace UnfoldedCircle.AdbTv.WoL;
 
 internal static class WakeOnLan
 {
-    public static async Task SendWakeOnLan(IPAddress ipAddress, string macAddress)
+    public static async Task SendWakeOnLanAsync(IPAddress ipAddress, string macAddress)
     {
         byte[] magicPacket = CreateMagicPacket(macAddress);
         var socket = new Socket(ipAddress.AddressFamily, SocketType.Dgram, ProtocolType.Udp);

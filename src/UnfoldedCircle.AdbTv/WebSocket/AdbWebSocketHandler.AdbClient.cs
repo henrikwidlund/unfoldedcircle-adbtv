@@ -11,7 +11,7 @@ namespace UnfoldedCircle.AdbTv.WebSocket;
 
 internal sealed partial class AdbWebSocketHandler
 {
-    private async Task<AdbTvClientKey?> TryGetAdbTvClientKey(
+    private async Task<AdbTvClientKey?> TryGetAdbTvClientKeyAsync(
         string wsId,
         IdentifierType identifierType,
         string? identifier,
@@ -43,7 +43,7 @@ internal sealed partial class AdbWebSocketHandler
         return null;
     }
 
-    private async Task<AdbTvClientKey[]?> TryGetAdbTvClientKeys(
+    private async Task<AdbTvClientKey[]?> TryGetAdbTvClientKeysAsync(
         string wsId,
         string? deviceId,
         CancellationToken cancellationToken)
@@ -76,7 +76,7 @@ internal sealed partial class AdbWebSocketHandler
         EntityId
     }
 
-    private async Task<List<AdbConfigurationItem>?> GetEntities(
+    private async Task<List<AdbConfigurationItem>?> GetEntitiesAsync(
         string wsId,
         string? deviceId,
         CancellationToken cancellationToken)
@@ -101,17 +101,17 @@ internal sealed partial class AdbWebSocketHandler
         return configuration.Entities;
     }
 
-    private async Task<AdbTvClientHolder?> TryGetAdbTvClientHolder(
+    private async Task<AdbTvClientHolder?> TryGetAdbTvClientHolderAsync(
         string wsId,
         string? identifier,
         IdentifierType identifierType,
         CancellationToken cancellationToken)
     {
-        var adbTvClientKey = await TryGetAdbTvClientKey(wsId, identifierType, identifier, cancellationToken);
+        var adbTvClientKey = await TryGetAdbTvClientKeyAsync(wsId, identifierType, identifier, cancellationToken);
         if (adbTvClientKey is null)
             return null;
 
-        var deviceClient = await _adbTvClientFactory.TryGetOrCreateClient(adbTvClientKey.Value, cancellationToken);
+        var deviceClient = await _adbTvClientFactory.TryGetOrCreateClientAsync(adbTvClientKey.Value, cancellationToken);
         if (deviceClient is null)
             return null;
 
@@ -119,16 +119,16 @@ internal sealed partial class AdbWebSocketHandler
             return new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
 
         _adbTvClientFactory.TryRemoveClient(adbTvClientKey.Value);
-        deviceClient = await _adbTvClientFactory.TryGetOrCreateClient(adbTvClientKey.Value, cancellationToken);
+        deviceClient = await _adbTvClientFactory.TryGetOrCreateClientAsync(adbTvClientKey.Value, cancellationToken);
 
         return deviceClient is null ? null : new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
     }
 
-    private async Task<bool> CheckClientApproved(string wsId,
+    private async Task<bool> CheckClientApprovedAsync(string wsId,
         string entityId,
         CancellationToken cancellationToken)
     {
-        var adbTvClientKey = await TryGetAdbTvClientKey(wsId, IdentifierType.EntityId, entityId, cancellationToken);
+        var adbTvClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.EntityId, entityId, cancellationToken);
         if (adbTvClientKey is null)
             return false;
 
@@ -146,12 +146,12 @@ internal sealed partial class AdbWebSocketHandler
         return deviceData is { State: AdvancedSharpAdbClient.Models.DeviceState.Online };
     }
 
-    private async ValueTask<bool> TryDisconnectAdbClients(
+    private async ValueTask<bool> TryDisconnectAdbClientsAsync(
         string wsId,
         string? deviceId,
         CancellationToken cancellationToken)
     {
-        var adbTvClientKeys = await TryGetAdbTvClientKeys(wsId, deviceId, cancellationToken);
+        var adbTvClientKeys = await TryGetAdbTvClientKeysAsync(wsId, deviceId, cancellationToken);
         if (adbTvClientKeys is not { Length: > 0 })
             return false;
 

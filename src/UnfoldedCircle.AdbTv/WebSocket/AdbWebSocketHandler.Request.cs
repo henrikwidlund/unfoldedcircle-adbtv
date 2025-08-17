@@ -14,13 +14,13 @@ internal sealed partial class AdbWebSocketHandler
 {
     private static readonly ConcurrentDictionary<AdbTvClientKey, RemoteState> RemoteStates = new();
 
-    private async Task FinishSetup(System.Net.WebSockets.WebSocket socket,
+    private async Task FinishSetupAsync(System.Net.WebSockets.WebSocket socket,
         string wsId,
         AdbConfigurationItem entity,
         CommonReq payload,
         CancellationToken cancellationToken)
     {
-        var adbTvClientHolder = await TryGetAdbTvClientHolder(wsId, entity.EntityId, IdentifierType.EntityId, cancellationToken);
+        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entity.EntityId, IdentifierType.EntityId, cancellationToken);
 
         var isConnected = adbTvClientHolder is not null && adbTvClientHolder.Client.Device.State == AdvancedSharpAdbClient.Models.DeviceState.Online;
         if (adbTvClientHolder is not null)

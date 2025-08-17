@@ -12,7 +12,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     private readonly ConcurrentDictionary<AdbTvClientKey, DeviceClient> _clients = new();
     private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
 
-    public async ValueTask<DeviceClient?> TryGetOrCreateClient(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
+    public async ValueTask<DeviceClient?> TryGetOrCreateClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
         if (_clients.TryGetValue(adbTvClientKey, out var client))
             return client;
