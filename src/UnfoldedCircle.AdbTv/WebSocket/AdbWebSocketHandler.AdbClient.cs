@@ -17,7 +17,7 @@ internal sealed partial class AdbWebSocketHandler
         string? identifier,
         CancellationToken cancellationToken)
     {
-        var configuration = await _configurationService.GetConfiguration(cancellationToken);
+        var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
             _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
@@ -48,7 +48,7 @@ internal sealed partial class AdbWebSocketHandler
         string? deviceId,
         CancellationToken cancellationToken)
     {
-        var configuration = await _configurationService.GetConfiguration(cancellationToken);
+        var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
             _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
@@ -81,7 +81,7 @@ internal sealed partial class AdbWebSocketHandler
         string? deviceId,
         CancellationToken cancellationToken)
     {
-        var configuration = await _configurationService.GetConfiguration(cancellationToken);
+        var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
             _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);

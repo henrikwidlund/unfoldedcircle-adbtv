@@ -27,15 +27,15 @@ internal sealed partial class AdbWebSocketHandler
             _logger.LogInformation("Setup of ADB TV: {ADBTv}", adbTvClientHolder.Client.Device.ToString());
 
         await Task.WhenAll(
-            SendAsync(socket,
+            SendMessageAsync(socket,
                 ResponsePayloadHelpers.CreateCommonResponsePayload(payload),
                 wsId,
                 cancellationToken),
-            SendAsync(socket,
+            SendMessageAsync(socket,
                 ResponsePayloadHelpers.CreateDeviceSetupChangeResponsePayload(isConnected),
                 wsId,
                 cancellationToken),
-            SendAsync(socket,
+            SendMessageAsync(socket,
                 ResponsePayloadHelpers.CreateConnectEventResponsePayload(GetDeviceState(adbTvClientHolder)),
                 wsId,
                 cancellationToken)
