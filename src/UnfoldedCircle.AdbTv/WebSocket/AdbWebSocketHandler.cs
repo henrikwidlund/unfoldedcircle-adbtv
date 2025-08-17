@@ -48,7 +48,7 @@ internal sealed partial class AdbWebSocketHandler(
         {
             case CommandType.KeyEvent:
                 if (command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase))
-                    await WakeOnLan.SendWakeOnLanAsync(IPAddress.Parse(adbTvClientHolder.ClientKey.IpAddress), adbTvClientHolder.ClientKey.MacAddress);
+                    await WakeOnLan.SendWakeOnLan(IPAddress.Parse(adbTvClientHolder.ClientKey.IpAddress), adbTvClientHolder.ClientKey.MacAddress);
 
                 await adbTvClientHolder.Client.SendKeyEventAsync(commandToSend, cancellationTokenWrapper.ApplicationStopping);
 
@@ -168,7 +168,7 @@ internal sealed partial class AdbWebSocketHandler(
     {
         if (TryGetEntityIdFromSocket(wsId, out var entityId))
         {
-            var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
+            var configuration = await _configurationService.GetConfiguration(cancellationToken);
             var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(entityId, StringComparison.OrdinalIgnoreCase));
 
             if (entity is null)
@@ -213,8 +213,8 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override async ValueTask<OnSetupResult?> OnSetupDriver(SetupDriverMsg payload, string wsId, CancellationToken cancellationToken)
     {
-        var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
-        var driverMetadata = await _configurationService.GetDriverMetadataAsync(cancellationToken);
+        var configuration = await _configurationService.GetConfiguration(cancellationToken);
+        var driverMetadata = await _configurationService.GetDriverMetadata(cancellationToken);
         var ipAddress = payload.MsgData.SetupData[AdbTvServerConstants.IpAddressKey];
         var macAddress = payload.MsgData.SetupData[AdbTvServerConstants.MacAddressKey];
         var deviceId = payload.MsgData.SetupData.GetValueOrNull(AdbTvServerConstants.DeviceIdKey, macAddress);
@@ -223,7 +223,7 @@ internal sealed partial class AdbWebSocketHandler(
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
             : 5555;
 
-        var entity = configuration.Entities.Find(x => string.Equals(x.EntityId, macAddress, StringComparison.Ordinal));
+        var entity = configuration.Entities.Find(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
         if (entity is null)
         {
             _logger.LogInformation("Adding configuration for device ID '{EntityId}'", macAddress);
@@ -252,7 +252,7 @@ internal sealed partial class AdbWebSocketHandler(
 
         configuration.Entities.Add(entity);
 
-        await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
+        await _configurationService.UpdateConfiguration(configuration, cancellationToken);
 
         if (!await CheckClientApproved(wsId, entity.EntityId, cancellationToken))
         {

@@ -12,8 +12,9 @@ builder.Services.AddHostedService<AdbBackgroundService>();
 
 var app = builder.Build();
 
-app.Logger.LogTrace("Configuration File Dump: {ConfigurationFileDump}",
-    await File.ReadAllLinesAsync(Path.Combine(app.Configuration["UC_CONFIG_HOME"] ?? string.Empty, "configured_entities.json")));
+var configurationFile = Path.Combine(app.Configuration["UC_CONFIG_HOME"] ?? string.Empty, "configured_entities.json");
+if (File.Exists(configurationFile))
+    app.Logger.LogTrace("Configuration File Dump: {ConfigurationFileDump}", await File.ReadAllLinesAsync(configurationFile));
 
 app.UseUnfoldedCircleServer<AdbWebSocketHandler, AdbConfigurationItem>();
 
