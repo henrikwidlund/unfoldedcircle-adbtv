@@ -44,16 +44,19 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    public void TryRemoveClient(in AdbTvClientKey adbTvClientKey)
+    public async ValueTask TryRemoveClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
-        try
+        if (_clients.TryRemove(adbTvClientKey, out var deviceClient))
         {
-            _clients.TryRemove(adbTvClientKey, out _);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Failed to remove client {ClientKey}", adbTvClientKey);
-            throw;
+            try
+            {
+                await deviceClient.AdbClient.DisconnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to remove client {ClientKey}", adbTvClientKey);
+                throw;
+            }
         }
     }
 

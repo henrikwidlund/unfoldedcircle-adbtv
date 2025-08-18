@@ -122,7 +122,7 @@ internal sealed partial class AdbWebSocketHandler
         if (deviceClient.Device.State == AdvancedSharpAdbClient.Models.DeviceState.Online)
             return new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
 
-        _adbTvClientFactory.TryRemoveClient(adbTvClientKey.Value);
+        await _adbTvClientFactory.TryRemoveClientAsync(adbTvClientKey.Value, cancellationToken);
         deviceClient = await _adbTvClientFactory.TryGetOrCreateClientAsync(adbTvClientKey.Value, cancellationToken);
 
         return deviceClient is null ? null : new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
@@ -159,8 +159,11 @@ internal sealed partial class AdbWebSocketHandler
         if (adbTvClientKeys is not { Length: > 0 })
             return false;
 
-        foreach (var adbTvClientKey in adbTvClientKeys)
-            _adbTvClientFactory.TryRemoveClient(adbTvClientKey);
+        await Parallel.ForEachAsync(adbTvClientKeys, new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
+            async (adbTvClientKey, localCancellationToken) =>
+            {
+                await _adbTvClientFactory.TryRemoveClientAsync(adbTvClientKey, localCancellationToken);
+            });
 
         return true;
     }
