@@ -36,7 +36,7 @@ internal sealed partial class AdbWebSocketHandler
                 wsId,
                 cancellationToken),
             SendMessageAsync(socket,
-                ResponsePayloadHelpers.CreateConnectEventResponsePayload(GetDeviceState(adbTvClientHolder)),
+                ResponsePayloadHelpers.CreateConnectEventResponsePayload(await GetDeviceStateAsync(adbTvClientHolder, cancellationToken)),
                 wsId,
                 cancellationToken)
         );

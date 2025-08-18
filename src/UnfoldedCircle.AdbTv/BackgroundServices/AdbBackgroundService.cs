@@ -18,7 +18,9 @@ public sealed class AdbBackgroundService : IHostedService
         };
         adbProcess.Start();
 
-        await adbProcess.WaitForExitAsync(cancellationToken);
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var linkedCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cancellationTokenSource.Token);
+        await adbProcess.WaitForExitAsync(linkedCancellationToken.Token);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -35,6 +37,8 @@ public sealed class AdbBackgroundService : IHostedService
         };
         adbProcess.Start();
 
-        await adbProcess.WaitForExitAsync(cancellationToken);
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var linkedCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cancellationTokenSource.Token);
+        await adbProcess.WaitForExitAsync(linkedCancellationToken.Token);
     }
 }

@@ -136,15 +136,17 @@ internal sealed partial class AdbWebSocketHandler
         if (adbTvClientKey is null)
             return false;
 
-        var startTimeStamp = Stopwatch.GetTimestamp();
         var adbClient = new AdbClient();
         string connectResult;
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(9));
+        using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
+            cancellationTokenSource.Token);
         do
         {
-            connectResult = await adbClient.ConnectAsync(adbTvClientKey.Value.IpAddress, adbTvClientKey.Value.Port, cancellationToken);
-        } while (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase)
-                 && Stopwatch.GetElapsedTime(startTimeStamp).TotalSeconds < 10);
+            connectResult = await adbClient.ConnectAsync(adbTvClientKey.Value.IpAddress, adbTvClientKey.Value.Port, linkedCancellationTokenSource.Token);
+        } while (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase));
 
+        // ReSharper disable once PossiblyMistakenUseOfCancellationToken
         var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
             x.Serial.Equals($"{adbTvClientKey.Value.IpAddress}:{adbTvClientKey.Value.Port.ToString(NumberFormatInfo.InvariantInfo)}", StringComparison.InvariantCulture));
         return deviceData is { State: AdvancedSharpAdbClient.Models.DeviceState.Online };
@@ -173,7 +175,7 @@ internal sealed partial class AdbWebSocketHandler
                 await _adbTvClientFactory.TryRemoveClientAsync(adbTvClientKey, localCancellationToken);
             });
 
-    private Models.Shared.DeviceState GetDeviceState(AdbTvClientHolder? adbTvClientHolder)
+    private async Task<Models.Shared.DeviceState> GetDeviceStateAsync(AdbTvClientHolder? adbTvClientHolder, CancellationToken cancellationToken)
     {
         if (adbTvClientHolder is null)
             return Models.Shared.DeviceState.Disconnected;
@@ -181,10 +183,14 @@ internal sealed partial class AdbWebSocketHandler
         try
         {
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(9));
-            while (!cancellationTokenSource.IsCancellationRequested)
+            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken, cancellationTokenSource.Token);
+            while (!linkedCancellationTokenSource.IsCancellationRequested)
             {
                 if (adbTvClientHolder.Client.Device.State == AdvancedSharpAdbClient.Models.DeviceState.Online)
                     return Models.Shared.DeviceState.Connected;
+
+                await Task.Delay(TimeSpan.FromMilliseconds(100), linkedCancellationTokenSource.Token);
             }
 
             return Models.Shared.DeviceState.Disconnected;
