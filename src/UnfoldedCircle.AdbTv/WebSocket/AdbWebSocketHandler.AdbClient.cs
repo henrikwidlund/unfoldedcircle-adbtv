@@ -159,14 +159,19 @@ internal sealed partial class AdbWebSocketHandler
         if (adbTvClientKeys is not { Length: > 0 })
             return false;
 
+        await TryDisconnectAdbClientsAsync(adbTvClientKeys, cancellationToken);
+
+        return true;
+    }
+
+    private async ValueTask TryDisconnectAdbClientsAsync(
+        IEnumerable<AdbTvClientKey> adbTvClientKeys,
+        CancellationToken cancellationToken) =>
         await Parallel.ForEachAsync(adbTvClientKeys, new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
             async (adbTvClientKey, localCancellationToken) =>
             {
                 await _adbTvClientFactory.TryRemoveClientAsync(adbTvClientKey, localCancellationToken);
             });
-
-        return true;
-    }
 
     private Models.Shared.DeviceState GetDeviceState(AdbTvClientHolder? adbTvClientHolder)
     {

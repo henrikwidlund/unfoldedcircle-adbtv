@@ -153,7 +153,28 @@ internal sealed partial class AdbWebSocketHandler(
     protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, CommonReq payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
         => ValueTask.CompletedTask;
 
-    protected override ValueTask OnUnsubscribeEventsAsync(UnsubscribeEventsMsg payload, string wsId, CancellationToken cancellationToken) => ValueTask.CompletedTask;
+    protected override async ValueTask OnUnsubscribeEventsAsync(UnsubscribeEventsMsg payload, string wsId, CancellationToken cancellationToken)
+    {
+        var clientKeys = new HashSet<AdbTvClientKey>();
+        if (!string.IsNullOrEmpty(payload.MsgData?.DeviceId))
+        {
+            var adbClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.DeviceId, payload.MsgData.DeviceId, cancellationToken);
+            if (adbClientKey is not null)
+                clientKeys.Add(adbClientKey.Value);
+        }
+
+        if (payload.MsgData?.EntityIds is { Length: > 0 })
+        {
+            foreach (string msgDataEntityId in payload.MsgData.EntityIds)
+            {
+                var adbClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.EntityId, msgDataEntityId, cancellationToken);
+                if (adbClientKey is not null)
+                    clientKeys.Add(adbClientKey.Value);
+            }
+        }
+
+        await TryDisconnectAdbClientsAsync(clientKeys, cancellationToken);
+    }
 
     protected override async ValueTask<EntityStateChanged[]> OnGetEntityStatesAsync(GetEntityStatesMsg payload, string wsId, CancellationToken cancellationToken)
     {
