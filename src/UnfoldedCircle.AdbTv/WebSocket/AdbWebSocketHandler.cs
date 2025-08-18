@@ -40,7 +40,7 @@ internal sealed partial class AdbWebSocketHandler(
         var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, IdentifierType.EntityId, cancellationTokenWrapper.RequestAborted);
         if (adbTvClientHolder is null)
         {
-            _logger.LogWarning("[{WSId}] WS: Could not find Oppo client for entity ID '{EntityId}'", wsId, payload.MsgData.EntityId);
+            _logger.LogWarning("[{WSId}] WS: Could not find Oppo client for entity ID '{EntityId}'", wsId, payload.MsgData.EntityId.GetBaseIdentifier());
             return EntityCommandResult.Failure;
         }
 

@@ -6,6 +6,7 @@ using AdvancedSharpAdbClient.DeviceCommands;
 
 using UnfoldedCircle.AdbTv.AdbTv;
 using UnfoldedCircle.AdbTv.Configuration;
+using UnfoldedCircle.Server.Extensions;
 
 namespace UnfoldedCircle.AdbTv.WebSocket;
 
@@ -24,13 +25,15 @@ internal sealed partial class AdbWebSocketHandler
             return null;
         }
 
+        var localIdentifier = identifier.GetNullableBaseIdentifier();
+
         var entity = identifierType switch
         {
-            IdentifierType.DeviceId => !string.IsNullOrWhiteSpace(identifier)
-                ? configuration.Entities.Find(x => string.Equals(x.DeviceId, identifier, StringComparison.Ordinal))
+            IdentifierType.DeviceId => !string.IsNullOrWhiteSpace(localIdentifier)
+                ? configuration.Entities.Find(x => string.Equals(x.DeviceId, localIdentifier, StringComparison.OrdinalIgnoreCase))
                 : configuration.Entities[0],
-            IdentifierType.EntityId => !string.IsNullOrWhiteSpace(identifier)
-                ? configuration.Entities.Find(x => string.Equals(x.EntityId, identifier, StringComparison.Ordinal))
+            IdentifierType.EntityId => !string.IsNullOrWhiteSpace(localIdentifier)
+                ? configuration.Entities.Find(x => string.Equals(x.EntityId, localIdentifier, StringComparison.OrdinalIgnoreCase))
             : null,
             _ => throw new ArgumentOutOfRangeException(nameof(identifierType), identifierType, null)
         };
@@ -55,13 +58,14 @@ internal sealed partial class AdbWebSocketHandler
             return null;
         }
 
-        if (!string.IsNullOrEmpty(deviceId))
+        var localDeviceId = deviceId.GetNullableBaseIdentifier();
+        if (!string.IsNullOrEmpty(localDeviceId))
         {
-            var entity = configuration.Entities.Find(x => string.Equals(x.DeviceId, deviceId, StringComparison.Ordinal));
+            var entity = configuration.Entities.Find(x => string.Equals(x.DeviceId, localDeviceId, StringComparison.OrdinalIgnoreCase));
             if (entity is not null)
                 return [new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port)];
 
-            _logger.LogInformation("[{WSId}] WS: No configuration found for device ID '{DeviceId}'", wsId, deviceId);
+            _logger.LogInformation("[{WSId}] WS: No configuration found for device ID '{DeviceId}'", wsId, localDeviceId);
             return null;
         }
 
@@ -90,7 +94,7 @@ internal sealed partial class AdbWebSocketHandler
 
         if (!string.IsNullOrEmpty(deviceId))
         {
-            var entity = configuration.Entities.Find(x => string.Equals(x.DeviceId, deviceId, StringComparison.Ordinal));
+            var entity = configuration.Entities.Find(x => string.Equals(x.DeviceId, deviceId, StringComparison.OrdinalIgnoreCase));
             if (entity is not null)
                 return [entity];
 
