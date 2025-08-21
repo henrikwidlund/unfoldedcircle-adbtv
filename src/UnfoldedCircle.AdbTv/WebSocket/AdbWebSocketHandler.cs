@@ -153,12 +153,12 @@ internal sealed partial class AdbWebSocketHandler(
     protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, CommonReq payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
         => ValueTask.CompletedTask;
 
-    protected override async ValueTask OnUnsubscribeEventsAsync(UnsubscribeEventsMsg payload, string wsId, CancellationToken cancellationToken)
+    protected override async ValueTask OnUnsubscribeEventsAsync(UnsubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
     {
         var clientKeys = new HashSet<AdbTvClientKey>();
         if (!string.IsNullOrEmpty(payload.MsgData?.DeviceId))
         {
-            var adbClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.DeviceId, payload.MsgData.DeviceId, cancellationToken);
+            var adbClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.DeviceId, payload.MsgData.DeviceId, cancellationTokenWrapper.ApplicationStopping);
             if (adbClientKey is not null)
                 clientKeys.Add(adbClientKey.Value);
         }
@@ -167,13 +167,13 @@ internal sealed partial class AdbWebSocketHandler(
         {
             foreach (string msgDataEntityId in payload.MsgData.EntityIds)
             {
-                var adbClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.EntityId, msgDataEntityId, cancellationToken);
+                var adbClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.EntityId, msgDataEntityId, cancellationTokenWrapper.ApplicationStopping);
                 if (adbClientKey is not null)
                     clientKeys.Add(adbClientKey.Value);
             }
         }
 
-        await TryDisconnectAdbClientsAsync(clientKeys, cancellationToken);
+        await TryDisconnectAdbClientsAsync(clientKeys, cancellationTokenWrapper.ApplicationStopping);
     }
 
     protected override async ValueTask<EntityStateChanged[]> OnGetEntityStatesAsync(GetEntityStatesMsg payload, string wsId, CancellationToken cancellationToken)
