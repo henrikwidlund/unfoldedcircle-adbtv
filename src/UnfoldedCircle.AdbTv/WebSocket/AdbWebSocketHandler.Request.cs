@@ -6,41 +6,12 @@ using UnfoldedCircle.Models.Events;
 using UnfoldedCircle.Models.Shared;
 using UnfoldedCircle.Models.Sync;
 using UnfoldedCircle.Server.Extensions;
-using UnfoldedCircle.Server.Response;
 
 namespace UnfoldedCircle.AdbTv.WebSocket;
 
 internal sealed partial class AdbWebSocketHandler
 {
     private static readonly ConcurrentDictionary<AdbTvClientKey, RemoteState> RemoteStates = new();
-
-    private async Task FinishSetupAsync(System.Net.WebSockets.WebSocket socket,
-        string wsId,
-        AdbConfigurationItem entity,
-        CommonReq payload,
-        CancellationToken cancellationToken)
-    {
-        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entity.EntityId, IdentifierType.EntityId, cancellationToken);
-
-        var isConnected = adbTvClientHolder is not null && adbTvClientHolder.Client.Device.State == AdvancedSharpAdbClient.Models.DeviceState.Online;
-        if (adbTvClientHolder is not null)
-            _logger.LogInformation("Setup of ADB TV: {ADBTv}", adbTvClientHolder.Client.Device.ToString());
-
-        await Task.WhenAll(
-            SendMessageAsync(socket,
-                ResponsePayloadHelpers.CreateCommonResponsePayload(payload),
-                wsId,
-                cancellationToken),
-            SendMessageAsync(socket,
-                ResponsePayloadHelpers.CreateDeviceSetupChangeResponsePayload(isConnected),
-                wsId,
-                cancellationToken),
-            SendMessageAsync(socket,
-                ResponsePayloadHelpers.CreateConnectEventResponsePayload(await GetDeviceStateAsync(adbTvClientHolder, cancellationToken)),
-                wsId,
-                cancellationToken)
-        );
-    }
 
     private static readonly RemoteOptions RemoteOptions = new()
     {

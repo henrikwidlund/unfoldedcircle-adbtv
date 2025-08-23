@@ -1,9 +1,9 @@
 using UnfoldedCircle.AdbTv.Configuration;
-using UnfoldedCircle.AdbTv.Json;
 using UnfoldedCircle.Models.Events;
 using UnfoldedCircle.Models.Shared;
 using UnfoldedCircle.Models.Sync;
 using UnfoldedCircle.Server.Extensions;
+using UnfoldedCircle.Server.Json;
 
 namespace UnfoldedCircle.AdbTv.Response;
 
@@ -31,7 +31,7 @@ internal static class AdbTvResponsePayloadHelpers
                     }
                 }
             }
-        }, AdbJsonSerializerContext.Default.DriverSetupChangeEvent);
+        }, UnfoldedCircleJsonSerializerContext.Default.DriverSetupChangeEvent);
 
     internal static IEnumerable<EntityStateChanged> GetEntityStates(IEnumerable<EntityIdDeviceId> entityIdDeviceIds)
     {
