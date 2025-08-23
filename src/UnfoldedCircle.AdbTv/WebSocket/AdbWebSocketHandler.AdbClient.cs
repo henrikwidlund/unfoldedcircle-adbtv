@@ -174,32 +174,5 @@ internal sealed partial class AdbWebSocketHandler
                 await _adbTvClientFactory.TryRemoveClientAsync(adbTvClientKey, localCancellationToken);
             });
 
-    private async Task<Models.Shared.DeviceState> GetDeviceStateAsync(AdbTvClientHolder? adbTvClientHolder, CancellationToken cancellationToken)
-    {
-        if (adbTvClientHolder is null)
-            return Models.Shared.DeviceState.Disconnected;
-        
-        try
-        {
-            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(9));
-            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken, cancellationTokenSource.Token);
-            while (!linkedCancellationTokenSource.IsCancellationRequested)
-            {
-                if (adbTvClientHolder.Client.Device.State == AdvancedSharpAdbClient.Models.DeviceState.Online)
-                    return Models.Shared.DeviceState.Connected;
-
-                await Task.Delay(TimeSpan.FromMilliseconds(100), linkedCancellationTokenSource.Token);
-            }
-
-            return Models.Shared.DeviceState.Disconnected;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Failed to get device state");
-            return Models.Shared.DeviceState.Error;
-        }
-    }
-    
     private sealed record AdbTvClientHolder(DeviceClient Client, in AdbTvClientKey ClientKey);
 }
