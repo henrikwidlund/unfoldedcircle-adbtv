@@ -40,7 +40,7 @@ internal sealed partial class AdbWebSocketHandler(
         var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, IdentifierType.EntityId, cancellationTokenWrapper.RequestAborted);
         if (adbTvClientHolder is null)
         {
-            _logger.LogWarning("[{WSId}] WS: Could not find Oppo client for entity ID '{EntityId}'", wsId, payload.MsgData.EntityId.GetBaseIdentifier());
+            _logger.LogWarning("[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'", wsId, payload.MsgData.EntityId.GetBaseIdentifier());
             return EntityCommandResult.Failure;
         }
 
@@ -96,7 +96,6 @@ internal sealed partial class AdbWebSocketHandler(
 
             RemoteStates[adbTvClientKey] = RemoteState.On;
             return EntityCommandResult.PowerOn;
-
         }
     }
 
@@ -134,8 +133,31 @@ internal sealed partial class AdbWebSocketHandler(
     protected override ValueTask OnExitStandbyAsync(ExitStandbyEvent payload, string wsId, CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
 
-    protected override Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string entityId, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
-        => Task.CompletedTask;
+    protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string entityId, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
+    {
+        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationTokenWrapper.RequestAborted);
+        if (adbTvClientHolder is null)
+        {
+            _logger.LogWarning("[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'", wsId, entityId);
+            await SendMessageAsync(socket,
+                ResponsePayloadHelpers.CreateStateChangedResponsePayload(
+                    new RemoteStateChangedEventMessageDataAttributes { State = RemoteState.Unknown },
+                    entityId,
+                    EntityType.Remote),
+                wsId,
+                cancellationTokenWrapper.RequestAborted);
+            return;
+        }
+
+        var remoteState = RemoteStates.GetValueOrDefault(adbTvClientHolder.ClientKey, RemoteState.Off);
+        await SendMessageAsync(socket,
+            ResponsePayloadHelpers.CreateStateChangedResponsePayload(
+                new RemoteStateChangedEventMessageDataAttributes { State = remoteState },
+                entityId,
+                EntityType.Remote),
+            wsId,
+            cancellationTokenWrapper.RequestAborted);
+    }
 
     protected override ValueTask<DeviceState> OnGetDeviceStateAsync(GetDeviceStateMsg payload, string wsId, CancellationToken cancellationToken)
             => ValueTask.FromResult(DeviceState.Connected);
@@ -184,62 +206,46 @@ internal sealed partial class AdbWebSocketHandler(
             : AdbTvResponsePayloadHelpers.GetEntityStates(entities.Select(static x => new EntityIdDeviceId(x.EntityId, x.DeviceId))).ToArray();
     }
 
-    protected override async ValueTask OnSetupDriverUserDataAsync(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
+    protected override ValueTask<SetupDriverUserDataResult> OnSetupDriverUserDataConfirmAsync(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
+        => ValueTask.FromResult(SetupDriverUserDataResult.Finalized);
+
+    protected override async ValueTask<SetupDriverUserDataResult> HandleEntityReconfigured(System.Net.WebSockets.WebSocket socket,
+        SetDriverUserDataMsg payload,
+        string wsId,
+        AdbConfigurationItem configurationItem,
+        CancellationToken cancellationToken)
     {
-        if (TryGetEntityIdFromSocket(wsId, out var entityId))
+        var deviceName = payload.MsgData.InputValues![AdbTvServerConstants.DeviceNameKey];
+        var ipAddress = payload.MsgData.InputValues[AdbTvServerConstants.IpAddressKey];
+        var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
+            ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
+            : 5555;
+
+        var newConfigurationItem = configurationItem with { EntityName = deviceName, Host = ipAddress, Port = port };
+        var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
+        configuration.Entities.Remove(configurationItem);
+        configuration.Entities.Add(newConfigurationItem);
+        await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
+
+        if (!await CheckClientApprovedAsync(wsId, configurationItem.EntityId, cancellationToken))
         {
-            var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
-            var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(entityId, StringComparison.OrdinalIgnoreCase));
-
-            if (entity is null)
-            {
-                _logger.LogError("Could not find configuration item with id: {EntityId}", entityId);
-                await SendMessageAsync(socket,
-                    ResponsePayloadHelpers.CreateValidationErrorResponsePayload(payload,
-                        new ValidationError
-                        {
-                            Code = "INV_ARGUMENT",
-                            Message = "Could not find specified entity"
-                        }),
-                    wsId,
-                    cancellationToken);
-                return;
-            }
-            if (!await CheckClientApprovedAsync(wsId, entity.EntityId, cancellationToken))
-            {
-                await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
-                    wsId, cancellationToken);
-                return;
-            }
-
-            await FinishSetupAsync(socket, wsId, entity, payload, cancellationToken);
-            return;
+            await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
+                wsId, cancellationToken);
+            return SetupDriverUserDataResult.Handled;
         }
 
-        _logger.LogError("Could not find entity for WSId: {EntityId}", wsId);
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateValidationErrorResponsePayload(payload,
-                new ValidationError
-                {
-                    Code = "INV_ARGUMENT",
-                    Message = "Could not find specified entity"
-                }),
-            wsId,
-            cancellationToken);
+        return await GetSetupResultForClient(wsId, configurationItem.EntityId, cancellationToken);
     }
 
-    protected override MediaPlayerEntityCommandMsgData<MediaPlayerCommandId>? DeserializeMediaPlayerCommandPayload(JsonDocument jsonDocument)
-        => null;
-
-    protected override async ValueTask<OnSetupResult?> OnSetupDriverAsync(SetupDriverMsg payload, string wsId, CancellationToken cancellationToken)
+    protected override async ValueTask<SetupDriverUserDataResult> HandleCreateNewEntity(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         var driverMetadata = await _configurationService.GetDriverMetadataAsync(cancellationToken);
-        var ipAddress = payload.MsgData.SetupData[AdbTvServerConstants.IpAddressKey];
-        var macAddress = payload.MsgData.SetupData[AdbTvServerConstants.MacAddressKey];
-        var deviceId = payload.MsgData.SetupData.GetValueOrNull(AdbTvServerConstants.DeviceIdKey, macAddress);
-        var deviceName = payload.MsgData.SetupData.GetValueOrNull(AdbTvServerConstants.DeviceNameKey, $"{driverMetadata.Name["en"]} {ipAddress}");
-        var port = payload.MsgData.SetupData.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
+        var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
+        var macAddress = payload.MsgData.InputValues[AdbTvServerConstants.MacAddressKey];
+        var deviceId = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.DeviceIdKey, macAddress);
+        var deviceName = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.DeviceNameKey, $"{driverMetadata.Name["en"]} {ipAddress}");
+        var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
             : 5555;
 
@@ -276,19 +282,131 @@ internal sealed partial class AdbWebSocketHandler(
 
         if (!await CheckClientApprovedAsync(wsId, entity.EntityId, cancellationToken))
         {
-            return new OnSetupResult(entity, SetupDriverResult.UserInputRequired, new RequireUserAction
-            {
-                Confirmation = new ConfirmationPage
-                {
-                    Title = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                    {
-                        ["en"] = "Confirm ADB Access on your TV"
-                    }
-                }
-            });
+            await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
+                wsId, cancellationToken);
+            return SetupDriverUserDataResult.Handled;
         }
 
-        return new OnSetupResult(entity, SetupDriverResult.Finalized);
+        return await GetSetupResultForClient(wsId, entity.EntityId, cancellationToken);
+    }
+
+    private async ValueTask<SetupDriverUserDataResult> GetSetupResultForClient(string wsId, string entityId, CancellationToken cancellationToken)
+    {
+        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationToken);
+        return adbTvClientHolder is not null && adbTvClientHolder.Client.Device.State == AdvancedSharpAdbClient.Models.DeviceState.Online
+            ? SetupDriverUserDataResult.Finalized
+            : SetupDriverUserDataResult.Error;
+    }
+
+    protected override MediaPlayerEntityCommandMsgData<MediaPlayerCommandId>? DeserializeMediaPlayerCommandPayload(JsonDocument jsonDocument)
+        => null;
+
+    protected override SettingsPage CreateNewEntitySettingsPage()
+    {
+        return new SettingsPage
+        {
+            Title = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Add a new device" },
+            Settings = [
+                new Setting
+                {
+                    Id = AdbTvServerConstants.DeviceNameKey,
+                    Field = new SettingTypeText
+                    {
+                        Text = new ValueRegex()
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the name of the TV (optional)" }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.MacAddressKey,
+                    Field = new SettingTypeText
+                    {
+                        Text = new ValueRegex
+                        {
+                            RegEx = AdbTvServerConstants.MacAddressRegex
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the MAC address of the TV (mandatory)" }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.IpAddressKey,
+                    Field = new SettingTypeText
+                    {
+                        Text = new ValueRegex
+                        {
+                            RegEx = AdbTvServerConstants.IpAddressRegex
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the IP address of the TV (mandatory)" }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.PortKey,
+                    Field = new SettingTypeNumber
+                    {
+                        Number = new SettingTypeNumberInner
+                        {
+                            Value = 5555,
+                            Min = 1,
+                            Max = 65535,
+                            Decimals = 0
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the ADB port of the TV (mandatory)" }
+                }
+            ]
+        };
+    }
+
+    protected override SettingsPage CreateReconfigureEntitySettingsPage(AdbConfigurationItem adbConfigurationItem)
+    {
+        return new SettingsPage
+        {
+            Title = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Reconfigure device" },
+            Settings = [
+                new Setting
+                {
+                    Id = AdbTvServerConstants.DeviceNameKey,
+                    Field = new SettingTypeText
+                    {
+                        Text = new ValueRegex
+                        {
+                            Value = adbConfigurationItem.EntityName
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the name of the TV (optional)" }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.IpAddressKey,
+                    Field = new SettingTypeText
+                    {
+                        Text = new ValueRegex
+                        {
+                            RegEx = AdbTvServerConstants.IpAddressRegex,
+                            Value = adbConfigurationItem.Host
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the IP address of the TV (mandatory)" }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.PortKey,
+                    Field = new SettingTypeNumber
+                    {
+                        Number = new SettingTypeNumberInner
+                        {
+                            Value = adbConfigurationItem.Port,
+                            Min = 1,
+                            Max = 65535,
+                            Decimals = 0
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the ADB port of the TV (mandatory)" }
+                }
+            ]
+        };
     }
 
     protected override FrozenSet<EntityType> SupportedEntityTypes { get; } = [EntityType.Remote];
