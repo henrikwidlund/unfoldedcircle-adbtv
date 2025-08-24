@@ -3,6 +3,7 @@ using System.Globalization;
 
 using AdvancedSharpAdbClient;
 using AdvancedSharpAdbClient.DeviceCommands;
+using AdvancedSharpAdbClient.Models;
 
 namespace UnfoldedCircle.AdbTv.AdbTv;
 
@@ -17,8 +18,11 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         if (_clients.TryGetValue(adbTvClientKey, out var client))
         {
             var connectResult = await client.AdbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken);
-            if (connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase))
+            if (connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) && client.Device.State == DeviceState.Online)
                 return client;
+
+            _logger.LogDebug("Client {ClientKey} is not connected or not online. Connection result was '{ConnectionResult}', device state was {deviceState}. Removing it.",
+                adbTvClientKey, connectResult, client.Device.State.ToString());
         }
 
         await _semaphoreSlim.WaitAsync(cancellationToken);
@@ -35,6 +39,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 x.Serial.Equals($"{adbTvClientKey.IpAddress}:{adbTvClientKey.Port.ToString(NumberFormatInfo.InvariantInfo)}", StringComparison.InvariantCulture));
             var deviceClient = deviceData.CreateDeviceClient();
             _clients[adbTvClientKey] = deviceClient;
+            _logger.LogDebug("Created new client {ClientKey}. Device state is {state}.", adbTvClientKey, deviceClient.Device.State.ToString());
             return deviceClient;
         }
         catch (Exception e)
