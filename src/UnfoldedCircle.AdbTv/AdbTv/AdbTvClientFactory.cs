@@ -15,7 +15,11 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     public async ValueTask<DeviceClient?> TryGetOrCreateClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
         if (_clients.TryGetValue(adbTvClientKey, out var client))
-            return client;
+        {
+            var connectResult = await client.AdbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken);
+            if (connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase))
+                return client;
+        }
 
         await _semaphoreSlim.WaitAsync(cancellationToken);
         try
