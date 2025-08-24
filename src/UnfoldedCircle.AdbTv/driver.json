@@ -16,9 +16,22 @@
   },
   "setup_data_schema": {
     "title": {
-      "en": "Setup Flow"
+      "en": "Setup Process"
     },
     "settings": [
+      {
+        "id": "disclaimer_0",
+        "field": {
+          "label": {
+            "value": {
+              "en": "You will be guided through the setup process to connect to your ADB device."
+            }
+          }
+        },
+        "label": {
+          "en": ""
+        }
+      },
       {
         "id": "disclaimer_1",
         "field": {
