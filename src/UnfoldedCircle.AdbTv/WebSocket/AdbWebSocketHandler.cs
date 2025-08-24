@@ -215,13 +215,12 @@ internal sealed partial class AdbWebSocketHandler(
         AdbConfigurationItem configurationItem,
         CancellationToken cancellationToken)
     {
-        var entityName = payload.MsgData.InputValues![AdbTvServerConstants.EntityName];
-        var ipAddress = payload.MsgData.InputValues[AdbTvServerConstants.IpAddressKey];
+        var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
             : 5555;
 
-        var newConfigurationItem = configurationItem with { EntityName = entityName, Host = ipAddress, Port = port };
+        var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port };
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         configuration.Entities.Remove(configurationItem);
         configuration.Entities.Add(newConfigurationItem);
