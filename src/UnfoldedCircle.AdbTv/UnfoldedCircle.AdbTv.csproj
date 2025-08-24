@@ -51,7 +51,7 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.1-pre28" />
+        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.1-pre29" />
     </ItemGroup>
 
 </Project>
