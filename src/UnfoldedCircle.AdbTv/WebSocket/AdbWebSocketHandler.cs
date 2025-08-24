@@ -215,13 +215,13 @@ internal sealed partial class AdbWebSocketHandler(
         AdbConfigurationItem configurationItem,
         CancellationToken cancellationToken)
     {
-        var deviceName = payload.MsgData.InputValues![AdbTvServerConstants.DeviceNameKey];
+        var entityName = payload.MsgData.InputValues![AdbTvServerConstants.EntityName];
         var ipAddress = payload.MsgData.InputValues[AdbTvServerConstants.IpAddressKey];
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
             : 5555;
 
-        var newConfigurationItem = configurationItem with { EntityName = deviceName, Host = ipAddress, Port = port };
+        var newConfigurationItem = configurationItem with { EntityName = entityName, Host = ipAddress, Port = port };
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         configuration.Entities.Remove(configurationItem);
         configuration.Entities.Add(newConfigurationItem);
@@ -244,7 +244,7 @@ internal sealed partial class AdbWebSocketHandler(
         var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
         var macAddress = payload.MsgData.InputValues[AdbTvServerConstants.MacAddressKey];
         var deviceId = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.DeviceIdKey, macAddress);
-        var deviceName = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.DeviceNameKey, $"{driverMetadata.Name["en"]} {ipAddress}");
+        var entityName = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.EntityName, $"{driverMetadata.Name["en"]} {ipAddress}");
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
             : 5555;
@@ -259,7 +259,7 @@ internal sealed partial class AdbWebSocketHandler(
                 MacAddress = macAddress,
                 Port = port,
                 DeviceId = deviceId,
-                EntityName = deviceName,
+                EntityName = entityName,
                 EntityId = macAddress
             };
         }
@@ -272,7 +272,7 @@ internal sealed partial class AdbWebSocketHandler(
                 Host = ipAddress,
                 MacAddress = macAddress,
                 Port = port,
-                EntityName = deviceName
+                EntityName = entityName
             };
         }
 
@@ -303,13 +303,29 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override SettingsPage CreateNewEntitySettingsPage()
     {
+        return CreateSettingsPage(null);
+    }
+
+    protected override SettingsPage CreateReconfigureEntitySettingsPage(AdbConfigurationItem adbConfigurationItem)
+    {
+        var settingsPage = CreateSettingsPage(adbConfigurationItem);
+        return settingsPage with
+        {
+            Settings = settingsPage.Settings.Where(static x =>
+                !x.Id.Equals(AdbTvServerConstants.MacAddressKey, StringComparison.OrdinalIgnoreCase) &&
+                !x.Id.Equals(AdbTvServerConstants.EntityName, StringComparison.OrdinalIgnoreCase)).ToArray()
+        };
+    }
+
+    private static SettingsPage CreateSettingsPage(AdbConfigurationItem? configurationItem)
+    {
         return new SettingsPage
         {
-            Title = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Add a new device" },
+            Title = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = configurationItem is null ? "Add a new device" : "Reconfigure device" },
             Settings = [
                 new Setting
                 {
-                    Id = AdbTvServerConstants.DeviceNameKey,
+                    Id = AdbTvServerConstants.EntityName,
                     Field = new SettingTypeText
                     {
                         Text = new ValueRegex()
@@ -335,57 +351,8 @@ internal sealed partial class AdbWebSocketHandler(
                     {
                         Text = new ValueRegex
                         {
-                            RegEx = AdbTvServerConstants.IpAddressRegex
-                        }
-                    },
-                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the IP address of the TV (mandatory)" }
-                },
-                new Setting
-                {
-                    Id = AdbTvServerConstants.PortKey,
-                    Field = new SettingTypeNumber
-                    {
-                        Number = new SettingTypeNumberInner
-                        {
-                            Value = 5555,
-                            Min = 1,
-                            Max = 65535,
-                            Decimals = 0
-                        }
-                    },
-                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the ADB port of the TV (mandatory)" }
-                }
-            ]
-        };
-    }
-
-    protected override SettingsPage CreateReconfigureEntitySettingsPage(AdbConfigurationItem adbConfigurationItem)
-    {
-        return new SettingsPage
-        {
-            Title = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Reconfigure device" },
-            Settings = [
-                new Setting
-                {
-                    Id = AdbTvServerConstants.DeviceNameKey,
-                    Field = new SettingTypeText
-                    {
-                        Text = new ValueRegex
-                        {
-                            Value = adbConfigurationItem.EntityName
-                        }
-                    },
-                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the name of the TV (optional)" }
-                },
-                new Setting
-                {
-                    Id = AdbTvServerConstants.IpAddressKey,
-                    Field = new SettingTypeText
-                    {
-                        Text = new ValueRegex
-                        {
                             RegEx = AdbTvServerConstants.IpAddressRegex,
-                            Value = adbConfigurationItem.Host
+                            Value = configurationItem?.Host
                         }
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the IP address of the TV (mandatory)" }
@@ -397,7 +364,7 @@ internal sealed partial class AdbWebSocketHandler(
                     {
                         Number = new SettingTypeNumberInner
                         {
-                            Value = adbConfigurationItem.Port,
+                            Value = configurationItem?.Port ?? 5555,
                             Min = 1,
                             Max = 65535,
                             Decimals = 0
