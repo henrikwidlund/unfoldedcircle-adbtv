@@ -137,7 +137,7 @@ internal sealed partial class AdbWebSocketHandler
 
         var adbClient = new AdbClient();
         string connectResult;
-        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(9));
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(7));
         using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
             cancellationTokenSource.Token);
         do
