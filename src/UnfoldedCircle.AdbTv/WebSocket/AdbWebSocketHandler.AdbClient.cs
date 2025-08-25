@@ -131,24 +131,32 @@ internal sealed partial class AdbWebSocketHandler
         string entityId,
         CancellationToken cancellationToken)
     {
-        var adbTvClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.EntityId, entityId, cancellationToken);
-        if (adbTvClientKey is null)
-            return false;
-
-        var adbClient = new AdbClient();
-        string connectResult;
-        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(7));
-        using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
-            cancellationTokenSource.Token);
-        do
+        try
         {
-            connectResult = await adbClient.ConnectAsync(adbTvClientKey.Value.IpAddress, adbTvClientKey.Value.Port, linkedCancellationTokenSource.Token);
-        } while (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase));
+            var adbTvClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.EntityId, entityId, cancellationToken);
+            if (adbTvClientKey is null)
+                return false;
 
-        // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-        var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
-            x.Serial.Equals($"{adbTvClientKey.Value.IpAddress}:{adbTvClientKey.Value.Port.ToString(NumberFormatInfo.InvariantInfo)}", StringComparison.InvariantCulture));
-        return deviceData is { State: AdvancedSharpAdbClient.Models.DeviceState.Online };
+            var adbClient = new AdbClient();
+            string connectResult;
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(7));
+            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
+                cancellationTokenSource.Token);
+            do
+            {
+                connectResult = await adbClient.ConnectAsync(adbTvClientKey.Value.IpAddress, adbTvClientKey.Value.Port, linkedCancellationTokenSource.Token);
+            } while (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase));
+
+            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+            var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
+                x.Serial.Equals($"{adbTvClientKey.Value.IpAddress}:{adbTvClientKey.Value.Port.ToString(NumberFormatInfo.InvariantInfo)}", StringComparison.InvariantCulture));
+            return deviceData is { State: AdvancedSharpAdbClient.Models.DeviceState.Online };
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[{WSId}] WS: Failed to check if client is approved for entity ID '{EntityId}'", wsId, entityId);
+            return false;
+        }
     }
 
     private async ValueTask<bool> TryDisconnectAdbClientsAsync(
