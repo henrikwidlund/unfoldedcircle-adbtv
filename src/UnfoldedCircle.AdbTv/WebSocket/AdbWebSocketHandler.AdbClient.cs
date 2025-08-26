@@ -110,21 +110,32 @@ internal sealed partial class AdbWebSocketHandler
         IdentifierType identifierType,
         CancellationToken cancellationToken)
     {
-        var adbTvClientKey = await TryGetAdbTvClientKeyAsync(wsId, identifierType, identifier, cancellationToken);
-        if (adbTvClientKey is null)
+        try
+        {
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cancellationTokenSource.Token);
+            var adbTvClientKey = await TryGetAdbTvClientKeyAsync(wsId, identifierType, identifier, linkedCancellationTokenSource.Token);
+            if (adbTvClientKey is null)
+                return null;
+
+            var deviceClient = await _adbTvClientFactory.TryGetOrCreateClientAsync(adbTvClientKey.Value, linkedCancellationTokenSource.Token);
+            if (deviceClient is null)
+                return null;
+
+            if (deviceClient.Device.State == AdvancedSharpAdbClient.Models.DeviceState.Online)
+                return new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
+
+            await _adbTvClientFactory.TryRemoveClientAsync(adbTvClientKey.Value, linkedCancellationTokenSource.Token);
+            deviceClient = await _adbTvClientFactory.TryGetOrCreateClientAsync(adbTvClientKey.Value, linkedCancellationTokenSource.Token);
+
+            return deviceClient is null ? null : new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}' with type {Type}",
+                wsId, identifier, identifierType.ToString());
             return null;
-
-        var deviceClient = await _adbTvClientFactory.TryGetOrCreateClientAsync(adbTvClientKey.Value, cancellationToken);
-        if (deviceClient is null)
-            return null;
-
-        if (deviceClient.Device.State == AdvancedSharpAdbClient.Models.DeviceState.Online)
-            return new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
-
-        await _adbTvClientFactory.TryRemoveClientAsync(adbTvClientKey.Value, cancellationToken);
-        deviceClient = await _adbTvClientFactory.TryGetOrCreateClientAsync(adbTvClientKey.Value, cancellationToken);
-
-        return deviceClient is null ? null : new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
+        }
     }
 
     private async Task<bool> CheckClientApprovedAsync(string wsId,
