@@ -17,7 +17,7 @@ public sealed class AdbBackgroundService : IHostedService
 
     private async Task KeepAdbServerRunning()
     {
-        using var periodicTimer = new PeriodicTimer(TimeSpan.FromMinutes(5));
+        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(5));
         while (!_keepAliveCancellationTokenSource.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(_keepAliveCancellationTokenSource.Token))
             await StartOrStop(true, _keepAliveCancellationTokenSource.Token);
     }
