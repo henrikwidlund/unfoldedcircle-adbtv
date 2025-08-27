@@ -174,7 +174,8 @@ internal sealed partial class AdbWebSocketHandler(
         return GetAvailableEntities(entities, payload).ToArray();
     }
 
-    protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, CommonReq payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
+    protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, CommonReq payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
+        CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
 
     protected override async ValueTask OnUnsubscribeEventsAsync(UnsubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
