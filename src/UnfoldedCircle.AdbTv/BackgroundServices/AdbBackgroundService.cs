@@ -1,8 +1,8 @@
-using AdvancedSharpAdbClient;
+using System.Diagnostics;
 
 namespace UnfoldedCircle.AdbTv.BackgroundServices;
 
-public sealed class AdbBackgroundService : IHostedService
+public sealed class AdbBackgroundService : IHostedService, IDisposable
 {
     private readonly CancellationTokenSource _keepAliveCancellationTokenSource = new();
 
@@ -29,10 +29,22 @@ public sealed class AdbBackgroundService : IHostedService
         await StartOrStop(false, linkedCancellationToken.Token);
     }
 
-    private static Task StartOrStop(bool start, CancellationToken cancellationToken)
+    private static async Task StartOrStop(bool start, CancellationToken cancellationToken)
     {
-        return start
-            ? AdbServer.Instance.StartServerAsync("adb",false, cancellationToken)
-            : AdbServer.Instance.StopServerAsync(cancellationToken);
+        using var adbProcess = new Process();
+        adbProcess.StartInfo = new ProcessStartInfo
+        {
+            FileName = "adb",
+            Arguments = start ? "start-server" : "kill-server",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        adbProcess.Start();
+
+        await adbProcess.WaitForExitAsync(cancellationToken);
     }
+
+    public void Dispose() => _keepAliveCancellationTokenSource.Dispose();
 }
