@@ -34,10 +34,11 @@ internal sealed partial class AdbWebSocketHandler(
         RemoteEntityCommandMsgData payload,
         string command,
         string wsId,
-        CancellationTokenWrapper cancellationTokenWrapper)
+        CancellationTokenWrapper cancellationTokenWrapper,
+        CancellationToken commandCancellationToken)
     {
         (string commandToSend, CommandType commandType) = GetMappedCommand(command);
-        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, IdentifierType.EntityId, cancellationTokenWrapper.RequestAborted);
+        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, IdentifierType.EntityId, commandCancellationToken);
         if (adbTvClientHolder is null)
         {
             _logger.LogWarning("[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'", wsId, payload.MsgData.EntityId.GetBaseIdentifier());
@@ -50,7 +51,7 @@ internal sealed partial class AdbWebSocketHandler(
                 if (command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase))
                     await WakeOnLan.SendWakeOnLanAsync(IPAddress.Parse(adbTvClientHolder.ClientKey.IpAddress), adbTvClientHolder.ClientKey.MacAddress);
 
-                await adbTvClientHolder.Client.SendKeyEventAsync(commandToSend, cancellationTokenWrapper.ApplicationStopping);
+                await adbTvClientHolder.Client.SendKeyEventAsync(commandToSend, commandCancellationToken);
 
                 var result = commandType switch
                 {
@@ -69,12 +70,12 @@ internal sealed partial class AdbWebSocketHandler(
             case CommandType.Raw:
                 await adbTvClientHolder.Client.AdbClient.ExecuteRemoteCommandAsync(commandToSend,
                     adbTvClientHolder.Client.Device,
-                    cancellationTokenWrapper.ApplicationStopping);
+                    commandCancellationToken);
                 return EntityCommandResult.Other;
             case CommandType.App:
                 await adbTvClientHolder.Client.AdbClient.StartAppAsync(adbTvClientHolder.Client.Device,
                     commandToSend,
-                    cancellationTokenWrapper.ApplicationStopping);
+                    commandCancellationToken);
                 return EntityCommandResult.Other;
             case CommandType.Unknown:
             default:
@@ -105,7 +106,8 @@ internal sealed partial class AdbWebSocketHandler(
     protected override ValueTask<EntityCommandResult> OnMediaPlayerCommandAsync(System.Net.WebSockets.WebSocket socket,
         MediaPlayerEntityCommandMsgData<MediaPlayerCommandId> payload,
         string wsId,
-        CancellationTokenWrapper cancellationTokenWrapper)
+        CancellationTokenWrapper cancellationTokenWrapper,
+        CancellationToken commandCancellationToken)
         => ValueTask.FromResult(EntityCommandResult.Failure);
 
     protected override async ValueTask OnConnectAsync(ConnectEvent payload, string wsId, CancellationToken cancellationToken)
@@ -222,6 +224,10 @@ internal sealed partial class AdbWebSocketHandler(
 
         var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port };
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
+        var maxWaitTime = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey, out var maxWaitTimeValue)
+            ? double.Parse(maxWaitTimeValue, NumberFormatInfo.InvariantInfo)
+            : 9.5;
+        configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
         configuration.Entities.Remove(configurationItem);
         configuration.Entities.Add(newConfigurationItem);
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
@@ -247,6 +253,10 @@ internal sealed partial class AdbWebSocketHandler(
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
             : 5555;
+        var maxWaitTime = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey, out var maxWaitTimeValue)
+            ? double.Parse(maxWaitTimeValue, NumberFormatInfo.InvariantInfo)
+            : 9.5;
+        configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
 
         var entity = configuration.Entities.Find(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
         if (entity is null)
@@ -300,14 +310,16 @@ internal sealed partial class AdbWebSocketHandler(
     protected override MediaPlayerEntityCommandMsgData<MediaPlayerCommandId>? DeserializeMediaPlayerCommandPayload(JsonDocument jsonDocument)
         => null;
 
-    protected override SettingsPage CreateNewEntitySettingsPage()
+    protected override async ValueTask<SettingsPage> CreateNewEntitySettingsPageAsync(CancellationToken cancellationToken)
     {
-        return CreateSettingsPage(null);
+        var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
+        return CreateSettingsPage(null, configuration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5);
     }
 
-    protected override SettingsPage CreateReconfigureEntitySettingsPage(AdbConfigurationItem adbConfigurationItem)
+    protected override async ValueTask<SettingsPage> CreateReconfigureEntitySettingsPageAsync(AdbConfigurationItem adbConfigurationItem, CancellationToken cancellationToken)
     {
-        var settingsPage = CreateSettingsPage(adbConfigurationItem);
+        var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
+        var settingsPage = CreateSettingsPage(adbConfigurationItem, configuration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5);
         return settingsPage with
         {
             Settings = settingsPage.Settings.Where(static x =>
@@ -316,7 +328,7 @@ internal sealed partial class AdbWebSocketHandler(
         };
     }
 
-    private static SettingsPage CreateSettingsPage(AdbConfigurationItem? configurationItem)
+    private static SettingsPage CreateSettingsPage(AdbConfigurationItem? configurationItem, double maxMessageHandlingWaitTimeInSeconds)
     {
         return new SettingsPage
         {
@@ -367,6 +379,21 @@ internal sealed partial class AdbWebSocketHandler(
                             Min = 1,
                             Max = 65535,
                             Decimals = 0
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the ADB port of the TV (mandatory)" }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey,
+                    Field = new SettingTypeNumber
+                    {
+                        Number = new SettingTypeNumberInner
+                        {
+                            Value = maxMessageHandlingWaitTimeInSeconds,
+                            Min = 0.1,
+                            Max = 9.5,
+                            Decimals = 1
                         }
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the ADB port of the TV (mandatory)" }
