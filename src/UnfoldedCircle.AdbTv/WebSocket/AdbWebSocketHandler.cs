@@ -41,7 +41,7 @@ internal sealed partial class AdbWebSocketHandler(
         var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, IdentifierType.EntityId, commandCancellationToken);
         if (adbTvClientHolder is null)
         {
-            _logger.LogWarning("[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'", wsId, payload.MsgData.EntityId.GetBaseIdentifier());
+            _logger.LogWarning("[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'", wsId, payload.MsgData.EntityId.AsMemory().GetBaseIdentifier());
             return EntityCommandResult.Failure;
         }
 

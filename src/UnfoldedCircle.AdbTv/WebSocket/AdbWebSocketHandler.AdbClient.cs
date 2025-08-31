@@ -24,16 +24,17 @@ internal sealed partial class AdbWebSocketHandler
             return null;
         }
 
-        var localIdentifier = identifier.GetNullableBaseIdentifier();
+        var localIdentifier = identifier?.AsMemory();
+        localIdentifier = localIdentifier.GetNullableBaseIdentifier();
 
         var entity = identifierType switch
         {
-            IdentifierType.DeviceId => !string.IsNullOrWhiteSpace(localIdentifier)
-                ? configuration.Entities.Find(x => string.Equals(x.DeviceId, localIdentifier, StringComparison.OrdinalIgnoreCase))
+            IdentifierType.DeviceId => localIdentifier is { Span.IsEmpty: false }
+                ? configuration.Entities.Find(x => x.DeviceId?.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) == true)
                 : configuration.Entities[0],
-            IdentifierType.EntityId => !string.IsNullOrWhiteSpace(localIdentifier)
-                ? configuration.Entities.Find(x => string.Equals(x.EntityId, localIdentifier, StringComparison.OrdinalIgnoreCase))
-            : null,
+            IdentifierType.EntityId => localIdentifier is { Span.IsEmpty: false }
+                ? configuration.Entities.Find(x => x.DeviceId?.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) == true)
+                : null,
             _ => throw new ArgumentOutOfRangeException(nameof(identifierType), identifierType, null)
         };
 
@@ -57,10 +58,10 @@ internal sealed partial class AdbWebSocketHandler
             return null;
         }
 
-        var localDeviceId = deviceId.GetNullableBaseIdentifier();
-        if (!string.IsNullOrEmpty(localDeviceId))
+        if (!string.IsNullOrEmpty(deviceId))
         {
-            var entity = configuration.Entities.Find(x => string.Equals(x.DeviceId, localDeviceId, StringComparison.OrdinalIgnoreCase));
+            var localDeviceId = deviceId.AsMemory().GetBaseIdentifier();
+            var entity = configuration.Entities.Find(x => x.DeviceId?.AsMemory().Span.Equals(localDeviceId.Span, StringComparison.OrdinalIgnoreCase) == true);
             if (entity is not null)
                 return [new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port)];
 
