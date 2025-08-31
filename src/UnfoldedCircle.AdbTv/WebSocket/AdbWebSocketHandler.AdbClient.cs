@@ -24,8 +24,7 @@ internal sealed partial class AdbWebSocketHandler
             return null;
         }
 
-        var localIdentifier = identifier?.AsMemory();
-        localIdentifier = localIdentifier.GetNullableBaseIdentifier();
+        var localIdentifier = identifier?.AsMemory().GetBaseIdentifier();
 
         var entity = identifierType switch
         {
@@ -33,7 +32,7 @@ internal sealed partial class AdbWebSocketHandler
                 ? configuration.Entities.Find(x => x.DeviceId?.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) == true)
                 : configuration.Entities[0],
             IdentifierType.EntityId => localIdentifier is { Span.IsEmpty: false }
-                ? configuration.Entities.Find(x => x.DeviceId?.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) == true)
+                ? configuration.Entities.Find(x => x.EntityId.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) == true)
                 : null,
             _ => throw new ArgumentOutOfRangeException(nameof(identifierType), identifierType, null)
         };
