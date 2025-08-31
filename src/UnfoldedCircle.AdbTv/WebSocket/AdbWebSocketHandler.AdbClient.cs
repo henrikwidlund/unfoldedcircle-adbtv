@@ -29,10 +29,10 @@ internal sealed partial class AdbWebSocketHandler
         var entity = identifierType switch
         {
             IdentifierType.DeviceId => localIdentifier is { Span.IsEmpty: false }
-                ? configuration.Entities.Find(x => x.DeviceId?.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) == true)
+                ? configuration.Entities.Find(x => x.DeviceId?.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) is true)
                 : configuration.Entities[0],
             IdentifierType.EntityId => localIdentifier is { Span.IsEmpty: false }
-                ? configuration.Entities.Find(x => x.EntityId.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) == true)
+                ? configuration.Entities.Find(x => x.EntityId.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase))
                 : null,
             _ => throw new ArgumentOutOfRangeException(nameof(identifierType), identifierType, null)
         };
