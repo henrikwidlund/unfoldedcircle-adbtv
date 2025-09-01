@@ -4,6 +4,7 @@ using System.Globalization;
 
 using AdvancedSharpAdbClient;
 using AdvancedSharpAdbClient.DeviceCommands;
+using AdvancedSharpAdbClient.Exceptions;
 using AdvancedSharpAdbClient.Models;
 
 namespace UnfoldedCircle.AdbTv.AdbTv;
@@ -22,7 +23,17 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             {
                 var connectResult = await client.AdbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken);
                 if (connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) && client.Device.State == DeviceState.Online)
-                    return client;
+                {
+                    try
+                    {
+                        await client.AdbClient.ExecuteRemoteCommandAsync("true", client.Device, cancellationToken);
+                        return client;
+                    }
+                    catch (AdbException e)
+                    {
+                        _logger.LogInformation(e, "Client {ClientKey} failed to execute health check command.", adbTvClientKey);
+                    }
+                }
 
                 _logger.LogDebug("Client {ClientKey} is not connected or not online. Connection result was '{ConnectionResult}', device state was {deviceState}. Removing it.",
                     adbTvClientKey, connectResult, client.Device.State.ToString());
