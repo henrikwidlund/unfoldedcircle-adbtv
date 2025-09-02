@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Diagnostics;
 using System.Globalization;
 
@@ -45,17 +46,26 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 var startTime = Stopwatch.GetTimestamp();
                 var adbClient = new AdbClient();
                 string connectResult;
+                var timeout = TimeSpan.FromSeconds(5);
                 do
                 {
                     connectResult = await adbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken);
                     if (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase))
                         await Task.Delay(100, cancellationToken);
-                } while (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase)
-                         && (Stopwatch.GetElapsedTime(startTime) < TimeSpan.FromSeconds(5)));
+                } while (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) &&
+                         Stopwatch.GetElapsedTime(startTime) < timeout &&
+                         !cancellationToken.IsCancellationRequested);
 
                 var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
                     x.Serial.Equals($"{adbTvClientKey.IpAddress}:{adbTvClientKey.Port.ToString(NumberFormatInfo.InvariantInfo)}", StringComparison.InvariantCulture));
                 var deviceClient = deviceData.CreateDeviceClient();
+
+                startTime = Stopwatch.GetTimestamp();
+                while (RetryStates.Contains(deviceClient.Device.State) &&
+                       Stopwatch.GetElapsedTime(startTime) < timeout &&
+                       !cancellationToken.IsCancellationRequested)
+                    await Task.Delay(100, cancellationToken);
+
                 if (deviceClient.Device.State != DeviceState.Online)
                 {
                     _logger.LogWarning("Device {ClientKey} is not online. Connection result was '{ConnectionResult}', device state was {deviceState}.",
@@ -82,6 +92,14 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             return null;
         }
     }
+
+    private static readonly FrozenSet<DeviceState> RetryStates =
+    [
+        DeviceState.Connecting,
+        DeviceState.Offline,
+        DeviceState.Unauthorized,
+        DeviceState.Unknown
+    ];
 
     public async ValueTask TryRemoveClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
