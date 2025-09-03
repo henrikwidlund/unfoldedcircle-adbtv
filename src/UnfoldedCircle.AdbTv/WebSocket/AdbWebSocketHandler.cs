@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Net;
 
 using AdvancedSharpAdbClient.DeviceCommands;
+using AdvancedSharpAdbClient.Exceptions;
 
 using Microsoft.Extensions.Options;
 
@@ -38,49 +39,101 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationToken commandCancellationToken)
     {
         (string commandToSend, CommandType commandType) = GetMappedCommand(command);
-        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, IdentifierType.EntityId, commandCancellationToken);
-        if (adbTvClientHolder is null)
+        return await HandleCommandAsync(wsId, payload.MsgData.EntityId, command, commandType, commandToSend, true, commandCancellationToken);
+    }
+
+    private async ValueTask<EntityCommandResult> HandleCommandAsync(
+        string wsId,
+        string entityId,
+        string command,
+        CommandType commandType,
+        string commandToSend,
+        bool firstAttempt,
+        CancellationToken commandCancellationToken)
+    {
+        try
         {
-            _logger.LogWarning("[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'", wsId, payload.MsgData.EntityId.AsMemory().GetBaseIdentifier());
+            var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, commandCancellationToken);
+            if (adbTvClientHolder is null)
+            {
+                if (firstAttempt)
+                {
+                    _logger.LogInformation("[{WSId}] WS: Trying to refresh ADB client for entity ID '{EntityId}' and command '{Command}'",
+                        wsId,
+                        entityId.AsMemory().GetBaseIdentifier(),
+                        command);
+                    await Task.Delay(100, commandCancellationToken);
+                    return await HandleCommandAsync(wsId, entityId, command, commandType, commandToSend, false, commandCancellationToken);
+                }
+
+                _logger.LogWarning("[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'", wsId, entityId.AsMemory().GetBaseIdentifier());
+                return EntityCommandResult.Failure;
+            }
+
+            switch (commandType)
+            {
+                case CommandType.KeyEvent:
+                    if (command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase))
+                        await WakeOnLan.SendWakeOnLanAsync(IPAddress.Parse(adbTvClientHolder.ClientKey.IpAddress), adbTvClientHolder.ClientKey.MacAddress);
+
+                    await adbTvClientHolder.Client.SendKeyEventAsync(commandToSend, commandCancellationToken);
+
+                    var result = commandType switch
+                    {
+                        CommandType.KeyEvent when command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase) => EntityCommandResult.PowerOn,
+                        CommandType.KeyEvent when command.Equals(RemoteButtonConstants.Off, StringComparison.OrdinalIgnoreCase) => EntityCommandResult.PowerOff,
+                        CommandType.KeyEvent when command.Equals(RemoteButtonConstants.Toggle, StringComparison.OrdinalIgnoreCase) => HandleToggleResult(
+                            adbTvClientHolder.ClientKey),
+                        _ => EntityCommandResult.Other
+                    };
+
+                    if (result == EntityCommandResult.PowerOn)
+                        RemoteStates[adbTvClientHolder.ClientKey] = RemoteState.On;
+                    else if (result == EntityCommandResult.PowerOff)
+                        RemoteStates[adbTvClientHolder.ClientKey] = RemoteState.Off;
+
+                    return result;
+                case CommandType.Raw:
+                    await adbTvClientHolder.Client.AdbClient.ExecuteRemoteCommandAsync(commandToSend,
+                        adbTvClientHolder.Client.Device,
+                        commandCancellationToken);
+                    return EntityCommandResult.Other;
+                case CommandType.App:
+                    await adbTvClientHolder.Client.AdbClient.StartAppAsync(adbTvClientHolder.Client.Device,
+                        commandToSend,
+                        commandCancellationToken);
+                    return EntityCommandResult.Other;
+                case CommandType.Unknown:
+                default:
+                    _logger.LogWarning("Unknown command '{Command}'", command);
+                    return EntityCommandResult.Failure;
+            }
+        }
+        catch (AdbException e)
+        {
+            if (firstAttempt)
+            {
+                _logger.LogInformation(e, "[{WSId}] WS: ADB command '{Command}' failed for entity ID '{EntityId}'. Trying again.",
+                    wsId,
+                    command,
+                    entityId.AsMemory().GetBaseIdentifier());
+                await Task.Delay(100, commandCancellationToken);
+                return await HandleCommandAsync(wsId, entityId, command, commandType, commandToSend, false, commandCancellationToken);
+            }
+
+            _logger.LogError(e, "[{WSId}] WS: Second attempt of ADB command '{Command}' failed for entity ID '{EntityId}'.",
+                wsId,
+                command,
+                entityId.AsMemory().GetBaseIdentifier());
             return EntityCommandResult.Failure;
         }
-
-        switch (commandType)
+        catch (Exception e)
         {
-            case CommandType.KeyEvent:
-                if (command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase))
-                    await WakeOnLan.SendWakeOnLanAsync(IPAddress.Parse(adbTvClientHolder.ClientKey.IpAddress), adbTvClientHolder.ClientKey.MacAddress);
-
-                await adbTvClientHolder.Client.SendKeyEventAsync(commandToSend, commandCancellationToken);
-
-                var result = commandType switch
-                {
-                    CommandType.KeyEvent when command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase) => EntityCommandResult.PowerOn,
-                    CommandType.KeyEvent when command.Equals(RemoteButtonConstants.Off, StringComparison.OrdinalIgnoreCase) => EntityCommandResult.PowerOff,
-                    CommandType.KeyEvent when command.Equals(RemoteButtonConstants.Toggle, StringComparison.OrdinalIgnoreCase) => HandleToggleResult(adbTvClientHolder.ClientKey),
-                    _ => EntityCommandResult.Other
-                };
-
-                if (result == EntityCommandResult.PowerOn)
-                    RemoteStates[adbTvClientHolder.ClientKey] = RemoteState.On;
-                else if (result == EntityCommandResult.PowerOff)
-                    RemoteStates[adbTvClientHolder.ClientKey] = RemoteState.Off;
-
-                return result;
-            case CommandType.Raw:
-                await adbTvClientHolder.Client.AdbClient.ExecuteRemoteCommandAsync(commandToSend,
-                    adbTvClientHolder.Client.Device,
-                    commandCancellationToken);
-                return EntityCommandResult.Other;
-            case CommandType.App:
-                await adbTvClientHolder.Client.AdbClient.StartAppAsync(adbTvClientHolder.Client.Device,
-                    commandToSend,
-                    commandCancellationToken);
-                return EntityCommandResult.Other;
-            case CommandType.Unknown:
-            default:
-                logger.LogWarning("Unknown command '{Command}'", command);
-                return EntityCommandResult.Failure;
+            _logger.LogError(e, "[{WSId}] WS: Command '{Command}' failed for entity ID '{EntityId}'.",
+                wsId,
+                command,
+                entityId.AsMemory().GetBaseIdentifier());
+            return EntityCommandResult.Failure;
         }
 
         static EntityCommandResult HandleToggleResult(in AdbTvClientKey adbTvClientKey)
@@ -101,7 +154,12 @@ internal sealed partial class AdbWebSocketHandler(
     }
 
     protected override async ValueTask<bool> IsEntityReachableAsync(string wsId, string entityId, CancellationToken cancellationToken)
-        => await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationToken) is not null;
+    {
+        if (await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationToken) is not null)
+            return true;
+
+        return await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationToken) is not null;
+    }
 
     protected override ValueTask<EntityCommandResult> OnMediaPlayerCommandAsync(System.Net.WebSockets.WebSocket socket,
         MediaPlayerEntityCommandMsgData<MediaPlayerCommandId> payload,
