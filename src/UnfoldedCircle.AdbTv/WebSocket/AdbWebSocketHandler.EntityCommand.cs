@@ -27,6 +27,7 @@ internal sealed partial class AdbWebSocketHandler
             _ when command.Equals(RemoteButtonConstants.DpadMiddle, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.DpadCenter, CommandType.KeyEvent),
             _ when command.Equals(RemoteButtonConstants.Home, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Home, CommandType.KeyEvent),
             _ when command.Equals(RemoteButtonConstants.Back, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Back, CommandType.KeyEvent),
+            _ when command.Equals(RemoteButtonConstants.Menu, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Settings, CommandType.KeyEvent),
             _ when command.Equals(AdbTvRemoteCommands.Digit0, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Key0, CommandType.KeyEvent),
             _ when command.Equals(AdbTvRemoteCommands.Digit1, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Key1, CommandType.KeyEvent),
             _ when command.Equals(AdbTvRemoteCommands.Digit2, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Key2, CommandType.KeyEvent),

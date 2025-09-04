@@ -29,7 +29,8 @@ internal sealed partial class AdbWebSocketHandler
             new DeviceButtonMapping { Button = RemoteButton.VolumeUp, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.VolumeUp } },
             new DeviceButtonMapping { Button = RemoteButton.VolumeDown, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.VolumeDown } },
             new DeviceButtonMapping { Button = RemoteButton.Power, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Toggle } },
-            new DeviceButtonMapping { Button = RemoteButton.Mute, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Mute } }
+            new DeviceButtonMapping { Button = RemoteButton.Mute, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Mute } },
+            new DeviceButtonMapping { Button = RemoteButton.Menu, ShortPress = new EntityCommand { CmdId = RemoteButtonConstants.Menu } }
         ],
         SimpleCommands =
         [
@@ -42,7 +43,7 @@ internal sealed partial class AdbWebSocketHandler
             RemoteButtonConstants.VolumeDown, RemoteButtonConstants.Mute, AdbTvRemoteCommands.Info,
             RemoteButtonConstants.ChannelUp, RemoteButtonConstants.ChannelDown, AdbTvRemoteCommands.Settings,
             AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3,
-            AdbTvRemoteCommands.InputHdmi4, ..AppNames.SupportedApps
+            AdbTvRemoteCommands.InputHdmi4, ..AppNames.SupportedApps, RemoteButtonConstants.Menu
         ],
         UserInterface = new UserInterface
         {
