@@ -47,11 +47,11 @@
 
     <ItemGroup>
         <PackageReference Include="AdvancedSharpAdbClient" Version="3.4.14" />
-        <PackageReference Include="Meziantou.Analyzer" Version="2.0.213">
+        <PackageReference Include="Meziantou.Analyzer" Version="2.0.215">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.1-pre35" />
+        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.1-pre36" />
     </ItemGroup>
 
 </Project>
