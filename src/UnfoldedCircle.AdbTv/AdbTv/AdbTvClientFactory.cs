@@ -77,6 +77,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
                 if (deviceClient is { Device.State: DeviceState.Online })
                 {
+                    await deviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClient.Device, cancellationToken);
                     _clients[adbTvClientKey] = new DeviceClientHolder(deviceClient, Stopwatch.GetTimestamp());
                     return deviceClient;
                 }
