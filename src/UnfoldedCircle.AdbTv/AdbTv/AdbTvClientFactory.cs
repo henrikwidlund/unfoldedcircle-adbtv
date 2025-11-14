@@ -36,7 +36,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                     }
                     catch (AdbException e)
                     {
-                        _logger.LogInformation(e, "Client {ClientKey} failed to execute health check command.", adbTvClientKey);
+                        if (_logger.IsEnabled(LogLevel.Information))
+                            _logger.LogInformation(e, "Client {ClientKey} failed to execute health check command.", adbTvClientKey);
                     }
                 }
             }
@@ -82,8 +83,9 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                     return deviceClient;
                 }
 
-                _logger.LogWarning("Device {ClientKey} is not online. Connection result was '{ConnectionResult}', device state was {deviceState}.",
-                    adbTvClientKey, connectResult, deviceClient?.Device.State.ToString());
+                if (_logger.IsEnabled(LogLevel.Warning))
+                    _logger.LogWarning("Device {ClientKey} is not online. Connection result was '{ConnectionResult}', device state was {deviceState}.",
+                        adbTvClientKey, connectResult, deviceClient?.Device.State.ToString());
 
                 return null;
             }
@@ -94,7 +96,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to get or create client {ClientKey}.", adbTvClientKey);
+            if (_logger.IsEnabled(LogLevel.Error))
+                _logger.LogError(e, "Failed to get or create client {ClientKey}.", adbTvClientKey);
             return null;
         }
     }
@@ -119,7 +122,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to remove client {ClientKey}", adbTvClientKey);
+                if (_logger.IsEnabled(LogLevel.Error))
+                    _logger.LogError(e, "Failed to remove client {ClientKey}", adbTvClientKey);
                 throw;
             }
         }
