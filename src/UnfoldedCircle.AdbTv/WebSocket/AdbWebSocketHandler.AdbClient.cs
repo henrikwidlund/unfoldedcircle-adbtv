@@ -20,7 +20,9 @@ internal sealed partial class AdbWebSocketHandler
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
-            _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
+
             return null;
         }
 
@@ -29,10 +31,10 @@ internal sealed partial class AdbWebSocketHandler
         var entity = identifierType switch
         {
             IdentifierType.DeviceId => localIdentifier is { Span.IsEmpty: false }
-                ? configuration.Entities.Find(x => x.DeviceId?.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) is true)
+                ? configuration.Entities.FirstOrDefault(x => x.DeviceId?.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) is true)
                 : configuration.Entities[0],
             IdentifierType.EntityId => localIdentifier is { Span.IsEmpty: false }
-                ? configuration.Entities.Find(x => x.EntityId.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase))
+                ? configuration.Entities.FirstOrDefault(x => x.EntityId.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase))
                 : null,
             _ => throw new ArgumentOutOfRangeException(nameof(identifierType), identifierType, null)
         };
@@ -40,8 +42,9 @@ internal sealed partial class AdbWebSocketHandler
         if (entity is not null)
             return new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port);
 
-        _logger.LogInformation("[{WSId}] WS: No configuration found for identifier '{Identifier}' with type {Type}",
-            wsId, identifier, identifierType.ToString());
+        if (_logger.IsEnabled(LogLevel.Information))
+            _logger.LogInformation("[{WSId}] WS: No configuration found for identifier '{Identifier}' with type {Type}",
+                wsId, identifier, identifierType.ToString());
         return null;
     }
 
@@ -53,18 +56,20 @@ internal sealed partial class AdbWebSocketHandler
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
-            _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
             return null;
         }
 
         if (!string.IsNullOrEmpty(deviceId))
         {
             var localDeviceId = deviceId.AsMemory().GetBaseIdentifier();
-            var entity = configuration.Entities.Find(x => x.DeviceId?.AsMemory().Span.Equals(localDeviceId.Span, StringComparison.OrdinalIgnoreCase) == true);
+            var entity = configuration.Entities.FirstOrDefault(x => x.DeviceId?.AsMemory().Span.Equals(localDeviceId.Span, StringComparison.OrdinalIgnoreCase) == true);
             if (entity is not null)
                 return [new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port)];
 
-            _logger.LogInformation("[{WSId}] WS: No configuration found for device ID '{DeviceId}'", wsId, localDeviceId);
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation("[{WSId}] WS: No configuration found for device ID '{DeviceId}'", wsId, localDeviceId);
             return null;
         }
 
@@ -87,17 +92,19 @@ internal sealed partial class AdbWebSocketHandler
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
-            _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
             return null;
         }
 
         if (!string.IsNullOrEmpty(deviceId))
         {
-            var entity = configuration.Entities.Find(x => string.Equals(x.DeviceId, deviceId, StringComparison.OrdinalIgnoreCase));
+            var entity = configuration.Entities.FirstOrDefault(x => string.Equals(x.DeviceId, deviceId, StringComparison.OrdinalIgnoreCase));
             if (entity is not null)
                 return [entity];
 
-            _logger.LogInformation("[{WSId}] WS: No configuration found for device ID '{DeviceId}'", wsId, deviceId);
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation("[{WSId}] WS: No configuration found for device ID '{DeviceId}'", wsId, deviceId);
             return null;
         }
 
@@ -132,8 +139,10 @@ internal sealed partial class AdbWebSocketHandler
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}' with type {Type}",
-                wsId, identifier, identifierType.ToString());
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogError(e, "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}' with type {Type}",
+                    wsId, identifier, identifierType.ToString());
+
             return null;
         }
     }
@@ -165,7 +174,8 @@ internal sealed partial class AdbWebSocketHandler
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "[{WSId}] WS: Failed to check if client is approved for entity ID '{EntityId}'", wsId, entityId);
+            if (_logger.IsEnabled(LogLevel.Error))
+                _logger.LogError(e, "[{WSId}] WS: Failed to check if client is approved for entity ID '{EntityId}'", wsId, entityId);
             return false;
         }
     }
