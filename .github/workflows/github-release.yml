@@ -69,8 +69,7 @@ jobs:
           
             cp publish/driver driverdir/bin/
             cp publish/driver.dbg driverdir/bin/
-          
-            tar -czvf unfolded-circle-adb-$tag-remote.tar.gz -C ./driverdir .
+            tar -czvf unfolded-circle-adbtv-$tag-remote.tar.gz -C ./driverdir .
           
             # Delete output directory
             rm -r "./driverdir"
