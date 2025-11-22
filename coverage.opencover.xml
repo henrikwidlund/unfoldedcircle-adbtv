@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<CoverageSession>
-  <Summary numSequencePoints="0" visitedSequencePoints="0" numBranchPoints="0" visitedBranchPoints="0" sequenceCoverage="0" branchCoverage="0" maxCyclomaticComplexity="0" minCyclomaticComplexity="0" />
-  <Modules />
-</CoverageSession>
-
