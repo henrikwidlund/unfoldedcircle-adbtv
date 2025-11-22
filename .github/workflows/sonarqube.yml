@@ -44,6 +44,6 @@ jobs:
       - name: Build and analyze
         shell: powershell
         run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"henrikwidlund_unfoldedcircle-firetv" /o:"henrikwidlund" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.coverage.exclusions=**/* /d:sonar.coverageReportPaths=
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"henrikwidlund_unfoldedcircle-firetv" /o:"henrikwidlund" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.coverage.exclusions=**/*
           dotnet build
           ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
