@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/gh-actions/">
+    <File Path=".github/workflows/ci.yml" />
+    <File Path=".github/workflows/dependency-review.yml" />
+    <File Path=".github/workflows/docker.yml" />
+    <File Path=".github/workflows/github-release.yml" />
+    <File Path=".github/workflows/qodana_code_quality.yml" />
+    <File Path=".github/workflows/sonarqube.yml" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".dockerignore" />
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="publish.sh" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/UnfoldedCircle.AdbTv/UnfoldedCircle.AdbTv.csproj" />
+  </Folder>
+</Solution>

@@ -3,7 +3,7 @@ linter: jetbrains/qodana-cdnet:2025.2-eap
 profile:
   name: qodana.recommended
 dotnet:
-  solution: UnfoldedCircle.AdbTv.sln
+  solution: UnfoldedCircle.AdbTv.slnx
 include:
   - name: CheckDependencyLicenses
   - name: CompareNonConstrainedGenericWithNull
