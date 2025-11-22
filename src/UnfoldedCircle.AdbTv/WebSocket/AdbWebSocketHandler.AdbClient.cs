@@ -5,6 +5,7 @@ using AdvancedSharpAdbClient.DeviceCommands;
 
 using UnfoldedCircle.AdbTv.AdbTv;
 using UnfoldedCircle.AdbTv.Configuration;
+using UnfoldedCircle.AdbTv.Logging;
 using UnfoldedCircle.Server.Extensions;
 
 namespace UnfoldedCircle.AdbTv.WebSocket;
@@ -20,8 +21,7 @@ internal sealed partial class AdbWebSocketHandler
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-                _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
+            _logger.NoConfigurationsFound(wsId);
 
             return null;
         }
@@ -42,9 +42,7 @@ internal sealed partial class AdbWebSocketHandler
         if (entity is not null)
             return new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port);
 
-        if (_logger.IsEnabled(LogLevel.Information))
-            _logger.LogInformation("[{WSId}] WS: No configuration found for identifier '{Identifier}' with type {Type}",
-                wsId, identifier, identifierType.ToString());
+        _logger.NoConfigurationFoundForIdentifier(wsId, identifier, identifierType);
         return null;
     }
 
@@ -56,8 +54,7 @@ internal sealed partial class AdbWebSocketHandler
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-                _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
+            _logger.NoConfigurationsFound(wsId);
             return null;
         }
 
@@ -68,8 +65,7 @@ internal sealed partial class AdbWebSocketHandler
             if (entity is not null)
                 return [new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port)];
 
-            if (_logger.IsEnabled(LogLevel.Information))
-                _logger.LogInformation("[{WSId}] WS: No configuration found for device ID '{DeviceId}'", wsId, localDeviceId);
+            _logger.NoConfigurationFoundForDeviceId(wsId, localDeviceId);
             return null;
         }
 
@@ -78,7 +74,7 @@ internal sealed partial class AdbWebSocketHandler
             .ToArray();
     }
 
-    private enum IdentifierType
+    internal enum IdentifierType
     {
         DeviceId,
         EntityId
@@ -92,8 +88,7 @@ internal sealed partial class AdbWebSocketHandler
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-                _logger.LogInformation("[{WSId}] WS: No configurations found", wsId);
+            _logger.NoConfigurationsFound(wsId);
             return null;
         }
 
@@ -103,8 +98,7 @@ internal sealed partial class AdbWebSocketHandler
             if (entity is not null)
                 return [entity];
 
-            if (_logger.IsEnabled(LogLevel.Information))
-                _logger.LogInformation("[{WSId}] WS: No configuration found for device ID '{DeviceId}'", wsId, deviceId);
+            _logger.NoConfigurationFoundForDeviceIdString(wsId, deviceId);
             return null;
         }
 
@@ -139,9 +133,7 @@ internal sealed partial class AdbWebSocketHandler
         }
         catch (Exception e)
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-                _logger.LogError(e, "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}' with type {Type}",
-                    wsId, identifier, identifierType.ToString());
+            _logger.FailedToGetAdbTvClient(e, wsId, identifier, identifierType);
 
             return null;
         }
@@ -174,8 +166,7 @@ internal sealed partial class AdbWebSocketHandler
         }
         catch (Exception e)
         {
-            if (_logger.IsEnabled(LogLevel.Error))
-                _logger.LogError(e, "[{WSId}] WS: Failed to check if client is approved for entity ID '{EntityId}'", wsId, entityId);
+            _logger.FailedToCheckClientApproved(e, wsId, entityId);
             return false;
         }
     }

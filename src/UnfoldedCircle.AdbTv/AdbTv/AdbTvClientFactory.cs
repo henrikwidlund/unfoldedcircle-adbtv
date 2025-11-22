@@ -8,6 +8,8 @@ using AdvancedSharpAdbClient.DeviceCommands;
 using AdvancedSharpAdbClient.Exceptions;
 using AdvancedSharpAdbClient.Models;
 
+using UnfoldedCircle.AdbTv.Logging;
+
 namespace UnfoldedCircle.AdbTv.AdbTv;
 
 public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
@@ -36,8 +38,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                     }
                     catch (AdbException e)
                     {
-                        if (_logger.IsEnabled(LogLevel.Information))
-                            _logger.LogInformation(e, "Client {ClientKey} failed to execute health check command.", adbTvClientKey);
+                        _logger.ClientFailedHealthCheck(e, adbTvClientKey);
                     }
                 }
             }
@@ -83,9 +84,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                     return deviceClient;
                 }
 
-                if (_logger.IsEnabled(LogLevel.Warning))
-                    _logger.LogWarning("Device {ClientKey} is not online. Connection result was '{ConnectionResult}', device state was {deviceState}.",
-                        adbTvClientKey, connectResult, deviceClient?.Device.State.ToString());
+                _logger.DeviceNotOnline(adbTvClientKey, connectResult, deviceClient?.Device.State);
 
                 return null;
             }
@@ -96,8 +95,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
         catch (Exception e)
         {
-            if (_logger.IsEnabled(LogLevel.Error))
-                _logger.LogError(e, "Failed to get or create client {ClientKey}.", adbTvClientKey);
+            _logger.FailedToGetOrCreateClient(e, adbTvClientKey);
             return null;
         }
     }
@@ -122,8 +120,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             }
             catch (Exception e)
             {
-                if (_logger.IsEnabled(LogLevel.Error))
-                    _logger.LogError(e, "Failed to remove client {ClientKey}", adbTvClientKey);
+                _logger.FailedToRemoveClient(e, adbTvClientKey);
                 throw;
             }
         }

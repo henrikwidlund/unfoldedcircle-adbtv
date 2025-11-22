@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 
 using UnfoldedCircle.AdbTv.AdbTv;
 using UnfoldedCircle.AdbTv.Configuration;
+using UnfoldedCircle.AdbTv.Logging;
 using UnfoldedCircle.AdbTv.Response;
 using UnfoldedCircle.AdbTv.WoL;
 using UnfoldedCircle.Models.Events;
@@ -41,8 +42,7 @@ internal sealed partial class AdbWebSocketHandler(
         var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, IdentifierType.EntityId, commandCancellationToken);
         if (adbTvClientHolder is null)
         {
-            if (_logger.IsEnabled(LogLevel.Warning))
-                _logger.LogWarning("[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'", wsId, payload.MsgData.EntityId.AsMemory().GetBaseIdentifier());
+            _logger.CouldNotFindAdbClient(wsId, payload.MsgData.EntityId.AsMemory().GetBaseIdentifier());
             return EntityCommandResult.Failure;
         }
 
@@ -80,8 +80,7 @@ internal sealed partial class AdbWebSocketHandler(
                 return EntityCommandResult.Other;
             case CommandType.Unknown:
             default:
-                if (_logger.IsEnabled(LogLevel.Warning))
-                    _logger.LogWarning("Unknown command '{Command}'", command);
+                _logger.UnknownCommand(command);
                 return EntityCommandResult.Failure;
         }
 
@@ -142,9 +141,7 @@ internal sealed partial class AdbWebSocketHandler(
         var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationTokenWrapper.RequestAborted);
         if (adbTvClientHolder is null)
         {
-            if (_logger.IsEnabled(LogLevel.Warning))
-                _logger.LogWarning("[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'", wsId, entityId);
-
+            _logger.CouldNotFindAdbClientString(wsId, entityId);
             await SendMessageAsync(socket,
                 ResponsePayloadHelpers.CreateStateChangedResponsePayload(
                     new RemoteStateChangedEventMessageDataAttributes { State = RemoteState.Unknown },
@@ -266,9 +263,7 @@ internal sealed partial class AdbWebSocketHandler(
         var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
         if (entity is null)
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-                _logger.LogInformation("Adding configuration for device ID '{EntityId}'", macAddress);
-
+            _logger.AddingConfigurationForDevice(macAddress);
             entity = new AdbConfigurationItem
             {
                 Host = ipAddress,
@@ -281,9 +276,7 @@ internal sealed partial class AdbWebSocketHandler(
         }
         else
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-                _logger.LogInformation("Updating configuration for device ID '{EntityId}'", macAddress);
-
+            _logger.UpdatingConfigurationForDevice(macAddress);
             configuration.Entities.Remove(entity);
             entity = entity with
             {
