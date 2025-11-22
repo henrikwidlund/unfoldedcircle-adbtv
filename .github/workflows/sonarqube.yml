@@ -42,10 +42,8 @@ jobs:
           New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory
           dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
       - name: Build and analyze
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
         run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"henrikwidlund_unfoldedcircle-firetv" /o:"henrikwidlund" /d:sonar.token="$SONAR_TOKEN"
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"henrikwidlund_unfoldedcircle-firetv" /o:"henrikwidlund" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
           dotnet build
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
