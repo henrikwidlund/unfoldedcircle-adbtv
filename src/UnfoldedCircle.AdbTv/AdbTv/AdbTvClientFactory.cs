@@ -100,7 +100,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    private record DeviceClientHolder(DeviceClient DeviceClient, long AddedAt);
+    private sealed record DeviceClientHolder(DeviceClient DeviceClient, long AddedAt);
 
     private static readonly FrozenSet<DeviceState> RetryStates =
     [
