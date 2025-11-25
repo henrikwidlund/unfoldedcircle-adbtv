@@ -63,7 +63,7 @@ internal sealed partial class AdbWebSocketHandler
         }
     }
 
-    private enum CommandType
+    private enum CommandType : sbyte
     {
         KeyEvent,
         Raw,

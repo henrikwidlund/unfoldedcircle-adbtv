@@ -22,7 +22,6 @@ internal sealed partial class AdbWebSocketHandler
         if (configuration.Entities.Count == 0)
         {
             _logger.NoConfigurationsFound(wsId);
-
             return null;
         }
 
@@ -31,10 +30,10 @@ internal sealed partial class AdbWebSocketHandler
         var entity = identifierType switch
         {
             IdentifierType.DeviceId => localIdentifier is { Span.IsEmpty: false }
-                ? configuration.Entities.FirstOrDefault(x => x.DeviceId?.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) is true)
+                ? configuration.Entities.FirstOrDefault(x => x.DeviceId?.AsSpan().Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase) is true)
                 : configuration.Entities[0],
             IdentifierType.EntityId => localIdentifier is { Span.IsEmpty: false }
-                ? configuration.Entities.FirstOrDefault(x => x.EntityId.AsMemory().Span.Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase))
+                ? configuration.Entities.FirstOrDefault(x => x.EntityId.AsSpan().Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase))
                 : null,
             _ => throw new ArgumentOutOfRangeException(nameof(identifierType), identifierType, null)
         };
@@ -61,7 +60,7 @@ internal sealed partial class AdbWebSocketHandler
         if (!string.IsNullOrEmpty(deviceId))
         {
             var localDeviceId = deviceId.AsMemory().GetBaseIdentifier();
-            var entity = configuration.Entities.FirstOrDefault(x => x.DeviceId?.AsMemory().Span.Equals(localDeviceId.Span, StringComparison.OrdinalIgnoreCase) == true);
+            var entity = configuration.Entities.FirstOrDefault(x => x.DeviceId?.AsSpan().Equals(localDeviceId.Span, StringComparison.OrdinalIgnoreCase) == true);
             if (entity is not null)
                 return [new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port)];
 
@@ -74,7 +73,7 @@ internal sealed partial class AdbWebSocketHandler
             .ToArray();
     }
 
-    internal enum IdentifierType
+    internal enum IdentifierType : sbyte
     {
         DeviceId,
         EntityId
@@ -176,8 +175,7 @@ internal sealed partial class AdbWebSocketHandler
         string? deviceId,
         CancellationToken cancellationToken)
     {
-        var adbTvClientKeys = await TryGetAdbTvClientKeysAsync(wsId, deviceId, cancellationToken);
-        if (adbTvClientKeys is not { Length: > 0 })
+        if (await TryGetAdbTvClientKeysAsync(wsId, deviceId, cancellationToken) is not { Length: > 0 } adbTvClientKeys)
             return false;
 
         await TryDisconnectAdbClientsAsync(adbTvClientKeys, cancellationToken);

@@ -1,3 +1,6 @@
+using System.Runtime.InteropServices;
+
 namespace UnfoldedCircle.AdbTv.Configuration;
 
-public record EntityIdDeviceId(string EntityId, string? DeviceId);
+[StructLayout(LayoutKind.Auto)]
+public record struct EntityIdDeviceId(string EntityId, string? DeviceId);
