@@ -170,10 +170,7 @@ internal sealed partial class AdbWebSocketHandler(
             ? EntityState.Disconnected : EntityState.Connected;
 
     protected override async ValueTask<IReadOnlyCollection<AvailableEntity>> OnGetAvailableEntitiesAsync(GetAvailableEntitiesMsg payload, string wsId, CancellationToken cancellationToken)
-    {
-        var entities = await GetEntitiesAsync(wsId, payload.MsgData.Filter?.DeviceId, cancellationToken);
-        return GetAvailableEntities(entities, payload).ToArray();
-    }
+        => GetAvailableEntities(await GetEntitiesAsync(wsId, payload.MsgData.Filter?.DeviceId, cancellationToken), payload).ToArray();
 
     protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, CommonReq payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
@@ -193,9 +190,8 @@ internal sealed partial class AdbWebSocketHandler(
         {
             foreach (string msgDataEntityId in payload.MsgData.EntityIds)
             {
-                var adbClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.EntityId, msgDataEntityId, cancellationTokenWrapper.ApplicationStopping);
-                if (adbClientKey is not null)
-                    clientKeys.Add(adbClientKey.Value);
+                if (await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.EntityId, msgDataEntityId, cancellationTokenWrapper.ApplicationStopping) is { } adbClientKey)
+                    clientKeys.Add(adbClientKey);
             }
         }
 
@@ -203,12 +199,9 @@ internal sealed partial class AdbWebSocketHandler(
     }
 
     protected override async ValueTask<EntityStateChanged[]> OnGetEntityStatesAsync(GetEntityStatesMsg payload, string wsId, CancellationToken cancellationToken)
-    {
-        var entities = await GetEntitiesAsync(wsId, payload.MsgData?.DeviceId, cancellationToken);
-        return entities is null
-            ? []
-            : AdbTvResponsePayloadHelpers.GetEntityStates(entities.Select(static x => new EntityIdDeviceId(x.EntityId, x.DeviceId))).ToArray();
-    }
+        => await GetEntitiesAsync(wsId, payload.MsgData?.DeviceId, cancellationToken) is { } entities
+            ? AdbTvResponsePayloadHelpers.GetEntityStates(entities.Select(static x => new EntityIdDeviceId(x.EntityId, x.DeviceId))).ToArray()
+            : [];
 
     protected override ValueTask<SetupDriverUserDataResult> OnSetupDriverUserDataConfirmAsync(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
         => ValueTask.FromResult(SetupDriverUserDataResult.Finalized);
@@ -301,13 +294,10 @@ internal sealed partial class AdbWebSocketHandler(
         return await GetSetupResultForClient(wsId, entity.EntityId, cancellationToken);
     }
 
-    private async ValueTask<SetupDriverUserDataResult> GetSetupResultForClient(string wsId, string entityId, CancellationToken cancellationToken)
-    {
-        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationToken);
-        return adbTvClientHolder is not null && adbTvClientHolder.Client.Device.State == AdvancedSharpAdbClient.Models.DeviceState.Online
+    private async ValueTask<SetupDriverUserDataResult> GetSetupResultForClient(string wsId, string entityId, CancellationToken cancellationToken) =>
+        await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationToken) is { Client.Device.State: AdvancedSharpAdbClient.Models.DeviceState.Online }
             ? SetupDriverUserDataResult.Finalized
             : SetupDriverUserDataResult.Error;
-    }
 
     protected override MediaPlayerEntityCommandMsgData<MediaPlayerCommandId>? DeserializeMediaPlayerCommandPayload(JsonDocument jsonDocument)
         => null;
