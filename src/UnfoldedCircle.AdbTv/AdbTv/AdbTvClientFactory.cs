@@ -8,6 +8,7 @@ using AdvancedSharpAdbClient.DeviceCommands;
 using AdvancedSharpAdbClient.Exceptions;
 using AdvancedSharpAdbClient.Models;
 
+using UnfoldedCircle.AdbTv.Cancellation;
 using UnfoldedCircle.AdbTv.Logging;
 
 namespace UnfoldedCircle.AdbTv.AdbTv;
@@ -27,13 +28,21 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         {
             if (_clients.TryGetValue(adbTvClientKey, out var deviceClientHolder) && Stopwatch.GetElapsedTime(deviceClientHolder.AddedAt) < CacheDuration)
             {
-                var connectResult = await deviceClientHolder.DeviceClient.AdbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken);
-                if (connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase))
+                var connectResult = await RunWithRetryWithReturn(() =>
+                        deviceClientHolder.DeviceClient.AdbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken),
+                    _logger,
+                    true,
+                    cancellationToken);
+                if (connectResult?.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) is true)
                 {
                     try
                     {
                         // check if the cached client is still healthy
-                        await deviceClientHolder.DeviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClientHolder.DeviceClient.Device, cancellationToken);
+                        await RunWithRetry(() =>
+                                deviceClientHolder.DeviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClientHolder.DeviceClient.Device, cancellationToken),
+                            _logger,
+                            true,
+                            cancellationToken);
                         return deviceClientHolder.DeviceClient;
                     }
                     catch (AdbException e)
@@ -52,15 +61,19 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             {
                 var startTime = Stopwatch.GetTimestamp();
                 var adbClient = new AdbClient();
-                string connectResult;
+                string? connectResult;
                 do
                 {
-                    connectResult = await adbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken);
-                    if (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase))
+                    connectResult = await RunWithRetryWithReturn(() =>
+                        adbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken),
+                        _logger,
+                        true,
+                        cancellationToken);
+                    if (connectResult?.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) is not true)
                     {
                         await Task.Delay(100, cancellationToken);
                     }
-                } while (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) &&
+                } while (connectResult?.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) is not true &&
                          Stopwatch.GetElapsedTime(startTime) < HealthyDeviceTimeout && !cancellationToken.IsCancellationRequested);
 
                 startTime = Stopwatch.GetTimestamp();
@@ -97,6 +110,51 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         {
             _logger.FailedToGetOrCreateClient(e, adbTvClientKey);
             return null;
+        }
+
+        static async ValueTask<T?> RunWithRetryWithReturn<T>(Func<Task<T>> func,
+            ILogger<AdbTvClientFactory> logger,
+            bool allowRetry,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await func();
+            }
+            catch (Exception e)
+            {
+                if (allowRetry)
+                {
+                    logger.ActionFailedWillRetry(e);
+                    await Task.SafeDelay(500, cancellationToken);
+                    return await RunWithRetryWithReturn(func, logger, false, cancellationToken);
+                }
+
+                throw;
+            }
+        }
+
+        static async ValueTask RunWithRetry(Func<Task> func,
+            ILogger<AdbTvClientFactory> logger,
+            bool allowRetry,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await func();
+            }
+            catch (Exception e)
+            {
+                if (allowRetry)
+                {
+                    logger.ActionFailedWillRetry(e);
+                    await Task.SafeDelay(500, cancellationToken);
+                    await RunWithRetry(func, logger, false, cancellationToken);
+                    return;
+                }
+
+                throw;
+            }
         }
     }
 
