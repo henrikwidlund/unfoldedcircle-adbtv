@@ -143,10 +143,11 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             {
                 await func();
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 if (allowRetry)
                 {
+                    logger.ActionFailedWillRetry(e);
                     await Task.SafeDelay(500, cancellationToken);
                     await RunWithRetry(func, logger, false, cancellationToken);
                     return;
