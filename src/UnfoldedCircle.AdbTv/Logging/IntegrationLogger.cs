@@ -11,7 +11,7 @@ internal static partial class IntegrationLogger
 
     [LoggerMessage(EventId = 2, EventName = nameof(DeviceNotOnline), Level = LogLevel.Warning,
         Message = "Device {ClientKey} is not online. Connection result was '{ConnectionResult}', device state was {DeviceState}.")]
-    public static partial void DeviceNotOnline(this ILogger logger, in AdbTvClientKey clientKey, string connectionResult, in AdvancedSharpAdbClient.Models.DeviceState? deviceState);
+    public static partial void DeviceNotOnline(this ILogger logger, in AdbTvClientKey clientKey, string? connectionResult, in AdvancedSharpAdbClient.Models.DeviceState? deviceState);
 
     private static readonly Action<ILogger, AdbTvClientKey, Exception> _failedToGetOrCreateClient = LoggerMessage.Define<AdbTvClientKey>(
         LogLevel.Error,
