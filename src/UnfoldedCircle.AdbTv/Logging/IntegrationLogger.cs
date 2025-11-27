@@ -82,4 +82,12 @@ internal static partial class IntegrationLogger
     [LoggerMessage(EventId = 15, EventName = nameof(UpdatingConfigurationForDevice), Level = LogLevel.Information,
         Message = "Updating configuration for device ID '{EntityId}'")]
     public static partial void UpdatingConfigurationForDevice(this ILogger logger, string entityId);
+
+    private static readonly Action<ILogger, Exception> _actionFailedWillRetry = LoggerMessage.Define(
+        LogLevel.Warning,
+        new EventId(16, nameof(ActionFailedWillRetry)),
+        "Action failed, will retry once.");
+
+    public static void ActionFailedWillRetry(this ILogger logger, Exception exception) =>
+        _actionFailedWillRetry(logger, exception);
 }
