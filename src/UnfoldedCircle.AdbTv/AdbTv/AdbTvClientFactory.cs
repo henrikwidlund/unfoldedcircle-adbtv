@@ -83,8 +83,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 {
                     var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
                         x.Serial.Equals(serial, StringComparison.InvariantCulture));
-                    deviceClient = deviceData.CreateDeviceClient();
-                    if (deviceClient.Device.State == DeviceState.Online || !RetryStates.Contains(deviceClient.Device.State))
+                    deviceClient = deviceData?.CreateDeviceClient();
+                    if (deviceClient is { Device.State: DeviceState.Online } || deviceClient is not null && !RetryStates.Contains(deviceClient.Device.State))
                         break;
 
                     await Task.Delay(100, cancellationToken);
