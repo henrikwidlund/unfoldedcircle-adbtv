@@ -13,21 +13,21 @@ internal static partial class IntegrationLogger
         Message = "Device {ClientKey} is not online. Connection result was '{ConnectionResult}', device state was {DeviceState}.")]
     public static partial void DeviceNotOnline(this ILogger logger, in AdbTvClientKey clientKey, string? connectionResult, in AdvancedSharpAdbClient.Models.DeviceState? deviceState);
 
-    private static readonly Action<ILogger, AdbTvClientKey, Exception> _failedToGetOrCreateClient = LoggerMessage.Define<AdbTvClientKey>(
+    private static readonly Action<ILogger, AdbTvClientKey, Exception> FailedToGetOrCreateClientAction = LoggerMessage.Define<AdbTvClientKey>(
         LogLevel.Error,
         new EventId(3, nameof(FailedToGetOrCreateClient)),
         "Failed to get or create client {ClientKey}.");
 
     public static void FailedToGetOrCreateClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey) =>
-        _failedToGetOrCreateClient(logger, clientKey, exception);
+        FailedToGetOrCreateClientAction(logger, clientKey, exception);
 
-    private static readonly Action<ILogger, AdbTvClientKey, Exception> _failedToRemoveClient = LoggerMessage.Define<AdbTvClientKey>(
+    private static readonly Action<ILogger, AdbTvClientKey, Exception> FailedToRemoveClientAction = LoggerMessage.Define<AdbTvClientKey>(
         LogLevel.Error,
         new EventId(4, nameof(FailedToRemoveClient)),
         "Failed to remove client {ClientKey}");
 
     public static void FailedToRemoveClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey) =>
-        _failedToRemoveClient(logger, clientKey, exception);
+        FailedToRemoveClientAction(logger, clientKey, exception);
 
     // AdbWebSocketHandler.AdbClient logging
 
@@ -47,21 +47,21 @@ internal static partial class IntegrationLogger
         Message = "[{WSId}] WS: No configuration found for device ID '{DeviceId}'")]
     public static partial void NoConfigurationFoundForDeviceIdString(this ILogger logger, string wsId, string deviceId);
 
-    private static readonly Action<ILogger, string, string?, AdbWebSocketHandler.IdentifierType, Exception> _failedToGetAdbTvClient = LoggerMessage.Define<string, string?, AdbWebSocketHandler.IdentifierType>(
+    private static readonly Action<ILogger, string, string?, AdbWebSocketHandler.IdentifierType, Exception> FailedToGetAdbTvClientAction = LoggerMessage.Define<string, string?, AdbWebSocketHandler.IdentifierType>(
         LogLevel.Error,
         new EventId(9, nameof(FailedToGetAdbTvClient)),
         "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}' with type {Type}");
 
     public static void FailedToGetAdbTvClient(this ILogger logger, Exception exception, string wsId, string? identifier, in AdbWebSocketHandler.IdentifierType type) =>
-        _failedToGetAdbTvClient(logger, wsId, identifier, type, exception);
+        FailedToGetAdbTvClientAction(logger, wsId, identifier, type, exception);
 
-    private static readonly Action<ILogger, string, string, Exception> _failedToCheckClientApproved = LoggerMessage.Define<string, string>(
+    private static readonly Action<ILogger, string, string, Exception> FailedToCheckClientApprovedAction = LoggerMessage.Define<string, string>(
         LogLevel.Error,
         new EventId(10, nameof(FailedToCheckClientApproved)),
         "[{WSId}] WS: Failed to check if client is approved for entity ID '{EntityId}'");
 
     public static void FailedToCheckClientApproved(this ILogger logger, Exception exception, string wsId, string entityId) =>
-        _failedToCheckClientApproved(logger, wsId, entityId, exception);
+        FailedToCheckClientApprovedAction(logger, wsId, entityId, exception);
 
     [LoggerMessage(EventId = 11, EventName = nameof(CouldNotFindAdbClient), Level = LogLevel.Warning,
         Message = "[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'")]
@@ -83,11 +83,11 @@ internal static partial class IntegrationLogger
         Message = "Updating configuration for device ID '{EntityId}'")]
     public static partial void UpdatingConfigurationForDevice(this ILogger logger, string entityId);
 
-    private static readonly Action<ILogger, Exception> _actionFailedWillRetry = LoggerMessage.Define(
+    private static readonly Action<ILogger, Exception> ActionFailedWillRetryAction = LoggerMessage.Define(
         LogLevel.Warning,
         new EventId(16, nameof(ActionFailedWillRetry)),
         "Action failed, will retry once.");
 
     public static void ActionFailedWillRetry(this ILogger logger, Exception exception) =>
-        _actionFailedWillRetry(logger, exception);
+        ActionFailedWillRetryAction(logger, exception);
 }
