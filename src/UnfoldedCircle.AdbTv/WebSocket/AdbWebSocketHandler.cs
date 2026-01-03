@@ -38,7 +38,9 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
     {
-        (string commandToSend, CommandType commandType) = GetMappedCommand(command);
+        var manufacturer = (await GetEntitiesAsync(wsId, null, commandCancellationToken))
+            ?.FirstOrDefault(x => x.EntityId.Equals(payload.MsgData.EntityId, StringComparison.OrdinalIgnoreCase))?.Manufacturer ?? Manufacturer.GenericAndroid;
+        (string commandToSend, CommandType commandType) = GetMappedCommand(command, manufacturer);
         var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, IdentifierType.EntityId, commandCancellationToken);
         if (adbTvClientHolder is null)
         {
@@ -143,10 +145,9 @@ internal sealed partial class AdbWebSocketHandler(
         {
             _logger.CouldNotFindAdbClientString(wsId, entityId);
             await SendMessageAsync(socket,
-                ResponsePayloadHelpers.CreateStateChangedResponsePayload(
+                ResponsePayloadHelpers.CreateRemoteStateChangedResponsePayload(
                     new RemoteStateChangedEventMessageDataAttributes { State = RemoteState.Unknown },
-                    entityId,
-                    EntityType.Remote),
+                    entityId),
                 wsId,
                 cancellationTokenWrapper.RequestAborted);
             return;
@@ -154,10 +155,9 @@ internal sealed partial class AdbWebSocketHandler(
 
         var remoteState = RemoteStates.GetValueOrDefault(adbTvClientHolder.ClientKey, RemoteState.Off);
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateRemoteStateChangedResponsePayload(
                 new RemoteStateChangedEventMessageDataAttributes { State = remoteState },
-                entityId,
-                EntityType.Remote),
+                entityId),
             wsId,
             cancellationTokenWrapper.RequestAborted);
     }
@@ -216,8 +216,11 @@ internal sealed partial class AdbWebSocketHandler(
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
             : 5555;
+        var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
+            ? Manufacturer.Parse(manufacturerValue)
+            : Manufacturer.GenericAndroid;
 
-        var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port };
+        var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port, Manufacturer =  manufacturer };
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         var maxWaitTime = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey, out var maxWaitTimeValue)
             ? double.Parse(maxWaitTimeValue, NumberFormatInfo.InvariantInfo)
@@ -251,6 +254,9 @@ internal sealed partial class AdbWebSocketHandler(
         var maxWaitTime = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey, out var maxWaitTimeValue)
             ? double.Parse(maxWaitTimeValue, NumberFormatInfo.InvariantInfo)
             : 9.5;
+        var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
+            ? Manufacturer.Parse(manufacturerValue)
+            : Manufacturer.GenericAndroid;
         configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
 
         var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
@@ -264,7 +270,8 @@ internal sealed partial class AdbWebSocketHandler(
                 Port = port,
                 DeviceId = deviceId,
                 EntityName = entityName,
-                EntityId = macAddress
+                EntityId = macAddress,
+                Manufacturer = manufacturer
             };
         }
         else
@@ -346,6 +353,23 @@ internal sealed partial class AdbWebSocketHandler(
                         }
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the MAC address of the TV (mandatory)" }
+                },
+                new Setting
+                {
+                    Id =  AdbTvServerConstants.Manufacturer,
+                    Field = new SettingTypeDropdown
+                    {
+                        Dropdown = new SettingTypeDropdownInner
+                        {
+                            Items = Manufacturer.GetValues().Select(static x => new SettingTypeDropdownItem
+                            {
+                                Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {["en"] = x.ToStringFast(true)},
+                                Value = x.ToStringFast()
+                            }).ToArray(),
+                            Value = configurationItem?.Manufacturer.ToStringFast()
+                        }
+                    },
+                    Label =  new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Select the manufacturer" }
                 },
                 new Setting
                 {
