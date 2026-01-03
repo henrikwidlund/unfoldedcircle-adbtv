@@ -16,6 +16,8 @@ public enum Manufacturer : sbyte
     [Display(Name = "Fire TV")]
     FireTv,
 
+    Hisense,
+
     Philips,
 
     [Display(Name = "TCL")]

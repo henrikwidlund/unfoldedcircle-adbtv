@@ -72,12 +72,16 @@ internal sealed partial class AdbWebSocketHandler
             var portNumber = hdmiPort switch
             {
                 HdmiPort.Hdmi1 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "15",
+                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Hisense => "2",
                 HdmiPort.Hdmi1 => AdbTvConstants.Hdmi1,
                 HdmiPort.Hdmi2 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "16",
+                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Hisense => "3",
                 HdmiPort.Hdmi2 => AdbTvConstants.Hdmi2,
                 HdmiPort.Hdmi3 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "17",
+                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Hisense => "4",
                 HdmiPort.Hdmi3 => AdbTvConstants.Hdmi3,
                 HdmiPort.Hdmi4 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "18",
+                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Hisense => "5",
                 HdmiPort.Hdmi4 => AdbTvConstants.Hdmi4,
                 _ => throw new ArgumentOutOfRangeException(nameof(hdmiPort), hdmiPort, null)
             };
@@ -88,6 +92,9 @@ internal sealed partial class AdbWebSocketHandler
                     CommandType.Raw),
                 Manufacturer.Tcl => (
                     $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.tcl.tvinput%2F.TvPassThroughService%2FHW{portNumber} -f 0x10000000",
+                    CommandType.Raw),
+                Manufacturer.Hisense => (
+                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.vt.source.external%2F.hdmi.HdmiTvInputService%2FHW{portNumber}",
                     CommandType.Raw),
                 _ => (portNumber, CommandType.KeyEvent)
             };
