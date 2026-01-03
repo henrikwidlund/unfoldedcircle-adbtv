@@ -220,7 +220,7 @@ internal sealed partial class AdbWebSocketHandler(
             ? Manufacturer.Parse(manufacturerValue)
             : Manufacturer.GenericAndroid;
 
-        var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port, Manufacturer =  manufacturer };
+        var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port, Manufacturer = manufacturer };
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         var maxWaitTime = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey, out var maxWaitTimeValue)
             ? double.Parse(maxWaitTimeValue, NumberFormatInfo.InvariantInfo)
@@ -356,7 +356,7 @@ internal sealed partial class AdbWebSocketHandler(
                 },
                 new Setting
                 {
-                    Id =  AdbTvServerConstants.Manufacturer,
+                    Id = AdbTvServerConstants.Manufacturer,
                     Field = new SettingTypeDropdown
                     {
                         Dropdown = new SettingTypeDropdownInner

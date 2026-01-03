@@ -60,7 +60,7 @@ internal sealed partial class AdbWebSocketHandler
                     $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.mediatek.tvinput%2F.hdmi.HDMIInputService%2FHW{command[4..]} -n org.droidtv.playtv/.PlayTvActivity -f 0x10000000",
                     CommandType.Raw),
                 _ when command.StartsWith("INP_TCL:", StringComparison.OrdinalIgnoreCase) => (
-                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.tcl.tvinput%2F.TvPassThroughService%2FHW{command[4..]} -f 0x10000000",
+                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.tcl.tvinput%2F.TvPassThroughService%2FHW{command[8..]} -f 0x10000000",
                     CommandType.Raw),
                 _ when AppNames.AppNamesMap.TryGetValue(command, out var appName) => (appName, CommandType.App),
                 _ => (command, CommandType.Unknown)
