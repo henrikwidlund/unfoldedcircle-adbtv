@@ -1,15 +1,17 @@
 using UnfoldedCircle.AdbTv.AdbTv;
+using UnfoldedCircle.AdbTv.Configuration;
 using UnfoldedCircle.Models.Sync;
 
 namespace UnfoldedCircle.AdbTv.WebSocket;
 
 internal sealed partial class AdbWebSocketHandler
 {
-    private static (string Command, CommandType CommandType) GetMappedCommand(string? command)
+    private static (string Command, CommandType CommandType) GetMappedCommand(string? command, in Manufacturer? manufacturer)
     {
         if (string.IsNullOrEmpty(command))
             return (string.Empty, CommandType.Unknown);
 
+        var localManufacturer = manufacturer ?? Manufacturer.GenericAndroid;
         return command switch
         {
             _ when command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Wakeup, CommandType.KeyEvent),
@@ -40,10 +42,10 @@ internal sealed partial class AdbWebSocketHandler
             _ when command.Equals(AdbTvRemoteCommands.Digit9, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Key9, CommandType.KeyEvent),
             _ when command.Equals(AdbTvRemoteCommands.Info, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Info, CommandType.KeyEvent),
             _ when command.Equals(AdbTvRemoteCommands.Settings, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Settings, CommandType.KeyEvent),
-            _ when command.Equals(AdbTvRemoteCommands.InputHdmi1, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Hdmi1, CommandType.KeyEvent),
-            _ when command.Equals(AdbTvRemoteCommands.InputHdmi2, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Hdmi2, CommandType.KeyEvent),
-            _ when command.Equals(AdbTvRemoteCommands.InputHdmi3, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Hdmi3, CommandType.KeyEvent),
-            _ when command.Equals(AdbTvRemoteCommands.InputHdmi4, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Hdmi4, CommandType.KeyEvent),
+            _ when command.Equals(AdbTvRemoteCommands.InputHdmi1, StringComparison.OrdinalIgnoreCase) => GetHdmiCommand(HdmiPort.Hdmi1, localManufacturer),
+            _ when command.Equals(AdbTvRemoteCommands.InputHdmi2, StringComparison.OrdinalIgnoreCase) => GetHdmiCommand(HdmiPort.Hdmi2, localManufacturer),
+            _ when command.Equals(AdbTvRemoteCommands.InputHdmi3, StringComparison.OrdinalIgnoreCase) => GetHdmiCommand(HdmiPort.Hdmi3, localManufacturer),
+            _ when command.Equals(AdbTvRemoteCommands.InputHdmi4, StringComparison.OrdinalIgnoreCase) => GetHdmiCommand(HdmiPort.Hdmi4, localManufacturer),
             _ => GetRawCommand(command)
         };
 
@@ -57,10 +59,47 @@ internal sealed partial class AdbWebSocketHandler
                 _ when command.StartsWith("INP:", StringComparison.OrdinalIgnoreCase) => (
                     $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.mediatek.tvinput%2F.hdmi.HDMIInputService%2FHW{command[4..]} -n org.droidtv.playtv/.PlayTvActivity -f 0x10000000",
                     CommandType.Raw),
+                _ when command.StartsWith("INP_TCL:", StringComparison.OrdinalIgnoreCase) => (
+                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.tcl.tvinput%2F.TvPassThroughService%2FHW{command[8..]} -f 0x10000000",
+                    CommandType.Raw),
                 _ when AppNames.AppNamesMap.TryGetValue(command, out var appName) => (appName, CommandType.App),
                 _ => (command, CommandType.Unknown)
             };
         }
+
+        static (string Command, CommandType CommandType) GetHdmiCommand(in HdmiPort hdmiPort, in Manufacturer manufacturer)
+        {
+            var portNumber = hdmiPort switch
+            {
+                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "15",
+                HdmiPort.Hdmi1 => AdbTvConstants.Hdmi1,
+                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "16",
+                HdmiPort.Hdmi2 => AdbTvConstants.Hdmi2,
+                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "17",
+                HdmiPort.Hdmi3 => AdbTvConstants.Hdmi3,
+                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "18",
+                HdmiPort.Hdmi4 => AdbTvConstants.Hdmi4,
+                _ => throw new ArgumentOutOfRangeException(nameof(hdmiPort), hdmiPort, null)
+            };
+            return manufacturer switch
+            {
+                Manufacturer.Philips => (
+                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.mediatek.tvinput%2F.hdmi.HDMIInputService%2FHW{portNumber} -n org.droidtv.playtv/.PlayTvActivity -f 0x10000000",
+                    CommandType.Raw),
+                Manufacturer.Tcl => (
+                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.tcl.tvinput%2F.TvPassThroughService%2FHW{portNumber} -f 0x10000000",
+                    CommandType.Raw),
+                _ => (portNumber, CommandType.KeyEvent)
+            };
+        }
+    }
+
+    private enum HdmiPort : sbyte
+    {
+        Hdmi1 = 1,
+        Hdmi2 = 2,
+        Hdmi3 = 3,
+        Hdmi4 = 4
     }
 
     private enum CommandType : sbyte
