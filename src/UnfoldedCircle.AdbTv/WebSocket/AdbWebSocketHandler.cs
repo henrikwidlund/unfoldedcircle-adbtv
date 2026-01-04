@@ -39,7 +39,7 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationToken commandCancellationToken)
     {
         var manufacturer = (await GetEntitiesAsync(wsId, null, commandCancellationToken))
-            ?.FirstOrDefault(x => x.EntityId.Equals(payload.MsgData.EntityId, StringComparison.OrdinalIgnoreCase))?.Manufacturer ?? Manufacturer.GenericAndroid;
+            ?.FirstOrDefault(x => x.EntityId.Equals(payload.MsgData.EntityId, StringComparison.OrdinalIgnoreCase))?.Manufacturer ?? Manufacturer.Android;
         (string commandToSend, CommandType commandType) = GetMappedCommand(command, manufacturer);
         var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, IdentifierType.EntityId, commandCancellationToken);
         if (adbTvClientHolder is null)
@@ -218,7 +218,7 @@ internal sealed partial class AdbWebSocketHandler(
             : 5555;
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
             ? Manufacturer.Parse(manufacturerValue)
-            : Manufacturer.GenericAndroid;
+            : Manufacturer.Android;
 
         var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port, Manufacturer = manufacturer };
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
@@ -256,7 +256,7 @@ internal sealed partial class AdbWebSocketHandler(
             : 9.5;
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
             ? Manufacturer.Parse(manufacturerValue)
-            : Manufacturer.GenericAndroid;
+            : Manufacturer.Android;
         configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
 
         var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
