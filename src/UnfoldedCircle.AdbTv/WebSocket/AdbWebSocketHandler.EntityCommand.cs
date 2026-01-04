@@ -97,7 +97,7 @@ internal sealed partial class AdbWebSocketHandler
             };
             return manufacturer switch
             {
-                Manufacturer.Hisense => (AdbAdvancedCommands.HisensHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
+                Manufacturer.Hisense => (AdbAdvancedCommands.HisenseHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
                 Manufacturer.Philips => (AdbAdvancedCommands.PhilipsHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
                 Manufacturer.Sony => (AdbAdvancedCommands.SonyHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
                 Manufacturer.Tcl => (AdbAdvancedCommands.TclHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
