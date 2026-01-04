@@ -46,6 +46,8 @@ internal sealed partial class AdbWebSocketHandler
             _ when command.Equals(AdbTvRemoteCommands.InputHdmi2, StringComparison.OrdinalIgnoreCase) => GetHdmiCommand(HdmiPort.Hdmi2, localManufacturer),
             _ when command.Equals(AdbTvRemoteCommands.InputHdmi3, StringComparison.OrdinalIgnoreCase) => GetHdmiCommand(HdmiPort.Hdmi3, localManufacturer),
             _ when command.Equals(AdbTvRemoteCommands.InputHdmi4, StringComparison.OrdinalIgnoreCase) => GetHdmiCommand(HdmiPort.Hdmi4, localManufacturer),
+            _ when command.Equals(AdbTvRemoteCommands.AudioTvSpeakers, StringComparison.OrdinalIgnoreCase) => (AdbAdvancedCommands.AudioTvSpeakers, CommandType.Raw),
+            _ when command.Equals(AdbTvRemoteCommands.AudioExternalDevice, StringComparison.OrdinalIgnoreCase) => (AdbAdvancedCommands.AudioExternalDevice, CommandType.Raw),
             _ => GetRawCommand(command)
         };
 
@@ -95,18 +97,10 @@ internal sealed partial class AdbWebSocketHandler
             };
             return manufacturer switch
             {
-                Manufacturer.Hisense => (
-                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.vt.source.external%2F.hdmi.HdmiTvInputService%2FHW{portNumber}",
-                    CommandType.Raw),
-                Manufacturer.Philips => (
-                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.mediatek.tvinput%2F.hdmi.HDMIInputService%2FHW{portNumber} -n org.droidtv.playtv/.PlayTvActivity -f 0x10000000",
-                    CommandType.Raw),
-                Manufacturer.Sony => (
-                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.sony.dtv.tvinput.external%2F.ExternalTvInputService%2FHW{portNumber} -n com.sony.dtv.tvx/.MainActivity -f 0x10000000",
-                    CommandType.Raw),
-                Manufacturer.Tcl => (
-                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.tcl.tvinput%2F.TvPassThroughService%2FHW{portNumber} -f 0x10000000",
-                    CommandType.Raw),
+                Manufacturer.Hisense => (AdbAdvancedCommands.HisensHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
+                Manufacturer.Philips => (AdbAdvancedCommands.PhilipsHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
+                Manufacturer.Sony => (AdbAdvancedCommands.SonyHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
+                Manufacturer.Tcl => (AdbAdvancedCommands.TclHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
                 _ => (portNumber, CommandType.KeyEvent)
             };
         }
