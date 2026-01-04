@@ -43,7 +43,8 @@ internal sealed partial class AdbWebSocketHandler
             RemoteButtonConstants.VolumeDown, RemoteButtonConstants.Mute, AdbTvRemoteCommands.Info,
             RemoteButtonConstants.ChannelUp, RemoteButtonConstants.ChannelDown, AdbTvRemoteCommands.Settings,
             AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3,
-            AdbTvRemoteCommands.InputHdmi4, ..AppNames.SupportedApps, RemoteButtonConstants.Menu
+            AdbTvRemoteCommands.InputHdmi4, AdbTvRemoteCommands.AudioTvSpeakers, AdbTvRemoteCommands.AudioExternalDevice,
+            ..AppNames.SupportedApps, RemoteButtonConstants.Menu
         ],
         UserInterface = new UserInterface
         {
@@ -86,6 +87,22 @@ internal sealed partial class AdbWebSocketHandler
                             Text = "HDMI 4",
                             Command = new EntityCommand { CmdId = AdbTvRemoteCommands.InputHdmi4 },
                             Location = new GridLocation { X = 1, Y = 1 },
+                            Size = new GridItemSize { Height = 1, Width = 1 }
+                        },
+                        new UserInterfaceItem
+                        {
+                            Type = UserInterfaceItemType.Text,
+                            Text = "TV Speakers",
+                            Command = new EntityCommand { CmdId = AdbTvRemoteCommands.AudioTvSpeakers },
+                            Location = new GridLocation { X = 0, Y = 2 },
+                            Size = new GridItemSize { Height = 1, Width = 1 }
+                        },
+                        new UserInterfaceItem
+                        {
+                            Type = UserInterfaceItemType.Text,
+                            Text = "External Audio",
+                            Command = new EntityCommand { CmdId = AdbTvRemoteCommands.AudioExternalDevice },
+                            Location = new GridLocation { X = 1, Y = 2 },
                             Size = new GridItemSize { Height = 1, Width = 1 }
                         },
                         new UserInterfaceItem
