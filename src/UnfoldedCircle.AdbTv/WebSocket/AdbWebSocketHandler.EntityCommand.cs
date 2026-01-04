@@ -11,7 +11,7 @@ internal sealed partial class AdbWebSocketHandler
         if (string.IsNullOrEmpty(command))
             return (string.Empty, CommandType.Unknown);
 
-        var localManufacturer = manufacturer ?? Manufacturer.GenericAndroid;
+        var localManufacturer = manufacturer ?? Manufacturer.Android;
         return command switch
         {
             _ when command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase) => (AdbTvConstants.Wakeup, CommandType.KeyEvent),
@@ -71,30 +71,41 @@ internal sealed partial class AdbWebSocketHandler
         {
             var portNumber = hdmiPort switch
             {
-                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "15",
                 HdmiPort.Hdmi1 when manufacturer is Manufacturer.Hisense => "2",
+                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Philips => "5",
+                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Sony => "2",
+                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Tcl => "15",
                 HdmiPort.Hdmi1 => AdbTvConstants.Hdmi1,
-                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "16",
                 HdmiPort.Hdmi2 when manufacturer is Manufacturer.Hisense => "3",
+                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Philips => "6",
+                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Sony => "3",
+                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Tcl => "16",
                 HdmiPort.Hdmi2 => AdbTvConstants.Hdmi2,
-                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "17",
                 HdmiPort.Hdmi3 when manufacturer is Manufacturer.Hisense => "4",
+                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Philips => "7",
+                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Sony => "4",
+                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Tcl => "17",
                 HdmiPort.Hdmi3 => AdbTvConstants.Hdmi3,
-                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Philips or Manufacturer.Tcl => "18",
                 HdmiPort.Hdmi4 when manufacturer is Manufacturer.Hisense => "5",
+                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Philips => "8",
+                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Sony => "5",
+                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Tcl => "18",
                 HdmiPort.Hdmi4 => AdbTvConstants.Hdmi4,
                 _ => throw new ArgumentOutOfRangeException(nameof(hdmiPort), hdmiPort, null)
             };
             return manufacturer switch
             {
+                Manufacturer.Hisense => (
+                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.vt.source.external%2F.hdmi.HdmiTvInputService%2FHW{portNumber}",
+                    CommandType.Raw),
                 Manufacturer.Philips => (
                     $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.mediatek.tvinput%2F.hdmi.HDMIInputService%2FHW{portNumber} -n org.droidtv.playtv/.PlayTvActivity -f 0x10000000",
                     CommandType.Raw),
+                Manufacturer.Sony => (
+                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.sony.dtv.tvinput.external%2F.ExternalTvInputService%2FHW{portNumber} -n com.sony.dtv.tvx/.MainActivity -f 0x10000000",
+                    CommandType.Raw),
                 Manufacturer.Tcl => (
                     $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.tcl.tvinput%2F.TvPassThroughService%2FHW{portNumber} -f 0x10000000",
-                    CommandType.Raw),
-                Manufacturer.Hisense => (
-                    $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.vt.source.external%2F.hdmi.HdmiTvInputService%2FHW{portNumber}",
                     CommandType.Raw),
                 _ => (portNumber, CommandType.KeyEvent)
             };
@@ -103,10 +114,10 @@ internal sealed partial class AdbWebSocketHandler
 
     private enum HdmiPort : sbyte
     {
-        Hdmi1 = 1,
-        Hdmi2 = 2,
-        Hdmi3 = 3,
-        Hdmi4 = 4
+        Hdmi1,
+        Hdmi2,
+        Hdmi3,
+        Hdmi4
     }
 
     private enum CommandType : sbyte

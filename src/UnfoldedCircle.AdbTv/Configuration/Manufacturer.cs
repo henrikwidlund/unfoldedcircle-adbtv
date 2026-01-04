@@ -11,14 +11,16 @@ namespace UnfoldedCircle.AdbTv.Configuration;
 [JsonConverter(typeof(ManufacturerJsonConverter))]
 public enum Manufacturer : sbyte
 {
-    GenericAndroid = 1,
+    [Display(Name = "Generic Android")]
+    Android = 1,
 
     [Display(Name = "Fire TV")]
     FireTv,
 
     Hisense,
-
+    Panasonic,
     Philips,
+    Sony,
 
     [Display(Name = "TCL")]
     Tcl
