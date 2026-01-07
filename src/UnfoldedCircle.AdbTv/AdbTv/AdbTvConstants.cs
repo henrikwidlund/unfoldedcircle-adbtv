@@ -66,7 +66,7 @@ public static class AdbAdvancedCommands
     public const string PhilipsHdmi = $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.mediatek.tvinput%2F.hdmi.HDMIInputService%2FHW{PortNumberPlaceholder} -n org.droidtv.playtv/.PlayTvActivity -f 0x10000000";
     public const string SonyHdmi = $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.sony.dtv.tvinput.external%2F.ExternalTvInputService%2FHW{PortNumberPlaceholder} -n com.sony.dtv.tvx/.MainActivity -f 0x10000000";
     public const string TclHdmi = $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.tcl.tvinput%2F.TvPassThroughService%2FHW{PortNumberPlaceholder} -f 0x10000000";
-    private const string AudioOutputBase = "settings put global audio_output_mode ";
+    private const string AudioOutputBase = "settings put global hdmi_system_audio_control_enabled ";
     public const string AudioTvSpeakers = AudioOutputBase + "0";
     public const string AudioExternalDevice = AudioOutputBase + "1";
 }
