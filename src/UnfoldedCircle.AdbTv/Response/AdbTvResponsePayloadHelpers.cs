@@ -44,7 +44,7 @@ internal static class AdbTvResponsePayloadHelpers
                                     }
                                 },
                                 Id = AdbTvServerConstants.PairingCode,
-                                Label =  new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                                Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                                 {
                                     ["en"] = "Enter the pairing code shown on your TV"
                                 }

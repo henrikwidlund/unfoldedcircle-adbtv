@@ -256,7 +256,6 @@ internal sealed partial class AdbWebSocketHandler(
     protected override async ValueTask<SetupDriverUserDataResult> HandleCreateNewEntity(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
-        var driverMetadata = await _configurationService.GetDriverMetadataAsync(cancellationToken);
         if (payload.MsgData.InputValues!.TryGetValue(AdbTvServerConstants.PairingCode, out var pairingCode))
         {
             var entityId = _wsidEntityIdMapping[wsId];
@@ -268,6 +267,8 @@ internal sealed partial class AdbWebSocketHandler(
             _wsidEntityIdMapping.TryRemove(wsId, out _);
             return SetupDriverUserDataResult.Handled;
         }
+
+        var driverMetadata = await _configurationService.GetDriverMetadataAsync(cancellationToken);
         var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
         var macAddress = payload.MsgData.InputValues[AdbTvServerConstants.MacAddressKey];
         var deviceId = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.DeviceIdKey, macAddress);
@@ -394,7 +395,7 @@ internal sealed partial class AdbWebSocketHandler(
                             Value = configurationItem?.Manufacturer.ToStringFast()
                         }
                     },
-                    Label =  new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Select the manufacturer" }
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Select the manufacturer" }
                 },
                 new Setting
                 {

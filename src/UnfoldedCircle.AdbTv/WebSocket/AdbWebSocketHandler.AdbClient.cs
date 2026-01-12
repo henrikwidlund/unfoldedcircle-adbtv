@@ -189,7 +189,7 @@ internal sealed partial class AdbWebSocketHandler
                 pairingCode,
                 linkedCancellationTokenSource.Token);
 
-            return await CheckClientApprovedAsync(wsId, entityId, cancellationTokenSource.Token);
+            return await CheckClientApprovedAsync(wsId, entityId, linkedCancellationTokenSource.Token);
         }
         catch (Exception e)
         {
