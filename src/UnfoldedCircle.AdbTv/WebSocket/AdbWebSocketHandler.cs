@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Globalization;
 using System.Net;
@@ -212,7 +213,17 @@ internal sealed partial class AdbWebSocketHandler(
         AdbConfigurationItem configurationItem,
         CancellationToken cancellationToken)
     {
-        var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
+        if (payload.MsgData.InputValues!.TryGetValue(AdbTvServerConstants.PairingCode, out var pairingCode))
+        {
+            if (await PairAsync(wsId, configurationItem.EntityId, pairingCode, cancellationToken))
+                return await GetSetupResultForClient(wsId, configurationItem.EntityId, cancellationToken);
+
+            await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
+                wsId, cancellationToken);
+            return SetupDriverUserDataResult.Handled;
+        }
+
+        var ipAddress = payload.MsgData.InputValues[AdbTvServerConstants.IpAddressKey];
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
             : 5555;
@@ -240,10 +251,23 @@ internal sealed partial class AdbWebSocketHandler(
         return await GetSetupResultForClient(wsId, configurationItem.EntityId, cancellationToken);
     }
 
+    private readonly ConcurrentDictionary<string, string> _wsidEntityIdMapping = new(StringComparer.Ordinal);
+
     protected override async ValueTask<SetupDriverUserDataResult> HandleCreateNewEntity(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         var driverMetadata = await _configurationService.GetDriverMetadataAsync(cancellationToken);
+        if (payload.MsgData.InputValues!.TryGetValue(AdbTvServerConstants.PairingCode, out var pairingCode))
+        {
+            var entityId = _wsidEntityIdMapping[wsId];
+            if (await PairAsync(wsId, entityId, pairingCode, cancellationToken))
+                return await GetSetupResultForClient(wsId, entityId, cancellationToken);
+
+            await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
+                wsId, cancellationToken);
+            _wsidEntityIdMapping.TryRemove(wsId, out _);
+            return SetupDriverUserDataResult.Handled;
+        }
         var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
         var macAddress = payload.MsgData.InputValues[AdbTvServerConstants.MacAddressKey];
         var deviceId = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.DeviceIdKey, macAddress);
@@ -290,6 +314,7 @@ internal sealed partial class AdbWebSocketHandler(
         configuration.Entities.Add(entity);
 
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
+        _wsidEntityIdMapping[wsId] = entity.EntityId;
 
         if (!await CheckClientApprovedAsync(wsId, entity.EntityId, cancellationToken))
         {

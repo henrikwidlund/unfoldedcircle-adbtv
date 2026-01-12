@@ -90,4 +90,12 @@ internal static partial class IntegrationLogger
 
     public static void ActionFailedWillRetry(this ILogger logger, Exception exception) =>
         ActionFailedWillRetryAction(logger, exception);
+
+    private static readonly Action<ILogger, string, string, Exception> FailedToPairClientAction = LoggerMessage.Define<string, string>(
+        LogLevel.Error,
+        new EventId(17, nameof(FailedToPairClient)),
+        "[{WSId}] WS: Failed to pair client for entity ID '{EntityId}'");
+
+    public static void FailedToPairClient(this ILogger logger, Exception exception, string wsId, string entityId) =>
+        FailedToPairClientAction(logger, wsId, entityId, exception);
 }
