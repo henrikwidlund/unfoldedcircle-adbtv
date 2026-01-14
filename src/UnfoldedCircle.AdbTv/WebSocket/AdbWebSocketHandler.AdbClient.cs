@@ -170,31 +170,28 @@ internal sealed partial class AdbWebSocketHandler
         }
     }
 
-    private async Task<bool> PairAsync(string wsId,
+    private async Task PairAsync(string wsId,
         string entityId,
         string pairingCode,
+        int pairingPort,
         CancellationToken cancellationToken)
     {
         try
         {
             var adbTvClientKey = await TryGetAdbTvClientKeyAsync(wsId, IdentifierType.EntityId, entityId, cancellationToken);
-            if (adbTvClientKey is null)
-                return false;
+            if (adbTvClientKey is null) return;
 
             var adbClient = new AdbClient();
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(7));
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
                 cancellationTokenSource.Token);
-            await adbClient.PairAsync(adbTvClientKey.Value.IpAddress, adbTvClientKey.Value.Port,
+            await adbClient.PairAsync(adbTvClientKey.Value.IpAddress, pairingPort,
                 pairingCode,
                 linkedCancellationTokenSource.Token);
-
-            return await CheckClientApprovedAsync(wsId, entityId, linkedCancellationTokenSource.Token);
         }
         catch (Exception e)
         {
             _logger.FailedToPairClient(e, wsId, entityId);
-            return false;
         }
     }
 

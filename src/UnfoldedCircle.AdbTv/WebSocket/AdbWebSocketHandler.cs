@@ -213,17 +213,7 @@ internal sealed partial class AdbWebSocketHandler(
         AdbConfigurationItem configurationItem,
         CancellationToken cancellationToken)
     {
-        if (payload.MsgData.InputValues!.TryGetValue(AdbTvServerConstants.PairingCode, out var pairingCode))
-        {
-            if (await PairAsync(wsId, configurationItem.EntityId, pairingCode, cancellationToken))
-                return await GetSetupResultForClient(wsId, configurationItem.EntityId, cancellationToken);
-
-            await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
-                wsId, cancellationToken);
-            return SetupDriverUserDataResult.Handled;
-        }
-
-        var ipAddress = payload.MsgData.InputValues[AdbTvServerConstants.IpAddressKey];
+        var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
             : 5555;
@@ -251,23 +241,9 @@ internal sealed partial class AdbWebSocketHandler(
         return await GetSetupResultForClient(wsId, configurationItem.EntityId, cancellationToken);
     }
 
-    private readonly ConcurrentDictionary<string, string> _wsidEntityIdMapping = new(StringComparer.Ordinal);
-
     protected override async ValueTask<SetupDriverUserDataResult> HandleCreateNewEntity(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
-        if (payload.MsgData.InputValues!.TryGetValue(AdbTvServerConstants.PairingCode, out var pairingCode))
-        {
-            var entityId = _wsidEntityIdMapping[wsId];
-            if (await PairAsync(wsId, entityId, pairingCode, cancellationToken))
-                return await GetSetupResultForClient(wsId, entityId, cancellationToken);
-
-            await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
-                wsId, cancellationToken);
-            _wsidEntityIdMapping.TryRemove(wsId, out _);
-            return SetupDriverUserDataResult.Handled;
-        }
-
         var driverMetadata = await _configurationService.GetDriverMetadataAsync(cancellationToken);
         var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
         var macAddress = payload.MsgData.InputValues[AdbTvServerConstants.MacAddressKey];
@@ -282,6 +258,11 @@ internal sealed partial class AdbWebSocketHandler(
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
             ? Manufacturer.Parse(manufacturerValue)
             : Manufacturer.Android;
+        var pairingCode = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.PairingCode, string.Empty);
+        var pairingPort = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PairingPort, out var pairingPortValue)
+            ? int.Parse(pairingPortValue, NumberFormatInfo.InvariantInfo)
+            : 0;
+
         configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
 
         var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
@@ -315,7 +296,9 @@ internal sealed partial class AdbWebSocketHandler(
         configuration.Entities.Add(entity);
 
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
-        _wsidEntityIdMapping[wsId] = entity.EntityId;
+
+        if (!string.IsNullOrWhiteSpace(pairingCode) && pairingPort != 0)
+            await PairAsync(wsId, macAddress, pairingCode, pairingPort, cancellationToken);
 
         if (!await CheckClientApprovedAsync(wsId, entity.EntityId, cancellationToken))
         {
@@ -355,6 +338,43 @@ internal sealed partial class AdbWebSocketHandler(
 
     private static SettingsPage CreateSettingsPage(AdbConfigurationItem? configurationItem, double maxMessageHandlingWaitTimeInSeconds)
     {
+        Setting[] additionalSettings = configurationItem is null
+            ? []
+            :
+            [
+                new Setting
+                {
+                    Field = new SettingTypeNumber
+                    {
+                        Number = new SettingTypeNumberInner
+                        {
+                            Decimals = 0,
+                            Max = 999999,
+                            Min = 0,
+                            Steps = 1,
+                            Value = 0
+                        }
+                    },
+                    Id = AdbTvServerConstants.PairingCode,
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the pairing code shown on your TV (optional)" }
+                },
+                new Setting
+                {
+                    Field = new SettingTypeNumber
+                    {
+                        Number = new SettingTypeNumberInner
+                        {
+                            Decimals = 0,
+                            Max = 65_535,
+                            Min = 0,
+                            Steps = 1,
+                            Value = 0
+                        }
+                    },
+                    Id = AdbTvServerConstants.PairingPort,
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Pairing port shown on your TV (optional)" }
+                }
+            ];
         return new SettingsPage
         {
             Title = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = configurationItem is null ? "Add a new device" : "Reconfigure device" },
@@ -389,7 +409,7 @@ internal sealed partial class AdbWebSocketHandler(
                         {
                             Items = Manufacturer.GetValues().Select(static x => new SettingTypeDropdownItem
                             {
-                                Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {["en"] = x.ToStringFast(true)},
+                                Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = x.ToStringFast(true) },
                                 Value = x.ToStringFast()
                             }).ToArray(),
                             Value = configurationItem?.Manufacturer.ToStringFast()
@@ -425,6 +445,7 @@ internal sealed partial class AdbWebSocketHandler(
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the ADB port of the TV (mandatory)" }
                 },
+                ..additionalSettings,
                 new Setting
                 {
                     Id = AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey,
