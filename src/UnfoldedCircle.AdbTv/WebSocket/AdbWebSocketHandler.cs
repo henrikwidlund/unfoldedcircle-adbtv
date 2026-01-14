@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Globalization;
 using System.Net;
@@ -338,21 +337,17 @@ internal sealed partial class AdbWebSocketHandler(
 
     private static SettingsPage CreateSettingsPage(AdbConfigurationItem? configurationItem, double maxMessageHandlingWaitTimeInSeconds)
     {
-        Setting[] additionalSettings = configurationItem is null
+        Setting[] additionalSettings = configurationItem is not null
             ? []
             :
             [
                 new Setting
                 {
-                    Field = new SettingTypeNumber
+                    Field = new SettingTypeText
                     {
-                        Number = new SettingTypeNumberInner
+                        Text = new ValueRegex
                         {
-                            Decimals = 0,
-                            Max = 999999,
-                            Min = 0,
-                            Steps = 1,
-                            Value = 0
+                            RegEx = "^\\d{6}$"
                         }
                     },
                     Id = AdbTvServerConstants.PairingCode,

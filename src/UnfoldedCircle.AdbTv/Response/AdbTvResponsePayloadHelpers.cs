@@ -23,33 +23,12 @@ internal static class AdbTvResponsePayloadHelpers
                 EventType = DriverSetupChangeEventType.Setup,
                 RequireUserAction = new RequireUserAction
                 {
-                    Input = new SettingsPage
+                    Confirmation = new ConfirmationPage
                     {
                         Title = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
-                            ["en"] = "Confirm ADB Access on your TV or enter the pairing code shown on your TV"
-                        },
-                        Settings = [
-                            new Setting
-                            {
-                                Field = new SettingTypeNumber
-                                {
-                                    Number = new SettingTypeNumberInner
-                                    {
-                                        Decimals = 0,
-                                        Max = 999999,
-                                        Min = 0,
-                                        Steps = 1,
-                                        Value = 0
-                                    }
-                                },
-                                Id = AdbTvServerConstants.PairingCode,
-                                Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                                {
-                                    ["en"] = "Enter the pairing code shown on your TV"
-                                }
-                            }
-                        ]
+                            ["en"] = "Confirm ADB Access on your TV"
+                        }
                     }
                 }
             }
