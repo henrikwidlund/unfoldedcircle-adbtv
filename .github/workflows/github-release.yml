@@ -62,10 +62,13 @@ jobs:
             mkdir driverdir && mkdir driverdir/bin && mkdir driverdir/config && mkdir driverdir/data
             cp publish/driver.json driverdir/driver.json
             cp publish/appsettings*.json driverdir/bin/
-            # Download the latest version of adb for arm64
-            curl -sL "$(curl -s https://api.github.com/repos/prife/adb/releases/latest | grep browser_download_url | cut -d\" -f4 | grep 'aarch64-29.0.6-optimize$')" -o adb
-            chmod a+x adb
-            mv adb driverdir/bin/
+            # Install the latest adb version
+            sudo apt-get update
+            sudo apt-get install -y adb
+            
+            # Copy adb and set permissions
+            cp /usr/bin/adb driverdir/bin/
+            chmod a+x driverdir/bin/adb
           
             cp publish/driver driverdir/bin/
             cp publish/driver.dbg driverdir/bin/
