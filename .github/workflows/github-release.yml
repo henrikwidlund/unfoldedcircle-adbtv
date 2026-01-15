@@ -70,7 +70,7 @@ jobs:
             cp /usr/bin/adb driverdir/bin/
             chmod a+x driverdir/bin/adb
             
-            cp /usr/lib/aarch64-linux-gnu/libbase.so.0 driverdir/bin/
+            cp $(find /usr/lib -name 'libbase.so*' | head -n 1) driverdir/bin/
           
             cp publish/driver driverdir/bin/
             cp publish/driver.dbg driverdir/bin/
