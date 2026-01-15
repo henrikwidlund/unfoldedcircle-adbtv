@@ -75,6 +75,7 @@ jobs:
           
             cp publish/driver driverdir/bin/
             cp publish/driver.dbg driverdir/bin/
+            mv driverdir/bin/libcrypto.so driverdir/bin/libcrypto.so.0          
             tar -czvf unfolded-circle-adbtv-$tag-remote.tar.gz -C ./driverdir .
           
             # Delete output directory
