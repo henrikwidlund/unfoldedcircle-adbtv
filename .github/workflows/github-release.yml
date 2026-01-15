@@ -70,19 +70,19 @@ jobs:
             cp /usr/bin/adb driverdir/bin/
             chmod a+x driverdir/bin/adb
 
+            cp $(find /usr/lib -name 'libbase.so*' | head -n 1) driverdir/bin/
+            cp $(find /usr/lib -name 'libcrypto.so*' | head -n 1) driverdir/bin/
             # Use dpkg to find and copy the actual .so files, then rename if needed
-            for pkg in libbase1 libcrypt1 android-libcutils; do
-              sofile=$(dpkg -L $pkg | grep -E '\.so(\.[0-9]+)?$' | head -n 1)
-              if [ -n "$sofile" ]; then
-                cp "$sofile" driverdir/bin/
-                soname=$(basename "$sofile")
-                if [[ "$soname" != *.so.0 ]]; then
-                  if [ ! -f driverdir/bin/${soname%%.so*}.so.0 ]; then
-                    mv driverdir/bin/"$soname" driverdir/bin/${soname%%.so*}.so.0
-                  fi
+            sofile=$(dpkg -L "android-libcutils" | grep -E '\.so(\.[0-9]+)?$' | head -n 1)
+            if [ -n "$sofile" ]; then
+              cp "$sofile" driverdir/bin/
+              soname=$(basename "$sofile")
+              if [[ "$soname" != *.so.0 ]]; then
+                if [ ! -f driverdir/bin/${soname%%.so*}.so.0 ]; then
+                  mv driverdir/bin/"$soname" driverdir/bin/${soname%%.so*}.so.0
                 fi
               fi
-            done
+            fi
 
             cp publish/driver driverdir/bin/
             cp publish/driver.dbg driverdir/bin/
