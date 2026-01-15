@@ -3,6 +3,7 @@ using UnfoldedCircle.AdbTv.BackgroundServices;
 using UnfoldedCircle.AdbTv.Configuration;
 using UnfoldedCircle.AdbTv.WebSocket;
 
+Environment.SetEnvironmentVariable("LD_LIBRARY_PATH", AppContext.BaseDirectory);
 var builder = WebApplication.CreateSlimBuilder(args);
 
 builder.AddUnfoldedCircleServer<AdbWebSocketHandler, AdbConfigurationService, AdbConfigurationItem>(static options => options.DisableEntityIdPrefixing = true);

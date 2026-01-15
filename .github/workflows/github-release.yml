@@ -64,11 +64,13 @@ jobs:
             cp publish/appsettings*.json driverdir/bin/
             # Install the latest adb version
             sudo apt-get update
-            sudo apt-get install -y adb
+            sudo apt-get install -y adb libbase1
             
             # Copy adb and set permissions
             cp /usr/bin/adb driverdir/bin/
             chmod a+x driverdir/bin/adb
+            
+            cp /usr/lib/aarch64-linux-gnu/libbase.so.0 driverdir/bin/
           
             cp publish/driver driverdir/bin/
             cp publish/driver.dbg driverdir/bin/
