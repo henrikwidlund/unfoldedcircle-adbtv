@@ -62,42 +62,16 @@ jobs:
             mkdir driverdir && mkdir driverdir/bin && mkdir driverdir/config && mkdir driverdir/data
             cp publish/driver.json driverdir/driver.json
             cp publish/appsettings*.json driverdir/bin/
-            # Install the latest adb version and dependencies
+            # Install the latest adb version
             sudo apt-get update
-            sudo apt-get install -y adb libbase1 libcrypt1 android-libcutils android-liblog
+            sudo apt-get install -y adb
 
             # Copy adb and set permissions
             cp /usr/bin/adb driverdir/bin/
             chmod a+x driverdir/bin/adb
 
-            cp $(find /usr/lib -name 'libbase.so*' | head -n 1) driverdir/bin/
-            cp $(find /usr/lib -name 'libcrypto.so*' | head -n 1) driverdir/bin/
-            # Use dpkg to find and copy the actual .so files, then rename if needed
-            sofile=$(dpkg -L "android-libcutils" | grep -E '\.so(\.[0-9]+)?$' | head -n 1)
-            if [ -n "$sofile" ]; then
-              cp "$sofile" driverdir/bin/
-              soname=$(basename "$sofile")
-              if [[ "$soname" != *.so.0 ]]; then
-                if [ ! -f driverdir/bin/${soname%%.so*}.so.0 ]; then
-                  mv driverdir/bin/"$soname" driverdir/bin/${soname%%.so*}.so.0
-                fi
-              fi
-            fi
-          
-            sofile=$(dpkg -L "android-liblog" | grep -E '\.so(\.[0-9]+)?$' | head -n 1)
-            if [ -n "$sofile" ]; then
-              cp "$sofile" driverdir/bin/
-              soname=$(basename "$sofile")
-              if [[ "$soname" != *.so.0 ]]; then
-                if [ ! -f driverdir/bin/${soname%%.so*}.so.0 ]; then
-                  mv driverdir/bin/"$soname" driverdir/bin/${soname%%.so*}.so.0
-                fi
-              fi
-            fi
-
             cp publish/driver driverdir/bin/
             cp publish/driver.dbg driverdir/bin/
-            mv driverdir/bin/libcrypto.so driverdir/bin/libcrypto.so.0
             tar -czvf unfolded-circle-adbtv-$tag-remote.tar.gz -C ./driverdir .
 
             # Delete output directory

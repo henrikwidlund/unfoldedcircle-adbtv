@@ -1,4 +1,3 @@
-using UnfoldedCircle.AdbTv.AdbTv;
 using UnfoldedCircle.AdbTv.Configuration;
 using UnfoldedCircle.Models.Events;
 using UnfoldedCircle.Models.Shared;

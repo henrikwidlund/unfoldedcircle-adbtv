@@ -257,10 +257,6 @@ internal sealed partial class AdbWebSocketHandler(
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
             ? Manufacturer.Parse(manufacturerValue)
             : Manufacturer.Android;
-        var pairingCode = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.PairingCode, string.Empty);
-        var pairingPort = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PairingPort, out var pairingPortValue)
-            ? int.Parse(pairingPortValue, NumberFormatInfo.InvariantInfo)
-            : 0;
 
         configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
 
@@ -295,9 +291,6 @@ internal sealed partial class AdbWebSocketHandler(
         configuration.Entities.Add(entity);
 
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
-
-        if (!string.IsNullOrWhiteSpace(pairingCode) && pairingPort != 0)
-            await PairAsync(wsId, macAddress, pairingCode, pairingPort, cancellationToken);
 
         if (!await CheckClientApprovedAsync(wsId, entity.EntityId, cancellationToken))
         {
@@ -337,39 +330,6 @@ internal sealed partial class AdbWebSocketHandler(
 
     private static SettingsPage CreateSettingsPage(AdbConfigurationItem? configurationItem, double maxMessageHandlingWaitTimeInSeconds)
     {
-        Setting[] additionalSettings = configurationItem is not null
-            ? []
-            :
-            [
-                new Setting
-                {
-                    Field = new SettingTypeText
-                    {
-                        Text = new ValueRegex
-                        {
-                            RegEx = "^\\d{6}$"
-                        }
-                    },
-                    Id = AdbTvServerConstants.PairingCode,
-                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the pairing code shown on your TV (optional)" }
-                },
-                new Setting
-                {
-                    Field = new SettingTypeNumber
-                    {
-                        Number = new SettingTypeNumberInner
-                        {
-                            Decimals = 0,
-                            Max = 65_535,
-                            Min = 0,
-                            Steps = 1,
-                            Value = 0
-                        }
-                    },
-                    Id = AdbTvServerConstants.PairingPort,
-                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Pairing port shown on your TV (optional)" }
-                }
-            ];
         return new SettingsPage
         {
             Title = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = configurationItem is null ? "Add a new device" : "Reconfigure device" },
@@ -440,7 +400,6 @@ internal sealed partial class AdbWebSocketHandler(
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the ADB port of the TV (mandatory)" }
                 },
-                ..additionalSettings,
                 new Setting
                 {
                     Id = AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey,
