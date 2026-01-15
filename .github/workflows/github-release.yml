@@ -64,7 +64,7 @@ jobs:
             cp publish/appsettings*.json driverdir/bin/
             # Install the latest adb version and dependencies
             sudo apt-get update
-            sudo apt-get install -y adb libbase1 libcrypt1 android-libcutils
+            sudo apt-get install -y adb libbase1 libcrypt1 android-libcutils android-liblog
 
             # Copy adb and set permissions
             cp /usr/bin/adb driverdir/bin/
@@ -83,9 +83,21 @@ jobs:
                 fi
               fi
             fi
+          
+            sofile=$(dpkg -L "android-liblog" | grep -E '\.so(\.[0-9]+)?$' | head -n 1)
+            if [ -n "$sofile" ]; then
+              cp "$sofile" driverdir/bin/
+              soname=$(basename "$sofile")
+              if [[ "$soname" != *.so.0 ]]; then
+                if [ ! -f driverdir/bin/${soname%%.so*}.so.0 ]; then
+                  mv driverdir/bin/"$soname" driverdir/bin/${soname%%.so*}.so.0
+                fi
+              fi
+            fi
 
             cp publish/driver driverdir/bin/
             cp publish/driver.dbg driverdir/bin/
+            mv driverdir/bin/libcrypto.so driverdir/bin/libcrypto.so.0
             tar -czvf unfolded-circle-adbtv-$tag-remote.tar.gz -C ./driverdir .
 
             # Delete output directory
