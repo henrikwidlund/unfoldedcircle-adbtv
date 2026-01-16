@@ -5,13 +5,14 @@ namespace UnfoldedCircle.AdbTv.WoL;
 
 internal static class WakeOnLan
 {
-    public static async Task SendWakeOnLanAsync(IPAddress ipAddress, string macAddress)
+    private static readonly IPEndPoint BroadcastIpEndPoint = new(IPAddress.Parse("255.255.255.255"), 9);
+
+    public static async ValueTask SendWakeOnLanAsync(string macAddress)
     {
         byte[] magicPacket = CreateMagicPacket(macAddress);
-        var socket = new Socket(ipAddress.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+        using var socket = new Socket(BroadcastIpEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
         socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
-        await socket.ConnectAsync(ipAddress,9);
-        await socket.SendAsync(magicPacket);
+        await socket.SendToAsync(magicPacket, BroadcastIpEndPoint);
     }
 
     private static byte[] CreateMagicPacket(string macAddress) =>
