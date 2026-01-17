@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using System.Globalization;
-using System.Net;
 
 using AdvancedSharpAdbClient.DeviceCommands;
 
