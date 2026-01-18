@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Globalization;
+using System.Net;
 
 using AdvancedSharpAdbClient.DeviceCommands;
 
@@ -51,7 +52,7 @@ internal sealed partial class AdbWebSocketHandler(
         {
             case CommandType.KeyEvent:
                 if (command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase))
-                    await WakeOnLan.SendWakeOnLanAsync(adbTvClientHolder.ClientKey.MacAddress);
+                    await WakeOnLan.SendWakeOnLanAsync(adbTvClientHolder.ClientKey.MacAddress, IPAddress.Parse(adbTvClientHolder.ClientKey.IpAddress));
 
                 await adbTvClientHolder.Client.SendKeyEventAsync(commandToSend, commandCancellationToken);
 
