@@ -5,7 +5,6 @@ profile:
 dotnet:
   solution: UnfoldedCircle.AdbTv.slnx
 include:
-  - name: CheckDependencyLicenses
   - name: CompareNonConstrainedGenericWithNull
   - name: FunctionComplexityOverflow
   - name: InheritdocConsiderUsage
