@@ -20,6 +20,10 @@ public enum Manufacturer : sbyte
     Hisense,
     Panasonic,
     Philips,
+
+    [Display(Name = "Philips (Alternate)")]
+    PhilipsAlternate,
+
     Sony,
 
     [Display(Name = "TCL")]
