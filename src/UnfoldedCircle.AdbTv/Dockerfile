@@ -25,4 +25,5 @@ RUN apt-get -y update && apt-get install adb -y && apt-get clean
 USER $APP_UID
 WORKDIR /app
 COPY --from=publish /app/publish .
+RUN ln -sf $(which adb) /app/adb
 ENTRYPOINT ["./driver"]
