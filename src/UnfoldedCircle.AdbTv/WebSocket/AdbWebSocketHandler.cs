@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Globalization;
 using System.Net;
@@ -138,28 +139,36 @@ internal sealed partial class AdbWebSocketHandler(
     protected override ValueTask OnExitStandbyAsync(ExitStandbyEvent payload, string wsId, CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
 
-    protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string entityId, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
+    private static readonly ConcurrentDictionary<string, sbyte> ReportedEntityIds = [];
+
+    protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
     {
-        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationTokenWrapper.RequestAborted);
-        if (adbTvClientHolder is null)
+        foreach (string entityId in GetSubscribedEntityIds())
         {
-            _logger.CouldNotFindAdbClientString(wsId, entityId);
+            if (!ReportedEntityIds.TryAdd(entityId, 0))
+                continue;
+
+            var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationTokenWrapper.RequestAborted);
+            if (adbTvClientHolder is null)
+            {
+                _logger.CouldNotFindAdbClientString(wsId, entityId);
+                await SendMessageAsync(socket,
+                    ResponsePayloadHelpers.CreateRemoteStateChangedResponsePayload(
+                        new RemoteStateChangedEventMessageDataAttributes { State = RemoteState.Unknown },
+                        entityId),
+                    wsId,
+                    cancellationTokenWrapper.RequestAborted);
+                return;
+            }
+
+            var remoteState = RemoteStates.GetValueOrDefault(adbTvClientHolder.ClientKey, RemoteState.Off);
             await SendMessageAsync(socket,
                 ResponsePayloadHelpers.CreateRemoteStateChangedResponsePayload(
-                    new RemoteStateChangedEventMessageDataAttributes { State = RemoteState.Unknown },
+                    new RemoteStateChangedEventMessageDataAttributes { State = remoteState },
                     entityId),
                 wsId,
                 cancellationTokenWrapper.RequestAborted);
-            return;
         }
-
-        var remoteState = RemoteStates.GetValueOrDefault(adbTvClientHolder.ClientKey, RemoteState.Off);
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateRemoteStateChangedResponsePayload(
-                new RemoteStateChangedEventMessageDataAttributes { State = remoteState },
-                entityId),
-            wsId,
-            cancellationTokenWrapper.RequestAborted);
     }
 
     protected override ValueTask<DeviceState> OnGetDeviceStateAsync(GetDeviceStateMsg payload, string wsId, CancellationToken cancellationToken)
@@ -172,7 +181,7 @@ internal sealed partial class AdbWebSocketHandler(
     protected override async ValueTask<IReadOnlyCollection<AvailableEntity>> OnGetAvailableEntitiesAsync(GetAvailableEntitiesMsg payload, string wsId, CancellationToken cancellationToken)
         => GetAvailableEntities(await GetEntitiesAsync(wsId, payload.MsgData.Filter?.DeviceId, cancellationToken), payload).ToArray();
 
-    protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, CommonReq payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
+    protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, SubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
         => ValueTask.CompletedTask;
 
