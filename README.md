@@ -38,9 +38,9 @@ It's compiled for Linux ARM64 and is meant to be running on the remote.
 
 | Service      | Port   | Protocol   | Location              |
 |--------------|--------|------------|-----------------------|
-| Server       | 9001*  | HTTP (TCP) | Remote/other computer |
+| Server       | Random*  | HTTP (TCP) | Remote/other computer |
 | ADB          | 5555** | TCP        | Device to control     |
-| Wake on Lan  | 9      | UDP        | Device to control     |
+| Wake on Lan  | 7 and 9      | UDP        | Device to control     |
 
 \* Server port can be adjusted by specifying the desired port with the `UC_INTEGRATION_HTTP_PORT` environment variable.
 \** ADB port can be adjusted during configuration if your device uses a different port.
