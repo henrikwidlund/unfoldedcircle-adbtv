@@ -8,7 +8,8 @@ var builder = WebApplication.CreateSlimBuilder(args);
 builder.AddUnfoldedCircleServer<AdbWebSocketHandler, AdbConfigurationService, AdbConfigurationItem>(static options => options.DisableEntityIdPrefixing = true);
 builder.Services.AddSingleton<AdbTvClientFactory>();
 
-builder.Services.AddHostedService<AdbBackgroundService>();
+if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER")?.Equals("true", StringComparison.OrdinalIgnoreCase) != true)
+    builder.Services.AddHostedService<AdbBackgroundService>();
 
 var app = builder.Build();
 

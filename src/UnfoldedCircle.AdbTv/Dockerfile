@@ -14,7 +14,7 @@ COPY ./src .
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 WORKDIR "/src/UnfoldedCircle.AdbTv"
-RUN dotnet publish "UnfoldedCircle.AdbTv.csproj" -c "$BUILD_CONFIGURATION" -o /app/publish /p:PublishTrimmed=false /p:PublishSingleFile=false /p:UseAppHost=true
+RUN dotnet publish "UnfoldedCircle.AdbTv.csproj" -c "$BUILD_CONFIGURATION" -o /app/publish /p:PublishTrimmed=false /p:PublishSingleFile=true /p:UseAppHost=true
 RUN touch /app/publish/configured_entities.json && \
     chown "$APP_UID" /app/publish/configured_entities.json && \
     chmod 644 /app/publish/configured_entities.json
@@ -25,5 +25,6 @@ RUN apt-get -y update && apt-get install adb -y && apt-get clean
 USER $APP_UID
 WORKDIR /app
 COPY --from=publish /app/publish .
-RUN ln -sf $(which adb) /app/adb
-ENTRYPOINT ["./driver"]
+RUN echo '#!/bin/sh\nadb start-server\nexec ./driver' > /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh
+ENTRYPOINT ["/app/entrypoint.sh"]
