@@ -153,12 +153,7 @@ internal sealed partial class AdbWebSocketHandler(
                     var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, subscribedEntity.EntityId, IdentifierType.EntityId, cancellationToken);
                     var currentState = ReportedEntityIdStates.GetValueOrDefault(subscribedEntity.EntityId, RemoteState.Unknown);
                     if (adbTvClientHolder is null)
-                    {
                         await ReportUnknown(socket, wsId, currentState, subscribedEntity, cancellationToken);
-                        continue;
-                    }
-
-                    await ReportState(socket, wsId, currentState, subscribedEntity, cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -166,20 +161,6 @@ internal sealed partial class AdbWebSocketHandler(
                 }
             }
         } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
-    }
-
-    private async Task ReportState(System.Net.WebSockets.WebSocket socket, string wsId, RemoteState currentState, SubscribedEntity subscribedEntity, CancellationToken cancellationToken)
-    {
-        if (ReportedEntityIdStates.TryGetValue(subscribedEntity.EntityId, out var state) && state == currentState)
-            return;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateRemoteStateChangedResponsePayload(
-                new RemoteStateChangedEventMessageDataAttributes { State = currentState },
-                subscribedEntity.EntityId),
-            wsId,
-            cancellationToken);
-        ReportedEntityIdStates[subscribedEntity.EntityId] = currentState;
     }
 
     private async Task ReportUnknown(System.Net.WebSockets.WebSocket socket,
