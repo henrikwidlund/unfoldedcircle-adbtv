@@ -209,10 +209,6 @@ internal sealed partial class AdbWebSocketHandler(
     protected override ValueTask<DeviceState> OnGetDeviceStateAsync(GetDeviceStateMsg payload, string wsId, CancellationToken cancellationToken)
             => ValueTask.FromResult(DeviceState.Connected);
 
-    protected override async ValueTask<EntityState> GetEntityStateAsync(AdbConfigurationItem entity, string wsId, CancellationToken cancellationToken) =>
-        await TryGetAdbTvClientHolderAsync(wsId, entity.EntityId, IdentifierType.EntityId, cancellationToken) is null
-            ? EntityState.Disconnected : EntityState.Connected;
-
     protected override async ValueTask<IReadOnlyCollection<AvailableEntity>> OnGetAvailableEntitiesAsync(GetAvailableEntitiesMsg payload, string wsId, CancellationToken cancellationToken)
         => GetAvailableEntities(await GetEntitiesAsync(wsId, payload.MsgData.Filter?.DeviceId, cancellationToken), payload).ToArray();
 
@@ -225,7 +221,7 @@ internal sealed partial class AdbWebSocketHandler(
         foreach (string msgDataEntityId in payload.MsgData.EntityIds)
             cancellationTokenWrapper.AddSubscribedEntity(msgDataEntityId);
 
-        return cancellationTokenWrapper.StartEventProcessing();
+        return ValueTask.CompletedTask;
     }
 
     protected override async ValueTask OnUnsubscribeEventsAsync(UnsubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
