@@ -143,6 +143,7 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, SubscribedEntitiesHolder subscribedEntitiesHolder, CancellationToken cancellationToken)
     {
+        var entityHolderAvailableMap = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         do
         {
@@ -154,10 +155,12 @@ internal sealed partial class AdbWebSocketHandler(
                     var currentState = ReportedEntityIdStates.GetValueOrDefault(subscribedEntity.EntityId, RemoteState.Unknown);
                     if (adbTvClientHolder is null)
                     {
+                        entityHolderAvailableMap[subscribedEntity.EntityId] = false;
                         await ReportStateUnknown(socket, wsId, currentState, subscribedEntity, cancellationToken);
                         continue;
                     }
 
+                    entityHolderAvailableMap[subscribedEntity.EntityId] = true;
                     await ReportStateOff(socket, wsId, currentState, subscribedEntity, cancellationToken);
                 }
                 catch (Exception e)
@@ -165,6 +168,8 @@ internal sealed partial class AdbWebSocketHandler(
                     _logger.FailureDuringEvent(e, wsId, subscribedEntity.EntityId);
                 }
             }
+
+            periodicTimer.Period = TimeSpan.FromSeconds(entityHolderAvailableMap.Values.All(static x => x) ? 10 : 1);
         } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
     }
 
