@@ -169,6 +169,9 @@ internal sealed partial class AdbWebSocketHandler(
                     }
                     catch (Exception e)
                     {
+                        // This is expected from control flow, no need to spam logs
+                        if (e is OperationCanceledException)
+                            return;
                         _logger.FailureDuringEvent(e, wsId, subscribedEntity.EntityId);
                     }
                 });
