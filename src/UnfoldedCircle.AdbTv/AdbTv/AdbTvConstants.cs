@@ -57,6 +57,8 @@ public static class AdbTvRemoteCommands
     public const string InputHdmi4 = "INPUT_HDMI4";
     public const string AudioTvSpeakers = "AUDIO_TV_SPEAKERS";
     public const string AudioExternalDevice = "AUDIO_EXTERNAL_DEVICE";
+    public const string PowerStateOn = "POWER_STATE_ON";
+    public const string PowerStateOff = "POWER_STATE_OFF";
 }
 
 public static class AdbAdvancedCommands

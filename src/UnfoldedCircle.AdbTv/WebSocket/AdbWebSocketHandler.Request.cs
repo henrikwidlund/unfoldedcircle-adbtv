@@ -44,6 +44,7 @@ internal sealed partial class AdbWebSocketHandler
             RemoteButtonConstants.ChannelUp, RemoteButtonConstants.ChannelDown, AdbTvRemoteCommands.Settings,
             AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3,
             AdbTvRemoteCommands.InputHdmi4, AdbTvRemoteCommands.AudioTvSpeakers, AdbTvRemoteCommands.AudioExternalDevice,
+            AdbTvRemoteCommands.PowerStateOn, AdbTvRemoteCommands.PowerStateOff,
             ..AppNames.SupportedApps, RemoteButtonConstants.Menu
         ],
         UserInterface = new UserInterface

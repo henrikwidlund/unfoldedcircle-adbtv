@@ -48,6 +48,8 @@ internal sealed partial class AdbWebSocketHandler
             _ when command.Equals(AdbTvRemoteCommands.InputHdmi4, StringComparison.OrdinalIgnoreCase) => GetHdmiCommand(HdmiPort.Hdmi4, localManufacturer),
             _ when command.Equals(AdbTvRemoteCommands.AudioTvSpeakers, StringComparison.OrdinalIgnoreCase) => (AdbAdvancedCommands.AudioTvSpeakers, CommandType.Raw),
             _ when command.Equals(AdbTvRemoteCommands.AudioExternalDevice, StringComparison.OrdinalIgnoreCase) => (AdbAdvancedCommands.AudioExternalDevice, CommandType.Raw),
+            _ when command.Equals(AdbTvRemoteCommands.PowerStateOn, StringComparison.OrdinalIgnoreCase) => (AdbTvRemoteCommands.PowerStateOn, CommandType.NoOp),
+            _ when command.Equals(AdbTvRemoteCommands.PowerStateOff, StringComparison.OrdinalIgnoreCase) => (AdbTvRemoteCommands.PowerStateOff, CommandType.NoOp),
             _ => GetRawCommand(command)
         };
 
@@ -124,6 +126,7 @@ internal sealed partial class AdbWebSocketHandler
         KeyEvent,
         Raw,
         App,
+        NoOp,
         Unknown
     }
 }
