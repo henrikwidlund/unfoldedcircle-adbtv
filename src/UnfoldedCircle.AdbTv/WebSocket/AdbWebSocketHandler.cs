@@ -146,31 +146,32 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, SubscribedEntitiesHolder subscribedEntitiesHolder, CancellationToken cancellationToken)
     {
-        var holdersAvailabilities = new HashSet<bool>(2);
+        ConcurrentBag<bool> holdersAvailabilities = [];
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         do
         {
-            foreach (var subscribedEntity in subscribedEntitiesHolder.SubscribedEntities.Values.SelectMany(static x => x))
-            {
-                try
+            await Parallel.ForEachAsync(subscribedEntitiesHolder.SubscribedEntities.Values.SelectMany(static x => x), cancellationToken,
+                async (subscribedEntity, token) =>
                 {
-                    var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, subscribedEntity.EntityId, IdentifierType.EntityId, cancellationToken);
-                    var currentState = ReportedEntityIdStates.GetValueOrDefault(subscribedEntity.EntityId, RemoteState.Unknown);
-                    if (adbTvClientHolder is null)
+                    try
                     {
-                        holdersAvailabilities.Add(false);
-                        await ReportStateUnknown(socket, wsId, currentState, subscribedEntity, cancellationToken);
-                        continue;
-                    }
+                        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, subscribedEntity.EntityId, IdentifierType.EntityId, token);
+                        var currentState = ReportedEntityIdStates.GetValueOrDefault(subscribedEntity.EntityId, RemoteState.Unknown);
+                        if (adbTvClientHolder is null)
+                        {
+                            holdersAvailabilities.Add(false);
+                            await ReportStateUnknown(socket, wsId, currentState, subscribedEntity, token);
+                            return;
+                        }
 
-                    holdersAvailabilities.Add(true);
-                    await ReportStateOff(socket, wsId, currentState, subscribedEntity, cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    _logger.FailureDuringEvent(e, wsId, subscribedEntity.EntityId);
-                }
-            }
+                        holdersAvailabilities.Add(true);
+                        await ReportStateOff(socket, wsId, currentState, subscribedEntity, token);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.FailureDuringEvent(e, wsId, subscribedEntity.EntityId);
+                    }
+                });
 
             periodicTimer.Period = TimeSpan.FromSeconds(holdersAvailabilities.All(static x => x) ? 10 : 1);
             holdersAvailabilities.Clear();
