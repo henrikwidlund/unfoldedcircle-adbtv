@@ -5,10 +5,6 @@ namespace UnfoldedCircle.AdbTv.Logging;
 
 internal static partial class IntegrationLogger
 {
-    [LoggerMessage(EventId = 1, EventName = nameof(ClientFailedHealthCheck), Level = LogLevel.Information,
-        Message = "Client {ClientKey} failed to execute health check command.")]
-    public static partial void ClientFailedHealthCheck(this ILogger logger, Exception exception, in AdbTvClientKey clientKey);
-
     [LoggerMessage(EventId = 2, EventName = nameof(DeviceNotOnline), Level = LogLevel.Warning,
         Message = "Device {ClientKey} is not online. Connection result was '{ConnectionResult}', device state was {DeviceState}.")]
     public static partial void DeviceNotOnline(this ILogger logger, in AdbTvClientKey clientKey, string? connectionResult, in AdvancedSharpAdbClient.Models.DeviceState? deviceState);
@@ -28,9 +24,7 @@ internal static partial class IntegrationLogger
 
     public static void FailedToRemoveClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey) =>
         FailedToRemoveClientAction(logger, clientKey, exception);
-
-    // AdbWebSocketHandler.AdbClient logging
-
+    
     [LoggerMessage(EventId = 5, EventName = nameof(NoConfigurationsFound), Level = LogLevel.Information,
         Message = "[{WSId}] WS: No configurations found")]
     public static partial void NoConfigurationsFound(this ILogger logger, string wsId);
@@ -98,4 +92,12 @@ internal static partial class IntegrationLogger
 
     public static void FailureDuringEvent(this ILogger logger, Exception exception, string wsId, string key) =>
         FailureDuringEventAction(logger, wsId, key, exception);
+
+    [LoggerMessage(EventId = 18, EventName = nameof(TimeoutWaitingForGlobalSemaphore), Level = LogLevel.Information,
+        Message = "Failed to acquire global semaphore for client {ClientKey} within timeout.")]
+    public static partial void TimeoutWaitingForGlobalSemaphore(this ILogger logger, in AdbTvClientKey clientKey);
+
+    [LoggerMessage(EventId = 19, EventName = nameof(TimeoutWaitingForDeviceSemaphore), Level = LogLevel.Information,
+        Message = "Failed to acquire device semaphore for client {ClientKey} within timeout.")]
+    public static partial void TimeoutWaitingForDeviceSemaphore(this ILogger logger, in AdbTvClientKey clientKey);
 }
