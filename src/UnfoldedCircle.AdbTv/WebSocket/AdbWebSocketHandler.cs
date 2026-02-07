@@ -146,9 +146,7 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, SubscribedEntitiesHolder subscribedEntitiesHolder, CancellationToken cancellationToken)
     {
-        ConcurrentBag<bool> holdersAvailabilities = [];
-        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-        bool hasReportedAllSuccessOnce = false;
+        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(10));
         do
         {
             await Parallel.ForEachAsync(subscribedEntitiesHolder.SubscribedEntities.Values.SelectMany(static x => x), cancellationToken,
@@ -160,12 +158,10 @@ internal sealed partial class AdbWebSocketHandler(
                         var currentState = ReportedEntityIdStates.GetValueOrDefault(subscribedEntity.EntityId, RemoteState.Unknown);
                         if (adbTvClientHolder is null)
                         {
-                            holdersAvailabilities.Add(false);
                             await ReportStateUnknown(socket, wsId, currentState, subscribedEntity, token);
                             return;
                         }
 
-                        holdersAvailabilities.Add(true);
                         await ReportStateOff(socket, wsId, currentState, subscribedEntity, token);
                     }
                     catch (Exception e)
@@ -176,14 +172,6 @@ internal sealed partial class AdbWebSocketHandler(
                         _logger.FailureDuringEvent(e, wsId, subscribedEntity.EntityId);
                     }
                 });
-
-            // Reduce event interval once all clients have been reported as healthy at least once, to reduce load on the system.
-            if (!hasReportedAllSuccessOnce && holdersAvailabilities.All(static x => x))
-            {
-                hasReportedAllSuccessOnce = true;
-                periodicTimer.Period = TimeSpan.FromSeconds(10);
-            }
-            holdersAvailabilities.Clear();
         } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
     }
 

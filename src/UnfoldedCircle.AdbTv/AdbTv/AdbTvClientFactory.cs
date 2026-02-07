@@ -211,36 +211,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
     public async ValueTask TryRemoveClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
-        bool hasLock = false;
-        if (_clientSemaphores.TryGetValue(adbTvClientKey, out var clientSemaphore))
-        {
-            try
-            {
-                hasLock = await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken);
-                await RemoveClientAsync(adbTvClientKey, cancellationToken);
-                _clientSemaphores.TryRemove(adbTvClientKey, out _);
-                clientSemaphore.Release();
-                return;
-            }
-            catch (Exception ex)
-            {
-                _logger.ErrorWhenRemovingClient(ex, adbTvClientKey);
-            }
-        }
-
-        try
-        {
-            await RemoveClientAsync(adbTvClientKey, cancellationToken);
-        }
-        finally
-        {
-            if (hasLock)
-                clientSemaphore!.Release();
-        }
-    }
-
-    private async ValueTask RemoveClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
-    {
+        // We don't remove the semaphore since it might be used again, and people do not have enough TVs for this to be an issue
         if (_clients.TryRemove(adbTvClientKey, out var deviceClient))
         {
             try
