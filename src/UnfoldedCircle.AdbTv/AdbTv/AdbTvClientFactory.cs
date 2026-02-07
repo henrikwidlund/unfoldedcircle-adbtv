@@ -91,8 +91,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         AdbTvClientKey adbTvClientKey,
         AdbClient adbClient,
         ILogger<AdbTvClientFactory> logger,
-
-    long startTime,
+        long startTime,
         CancellationToken cancellationToken)
     {
         string? connectResult;
