@@ -148,6 +148,7 @@ internal sealed partial class AdbWebSocketHandler(
     {
         ConcurrentBag<bool> holdersAvailabilities = [];
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        bool hasReportedAllSuccessOnce = false;
         do
         {
             await Parallel.ForEachAsync(subscribedEntitiesHolder.SubscribedEntities.Values.SelectMany(static x => x), cancellationToken,
@@ -176,7 +177,12 @@ internal sealed partial class AdbWebSocketHandler(
                     }
                 });
 
-            periodicTimer.Period = TimeSpan.FromSeconds(holdersAvailabilities.All(static x => x) ? 10 : 1);
+            // Reduce event interval once all clients have been reported as healthy at least once, to reduce load on the system.
+            if (!hasReportedAllSuccessOnce && holdersAvailabilities.All(static x => x))
+            {
+                hasReportedAllSuccessOnce = true;
+                periodicTimer.Period = TimeSpan.FromSeconds(10);
+            }
             holdersAvailabilities.Clear();
         } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
     }
