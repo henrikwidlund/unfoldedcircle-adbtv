@@ -216,6 +216,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             try
             {
                 await deviceClient.AdbClient.DisconnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken);
+                _clientSemaphores.TryRemove(adbTvClientKey, out _);
             }
             catch (Exception e)
             {
