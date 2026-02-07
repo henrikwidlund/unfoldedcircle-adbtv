@@ -156,8 +156,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     }
 
     private static bool IsAdbConnectedResult(string? connectResult) =>
-        connectResult?.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) is true
-        || connectResult?.StartsWith("connected to ", StringComparison.InvariantCultureIgnoreCase) is true;
+        connectResult?.StartsWith("already connected to ", StringComparison.OrdinalIgnoreCase) is true
+        || connectResult?.StartsWith("connected to ", StringComparison.OrdinalIgnoreCase) is true;
 
     private static async ValueTask<T?> RunWithRetryWithReturnAsync<T>(Func<Task<T>> func,
         ILogger<AdbTvClientFactory> logger,

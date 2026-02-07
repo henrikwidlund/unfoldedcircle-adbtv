@@ -152,7 +152,8 @@ internal sealed partial class AdbWebSocketHandler
             do
             {
                 connectResult = await adbClient.ConnectAsync(adbTvClientKey.Value.IpAddress, adbTvClientKey.Value.Port, linkedCancellationTokenSource.Token);
-            } while (!connectResult.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase));
+            } while (!connectResult.StartsWith("already connected to ", StringComparison.OrdinalIgnoreCase)
+                     && !connectResult.StartsWith("connected to ", StringComparison.OrdinalIgnoreCase));
 
             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
             var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
