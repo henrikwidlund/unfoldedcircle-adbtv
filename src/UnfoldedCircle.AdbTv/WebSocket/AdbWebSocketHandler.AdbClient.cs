@@ -104,7 +104,7 @@ internal sealed partial class AdbWebSocketHandler
         return configuration.Entities;
     }
 
-    private async ValueTask<TimeSpan> GetMaxMessageHandlingWaitTimeInSecondsAsync(CancellationToken cancellationToken)
+    private async ValueTask<TimeSpan> GetMaxMessageHandlingWaitTimeSpanAsync(CancellationToken cancellationToken)
     {
         return await _configurationService.GetConfigurationAsync(cancellationToken) is { MaxMessageHandlingWaitTimeInSeconds: > 0 } configuration
             ? TimeSpan.FromSeconds(configuration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5)
@@ -119,7 +119,7 @@ internal sealed partial class AdbWebSocketHandler
     {
         try
         {
-            using var cancellationTokenSource = new CancellationTokenSource(await GetMaxMessageHandlingWaitTimeInSecondsAsync(cancellationToken));
+            using var cancellationTokenSource = new CancellationTokenSource(await GetMaxMessageHandlingWaitTimeSpanAsync(cancellationToken));
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cancellationTokenSource.Token);
             var adbTvClientKey = await TryGetAdbTvClientKeyAsync(wsId, identifierType, identifier, linkedCancellationTokenSource.Token);
             if (adbTvClientKey is null)

@@ -41,7 +41,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             }
 
             _logger.TimeoutWaitingForGlobalSemaphore(adbTvClientKey);
-            return null;
+            return _clients!.GetValueOrDefault(adbTvClientKey, null)?.DeviceClient;
         }
 
         if (!await deviceClientHolder.Semaphore.WaitAsync(HealthyDeviceTimeout, cancellationToken))
@@ -117,11 +117,11 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 logger,
                 true,
                 cancellationToken);
-            if (connectResult?.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) is not true)
+            if (!IsAdbConnectedResult(connectResult))
             {
                 await Task.Delay(100, cancellationToken);
             }
-        } while (connectResult?.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) is not true &&
+        } while (!IsAdbConnectedResult(connectResult) &&
                  Stopwatch.GetElapsedTime(startTime) < HealthyDeviceTimeout && !cancellationToken.IsCancellationRequested);
 
         return connectResult;
@@ -133,12 +133,12 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         CancellationToken cancellationToken)
     {
         var connectResult = await RunWithRetryWithReturnAsync(() =>
-            deviceClientHolder.DeviceClient.AdbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken),
-        _logger,
-        true,
-        cancellationToken);
+                deviceClientHolder.DeviceClient.AdbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken),
+            _logger,
+            true,
+            cancellationToken);
 
-        if (connectResult?.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) is true &&
+        if (IsAdbConnectedResult(connectResult) &&
             await RunWithRetryAsync(() =>
                     deviceClientHolder.DeviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClientHolder.DeviceClient.Device, cancellationToken),
                 _logger,
@@ -150,6 +150,10 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
         return await CreateDeviceClientAsync(adbTvClientKey, deviceClientHolder.Semaphore, cancellationToken);
     }
+
+    private static bool IsAdbConnectedResult(string? connectResult) =>
+        connectResult?.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) is true
+        || connectResult?.StartsWith("connected to ", StringComparison.InvariantCultureIgnoreCase) is true;
 
     private static async ValueTask<T?> RunWithRetryWithReturnAsync<T>(Func<Task<T>> func,
         ILogger<AdbTvClientFactory> logger,
