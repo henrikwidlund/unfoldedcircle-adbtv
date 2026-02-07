@@ -55,7 +55,7 @@ internal sealed partial class AdbWebSocketHandler
                 {
                     PageId = "uc_adbtv_general",
                     Name = "General",
-                    Grid = new Grid { Height = 4, Width = 2 },
+                    Grid = new Grid { Height = 6, Width = 2 },
                     Items =
                     [
                         new UserInterfaceItem
@@ -120,6 +120,29 @@ internal sealed partial class AdbWebSocketHandler
                             Text = "Settings",
                             Command = new EntityCommand { CmdId = AdbTvRemoteCommands.Settings },
                             Location = new GridLocation { X = 1, Y = 3 },
+                            Size = new GridItemSize { Height = 1, Width = 1 }
+                        },
+                        new UserInterfaceItem
+                        {
+                            Type = UserInterfaceItemType.Text,
+                            Text = "Adjust Power State",
+                            Location = new GridLocation { X = 0, Y = 4 },
+                            Size = new GridItemSize { Height = 1, Width = 2 }
+                        },
+                        new UserInterfaceItem
+                        {
+                            Type = UserInterfaceItemType.Text,
+                            Text = "Set to Off",
+                            Command = new EntityCommand { CmdId = AdbTvRemoteCommands.PowerStateOff },
+                            Location = new GridLocation { X = 0, Y = 5 },
+                            Size = new GridItemSize { Height = 1, Width = 1 }
+                        },
+                        new UserInterfaceItem
+                        {
+                            Type = UserInterfaceItemType.Text,
+                            Text = "Set to On",
+                            Command = new EntityCommand { CmdId = AdbTvRemoteCommands.PowerStateOn },
+                            Location = new GridLocation { X = 1, Y = 5 },
                             Size = new GridItemSize { Height = 1, Width = 1 }
                         }
                     ]
