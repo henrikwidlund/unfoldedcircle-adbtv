@@ -211,12 +211,43 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
     public async ValueTask TryRemoveClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
+        if (_clientSemaphores.TryGetValue(adbTvClientKey, out var clientSemaphore))
+        {
+            if (await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
+            {
+                try
+                {
+                    _clientSemaphores.TryRemove(adbTvClientKey, out _);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
+                }
+                finally
+                {
+                    await RemoveClientAsync(adbTvClientKey, cancellationToken);
+                    clientSemaphore.Release();
+                }
+            }
+            else
+            {
+                _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
+            }
+        }
+        else
+        {
+            // We have to try and remove it even if semaphore doesn't exist
+            await RemoveClientAsync(adbTvClientKey, cancellationToken);
+        }
+    }
+
+    private async ValueTask RemoveClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
+    {
         if (_clients.TryRemove(adbTvClientKey, out var deviceClient))
         {
             try
             {
                 await deviceClient.AdbClient.DisconnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken);
-                _clientSemaphores.TryRemove(adbTvClientKey, out _);
             }
             catch (Exception e)
             {
