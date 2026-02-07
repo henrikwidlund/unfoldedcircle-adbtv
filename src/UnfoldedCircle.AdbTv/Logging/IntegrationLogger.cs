@@ -9,13 +9,13 @@ internal static partial class IntegrationLogger
         Message = "Device {ClientKey} is not online. Connection result was '{ConnectionResult}', device state was {DeviceState}.")]
     public static partial void DeviceNotOnline(this ILogger logger, in AdbTvClientKey clientKey, string? connectionResult, in AdvancedSharpAdbClient.Models.DeviceState? deviceState);
 
-    private static readonly Action<ILogger, AdbTvClientKey, Exception> FailedToGetOrCreateClientAction = LoggerMessage.Define<AdbTvClientKey>(
+    private static readonly Action<ILogger, AdbTvClientKey, Exception> FailedToCreateClientAction = LoggerMessage.Define<AdbTvClientKey>(
         LogLevel.Error,
-        new EventId(3, nameof(FailedToGetOrCreateClient)),
-        "Failed to get or create client {ClientKey}.");
+        new EventId(3, nameof(FailedToCreateClient)),
+        "Failed to create client {ClientKey}.");
 
-    public static void FailedToGetOrCreateClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey) =>
-        FailedToGetOrCreateClientAction(logger, clientKey, exception);
+    public static void FailedToCreateClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey) =>
+        FailedToCreateClientAction(logger, clientKey, exception);
 
     private static readonly Action<ILogger, AdbTvClientKey, Exception> FailedToRemoveClientAction = LoggerMessage.Define<AdbTvClientKey>(
         LogLevel.Error,
@@ -24,7 +24,7 @@ internal static partial class IntegrationLogger
 
     public static void FailedToRemoveClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey) =>
         FailedToRemoveClientAction(logger, clientKey, exception);
-    
+
     [LoggerMessage(EventId = 5, EventName = nameof(NoConfigurationsFound), Level = LogLevel.Information,
         Message = "[{WSId}] WS: No configurations found")]
     public static partial void NoConfigurationsFound(this ILogger logger, string wsId);
@@ -100,4 +100,12 @@ internal static partial class IntegrationLogger
     [LoggerMessage(EventId = 19, EventName = nameof(TimeoutWaitingForDeviceSemaphore), Level = LogLevel.Information,
         Message = "Failed to acquire device semaphore for client {ClientKey} within timeout.")]
     public static partial void TimeoutWaitingForDeviceSemaphore(this ILogger logger, in AdbTvClientKey clientKey);
+
+    private static readonly Action<ILogger, Exception> ActionFailedWillNotRetryAction = LoggerMessage.Define(
+        LogLevel.Warning,
+        new EventId(16, nameof(ActionFailedWillNotRetry)),
+        "Action failed, will not retry.");
+
+    public static void ActionFailedWillNotRetry(this ILogger logger, Exception exception) =>
+        ActionFailedWillNotRetryAction(logger, exception);
 }

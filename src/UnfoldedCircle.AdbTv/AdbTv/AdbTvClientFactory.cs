@@ -28,7 +28,11 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             {
                 try
                 {
-                    return await CreateDeviceClient(adbTvClientKey, cancellationToken);
+                    // a new client was just added by another thread, assume healthy since it was just added.
+                    if (_clients.TryGetValue(adbTvClientKey, out deviceClientHolder))
+                        return deviceClientHolder.DeviceClient;
+
+                    return await CreateDeviceClient(adbTvClientKey, null, cancellationToken);
                 }
                 finally
                 {
@@ -56,35 +60,46 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    private async ValueTask<DeviceClient?> CreateDeviceClient(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
+    private async ValueTask<DeviceClient?> CreateDeviceClient(
+        AdbTvClientKey adbTvClientKey,
+        SemaphoreSlim? deviceSemaphore,
+        CancellationToken cancellationToken)
     {
-        var startTime = Stopwatch.GetTimestamp();
-        var adbClient = new AdbClient();
-        string? connectResult = await ConnectResult(adbTvClientKey, adbClient, _logger, startTime, cancellationToken);
-
-        startTime = Stopwatch.GetTimestamp();
-        DeviceClient? deviceClient = null;
-        var serial = $"{adbTvClientKey.IpAddress}:{adbTvClientKey.Port.ToString(NumberFormatInfo.InvariantInfo)}";
-        while (Stopwatch.GetElapsedTime(startTime) < HealthyDeviceTimeout && !cancellationToken.IsCancellationRequested)
+        try
         {
-            var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
-                x.Serial.Equals(serial, StringComparison.InvariantCulture));
-            deviceClient = deviceData?.CreateDeviceClient();
-            if (deviceClient is { Device.State: DeviceState.Online } || deviceClient is not null && !RetryStates.Contains(deviceClient.Device.State))
-                break;
+            var startTime = Stopwatch.GetTimestamp();
+            var adbClient = new AdbClient();
+            string? connectResult = await ConnectResult(adbTvClientKey, adbClient, _logger, startTime, cancellationToken);
 
-            await Task.Delay(100, cancellationToken);
+            startTime = Stopwatch.GetTimestamp();
+            DeviceClient? deviceClient = null;
+            var serial = $"{adbTvClientKey.IpAddress}:{adbTvClientKey.Port.ToString(NumberFormatInfo.InvariantInfo)}";
+            while (Stopwatch.GetElapsedTime(startTime) < HealthyDeviceTimeout && !cancellationToken.IsCancellationRequested)
+            {
+                var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
+                    x.Serial.Equals(serial, StringComparison.InvariantCulture));
+                deviceClient = deviceData?.CreateDeviceClient();
+                if (deviceClient is { Device.State: DeviceState.Online } || deviceClient is not null && !RetryStates.Contains(deviceClient.Device.State))
+                    break;
+
+                await Task.Delay(100, cancellationToken);
+            }
+
+            if (deviceClient is not { Device.State: DeviceState.Online })
+            {
+                _logger.DeviceNotOnline(adbTvClientKey, connectResult, deviceClient?.Device.State);
+                return null;
+            }
+
+            await deviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClient.Device, cancellationToken);
+            _clients[adbTvClientKey] = new DeviceClientHolder(deviceClient, deviceSemaphore ?? new SemaphoreSlim(1, 1));
+            return deviceClient;
         }
-
-        if (deviceClient is not { Device.State: DeviceState.Online })
+        catch (Exception e)
         {
-            _logger.DeviceNotOnline(adbTvClientKey, connectResult, deviceClient?.Device.State);
+            _logger.FailedToCreateClient(e, adbTvClientKey);
             return null;
         }
-
-        await deviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClient.Device, cancellationToken);
-        _clients[adbTvClientKey] = new DeviceClientHolder(deviceClient, new SemaphoreSlim(1, 1));
-        return deviceClient;
     }
 
     private static async ValueTask<string?> ConnectResult(
@@ -133,10 +148,10 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             return deviceClientHolder.DeviceClient;
         }
 
-        return await CreateDeviceClient(adbTvClientKey, cancellationToken);
+        return await CreateDeviceClient(adbTvClientKey, deviceClientHolder.Semaphore, cancellationToken);
     }
 
-    static async ValueTask<T?> RunWithRetryWithReturn<T>(Func<Task<T>> func,
+    private static async ValueTask<T?> RunWithRetryWithReturn<T>(Func<Task<T>> func,
         ILogger<AdbTvClientFactory> logger,
         bool allowRetry,
         CancellationToken cancellationToken)
@@ -177,6 +192,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 return await RunWithRetry(func, logger, false, cancellationToken);
             }
 
+            logger.ActionFailedWillNotRetry(e);
             return false;
         }
     }
