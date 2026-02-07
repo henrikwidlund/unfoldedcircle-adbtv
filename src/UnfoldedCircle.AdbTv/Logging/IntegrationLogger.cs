@@ -104,4 +104,12 @@ internal static partial class IntegrationLogger
 
     public static void ActionFailedWillNotRetry(this ILogger logger, Exception exception) =>
         ActionFailedWillNotRetryAction(logger, exception);
+
+    private static readonly Action<ILogger, AdbTvClientKey, Exception> ErrorWhenRemovingClientAction = LoggerMessage.Define<AdbTvClientKey>(
+        LogLevel.Warning,
+        new EventId(20, nameof(ErrorWhenRemovingClient)),
+        "Error while removing client {ClientKey}.");
+
+    public static void ErrorWhenRemovingClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey) =>
+        ErrorWhenRemovingClientAction(logger, clientKey, exception);
 }

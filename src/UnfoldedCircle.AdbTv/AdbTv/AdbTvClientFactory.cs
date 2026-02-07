@@ -211,22 +211,22 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
     public async ValueTask TryRemoveClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
-        bool hasLock;
+        bool hasLock = false;
         if (_clientSemaphores.TryGetValue(adbTvClientKey, out var clientSemaphore))
         {
             try
             {
                 hasLock = await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken);
+                await RemoveClientAsync(adbTvClientKey, cancellationToken);
                 _clientSemaphores.TryRemove(adbTvClientKey, out _);
+                clientSemaphore.Release();
+                return;
             }
-            catch (OperationCanceledException)
+            catch (Exception ex)
             {
-                hasLock = false;
-                _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
+                _logger.ErrorWhenRemovingClient(ex, adbTvClientKey);
             }
         }
-        else
-            hasLock = false;
 
         try
         {
