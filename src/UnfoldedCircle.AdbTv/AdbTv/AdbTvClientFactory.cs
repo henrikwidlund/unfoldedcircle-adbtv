@@ -211,33 +211,31 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
     public async ValueTask TryRemoveClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
+        bool hasLock;
         if (_clientSemaphores.TryGetValue(adbTvClientKey, out var clientSemaphore))
         {
-            if (await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
+            try
             {
-                try
-                {
-                    _clientSemaphores.TryRemove(adbTvClientKey, out _);
-                }
-                catch (OperationCanceledException)
-                {
-                    _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
-                }
-                finally
-                {
-                    await RemoveClientAsync(adbTvClientKey, cancellationToken);
-                    clientSemaphore.Release();
-                }
+                hasLock = await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken);
+                _clientSemaphores.TryRemove(adbTvClientKey, out _);
             }
-            else
+            catch (OperationCanceledException)
             {
+                hasLock = false;
                 _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
             }
         }
         else
+            hasLock = false;
+
+        try
         {
-            // We have to try and remove it even if semaphore doesn't exist
             await RemoveClientAsync(adbTvClientKey, cancellationToken);
+        }
+        finally
+        {
+            if (hasLock)
+                clientSemaphore!.Release();
         }
     }
 
