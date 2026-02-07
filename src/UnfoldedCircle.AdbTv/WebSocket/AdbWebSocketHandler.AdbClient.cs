@@ -104,12 +104,10 @@ internal sealed partial class AdbWebSocketHandler
         return configuration.Entities;
     }
 
-    private async ValueTask<TimeSpan> GetMaxMessageHandlingWaitTimeSpanAsync(CancellationToken cancellationToken)
-    {
-        return await _configurationService.GetConfigurationAsync(cancellationToken) is { MaxMessageHandlingWaitTimeInSeconds: > 0 } configuration
-            ? TimeSpan.FromSeconds(configuration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5)
+    private async ValueTask<TimeSpan> GetMaxMessageHandlingWaitTimeSpanAsync(CancellationToken cancellationToken) =>
+        await _configurationService.GetConfigurationAsync(cancellationToken) is { MaxMessageHandlingWaitTimeInSeconds: > 0 } configuration
+            ? TimeSpan.FromSeconds(configuration.MaxMessageHandlingWaitTimeInSeconds.Value)
             : TimeSpan.FromSeconds(9.5);
-    }
 
     private async Task<AdbTvClientHolder?> TryGetAdbTvClientHolderAsync(
         string wsId,
