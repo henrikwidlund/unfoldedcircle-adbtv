@@ -18,14 +18,14 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     private readonly ConcurrentDictionary<AdbTvClientKey, DeviceClient> _clients = new();
     private readonly ConcurrentDictionary<AdbTvClientKey, SemaphoreSlim> _clientSemaphores = new();
 
-    private static readonly TimeSpan HealthyDeviceTimeout = TimeSpan.FromSeconds(4.5);
+    private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(4.5);
 
     public async ValueTask<DeviceClient?> TryGetOrCreateClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
         var clientSemaphore = _clientSemaphores.GetOrAdd(adbTvClientKey, static _ => new SemaphoreSlim(1, 1));
         if (!_clients.TryGetValue(adbTvClientKey, out var deviceClient))
         {
-            if (await clientSemaphore.WaitAsync(HealthyDeviceTimeout, cancellationToken))
+            if (await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
             {
                 try
                 {
@@ -41,13 +41,13 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 }
             }
 
-            _logger.TimeoutWaitingForGlobalSemaphore(adbTvClientKey);
+            _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
             return _clients!.GetValueOrDefault(adbTvClientKey, null);
         }
 
-        if (!await clientSemaphore.WaitAsync(HealthyDeviceTimeout, cancellationToken))
+        if (!await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
         {
-            _logger.TimeoutWaitingForDeviceSemaphore(adbTvClientKey);
+            _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
             return _clients!.GetValueOrDefault(adbTvClientKey, null);
         }
 
@@ -74,7 +74,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             startTime = Stopwatch.GetTimestamp();
             DeviceClient? deviceClient = null;
             var serial = $"{adbTvClientKey.IpAddress}:{adbTvClientKey.Port.ToString(NumberFormatInfo.InvariantInfo)}";
-            while (Stopwatch.GetElapsedTime(startTime) < HealthyDeviceTimeout && !cancellationToken.IsCancellationRequested)
+            while (Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations && !cancellationToken.IsCancellationRequested)
             {
                 var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
                     x.Serial.Equals(serial, StringComparison.InvariantCulture));
@@ -122,7 +122,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 await Task.Delay(100, cancellationToken);
             }
         } while (!IsAdbConnectedResult(connectResult) &&
-                 Stopwatch.GetElapsedTime(startTime) < HealthyDeviceTimeout && !cancellationToken.IsCancellationRequested);
+                 Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations && !cancellationToken.IsCancellationRequested);
 
         return connectResult;
     }

@@ -93,17 +93,13 @@ internal static partial class IntegrationLogger
     public static void FailureDuringEvent(this ILogger logger, Exception exception, string wsId, string key) =>
         FailureDuringEventAction(logger, wsId, key, exception);
 
-    [LoggerMessage(EventId = 17, EventName = nameof(TimeoutWaitingForGlobalSemaphore), Level = LogLevel.Warning,
-        Message = "Failed to acquire global semaphore for client {ClientKey} within timeout.")]
-    public static partial void TimeoutWaitingForGlobalSemaphore(this ILogger logger, in AdbTvClientKey clientKey);
-
-    [LoggerMessage(EventId = 18, EventName = nameof(TimeoutWaitingForDeviceSemaphore), Level = LogLevel.Warning,
-        Message = "Failed to acquire device semaphore for client {ClientKey} within timeout.")]
-    public static partial void TimeoutWaitingForDeviceSemaphore(this ILogger logger, in AdbTvClientKey clientKey);
+    [LoggerMessage(EventId = 17, EventName = nameof(TimeoutWaitingForSemaphore), Level = LogLevel.Warning,
+        Message = "Failed to acquire semaphore for client {ClientKey} within timeout.")]
+    public static partial void TimeoutWaitingForSemaphore(this ILogger logger, in AdbTvClientKey clientKey);
 
     private static readonly Action<ILogger, Exception> ActionFailedWillNotRetryAction = LoggerMessage.Define(
         LogLevel.Warning,
-        new EventId(19, nameof(ActionFailedWillNotRetry)),
+        new EventId(18, nameof(ActionFailedWillNotRetry)),
         "Action failed, will not retry.");
 
     public static void ActionFailedWillNotRetry(this ILogger logger, Exception exception) =>
