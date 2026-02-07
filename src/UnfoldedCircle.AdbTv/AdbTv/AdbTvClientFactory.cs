@@ -91,7 +91,11 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 return null;
             }
 
-            await deviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClient.Device, cancellationToken);
+            await RunWithRetryAsync(() => deviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClient.Device, cancellationToken),
+                _logger,
+                true,
+                cancellationToken);
+
             _clients[adbTvClientKey] = deviceClient;
             return deviceClient;
         }
