@@ -82,8 +82,9 @@ internal sealed partial class AdbWebSocketHandler(
                     commandCancellationToken);
                 return EntityCommandResult.Other;
             case CommandType.NoOp:
-                RemoteStates[adbTvClientHolder.ClientKey] = command.Equals(AdbTvRemoteCommands.PowerStateOn, StringComparison.OrdinalIgnoreCase) ? RemoteState.On : RemoteState.Off;
-                return EntityCommandResult.Handled;
+                var isPowerOn = command.Equals(AdbTvRemoteCommands.PowerStateOn, StringComparison.OrdinalIgnoreCase);
+                RemoteStates[adbTvClientHolder.ClientKey] = isPowerOn ? RemoteState.On : RemoteState.Off;
+                return isPowerOn ? EntityCommandResult.PowerOn : EntityCommandResult.PowerOff;
             case CommandType.Unknown:
             default:
                 _logger.UnknownCommand(command);
