@@ -125,7 +125,7 @@ internal sealed partial class AdbWebSocketHandler
                         new UserInterfaceItem
                         {
                             Type = UserInterfaceItemType.Text,
-                            Text = "Fix Power State",
+                            Text = "Adjust Power State",
                             Location = new GridLocation { X = 0, Y = 4 },
                             Size = new GridItemSize { Height = 1, Width = 2 }
                         },
