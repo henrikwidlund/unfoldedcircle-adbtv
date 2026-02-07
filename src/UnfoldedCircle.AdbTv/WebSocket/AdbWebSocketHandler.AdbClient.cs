@@ -157,7 +157,7 @@ internal sealed partial class AdbWebSocketHandler
 
             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
             var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
-                x.Serial.Equals($"{adbTvClientKey.Value.IpAddress}:{adbTvClientKey.Value.Port.ToString(NumberFormatInfo.InvariantInfo)}", StringComparison.InvariantCulture));
+                x.Serial.Equals($"{adbTvClientKey.Value.IpAddress}:{adbTvClientKey.Value.Port.ToString(NumberFormatInfo.InvariantInfo)}", StringComparison.OrdinalIgnoreCase));
             return deviceData is { State: AdvancedSharpAdbClient.Models.DeviceState.Online };
         }
         catch (Exception e)
