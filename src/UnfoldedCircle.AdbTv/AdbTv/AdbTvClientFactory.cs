@@ -24,7 +24,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     {
         if (!_clients.TryGetValue(adbTvClientKey, out var deviceClientHolder))
         {
-            if (await _globalSemaphore.WaitAsync(TimeSpan.FromSeconds(3), cancellationToken))
+            if (await _globalSemaphore.WaitAsync(HealthyDeviceTimeout, cancellationToken))
             {
                 try
                 {
@@ -32,7 +32,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                     if (_clients.TryGetValue(adbTvClientKey, out deviceClientHolder))
                         return deviceClientHolder.DeviceClient;
 
-                    return await CreateDeviceClient(adbTvClientKey, null, cancellationToken);
+                    return await CreateDeviceClientAsync(adbTvClientKey, null, cancellationToken);
                 }
                 finally
                 {
@@ -44,7 +44,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             return null;
         }
 
-        if (!await deviceClientHolder.Semaphore.WaitAsync(TimeSpan.FromSeconds(3), cancellationToken))
+        if (!await deviceClientHolder.Semaphore.WaitAsync(HealthyDeviceTimeout, cancellationToken))
         {
             _logger.TimeoutWaitingForDeviceSemaphore(adbTvClientKey);
             return null;
@@ -52,7 +52,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
         try
         {
-            return await GetHealthyClient(adbTvClientKey, deviceClientHolder, cancellationToken);
+            return await GetHealthyClientAsync(adbTvClientKey, deviceClientHolder, cancellationToken);
         }
         finally
         {
@@ -60,7 +60,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    private async ValueTask<DeviceClient?> CreateDeviceClient(
+    private async ValueTask<DeviceClient?> CreateDeviceClientAsync(
         AdbTvClientKey adbTvClientKey,
         SemaphoreSlim? deviceSemaphore,
         CancellationToken cancellationToken)
@@ -69,7 +69,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         {
             var startTime = Stopwatch.GetTimestamp();
             var adbClient = new AdbClient();
-            string? connectResult = await ConnectResult(adbTvClientKey, adbClient, _logger, startTime, cancellationToken);
+            string? connectResult = await ConnectResultAsync(adbTvClientKey, adbClient, _logger, startTime, cancellationToken);
 
             startTime = Stopwatch.GetTimestamp();
             DeviceClient? deviceClient = null;
@@ -102,7 +102,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    private static async ValueTask<string?> ConnectResult(
+    private static async ValueTask<string?> ConnectResultAsync(
         AdbTvClientKey adbTvClientKey,
         AdbClient adbClient,
         ILogger<AdbTvClientFactory> logger,
@@ -112,7 +112,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         string? connectResult;
         do
         {
-            connectResult = await RunWithRetryWithReturn(() =>
+            connectResult = await RunWithRetryWithReturnAsync(() =>
                     adbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken),
                 logger,
                 true,
@@ -127,19 +127,19 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         return connectResult;
     }
 
-    private async ValueTask<DeviceClient?> GetHealthyClient(
+    private async ValueTask<DeviceClient?> GetHealthyClientAsync(
         AdbTvClientKey adbTvClientKey,
         DeviceClientHolder deviceClientHolder,
         CancellationToken cancellationToken)
     {
-        var connectResult = await RunWithRetryWithReturn(() =>
+        var connectResult = await RunWithRetryWithReturnAsync(() =>
             deviceClientHolder.DeviceClient.AdbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken),
         _logger,
         true,
         cancellationToken);
 
         if (connectResult?.StartsWith("already connected to ", StringComparison.InvariantCultureIgnoreCase) is true &&
-            await RunWithRetry(() =>
+            await RunWithRetryAsync(() =>
                     deviceClientHolder.DeviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClientHolder.DeviceClient.Device, cancellationToken),
                 _logger,
                 true,
@@ -148,10 +148,10 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             return deviceClientHolder.DeviceClient;
         }
 
-        return await CreateDeviceClient(adbTvClientKey, deviceClientHolder.Semaphore, cancellationToken);
+        return await CreateDeviceClientAsync(adbTvClientKey, deviceClientHolder.Semaphore, cancellationToken);
     }
 
-    private static async ValueTask<T?> RunWithRetryWithReturn<T>(Func<Task<T>> func,
+    private static async ValueTask<T?> RunWithRetryWithReturnAsync<T>(Func<Task<T>> func,
         ILogger<AdbTvClientFactory> logger,
         bool allowRetry,
         CancellationToken cancellationToken)
@@ -166,14 +166,14 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             {
                 logger.ActionFailedWillRetry(e);
                 await Task.SafeDelay(500, cancellationToken);
-                return await RunWithRetryWithReturn(func, logger, false, cancellationToken);
+                return await RunWithRetryWithReturnAsync(func, logger, false, cancellationToken);
             }
 
             throw;
         }
     }
 
-    static async ValueTask<bool> RunWithRetry(Func<Task> func,
+    private static async ValueTask<bool> RunWithRetryAsync(Func<Task> func,
         ILogger<AdbTvClientFactory> logger,
         bool allowRetry,
         CancellationToken cancellationToken)
@@ -189,7 +189,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             {
                 logger.ActionFailedWillRetry(e);
                 await Task.SafeDelay(500, cancellationToken);
-                return await RunWithRetry(func, logger, false, cancellationToken);
+                return await RunWithRetryAsync(func, logger, false, cancellationToken);
             }
 
             logger.ActionFailedWillNotRetry(e);
