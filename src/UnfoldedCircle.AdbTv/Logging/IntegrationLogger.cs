@@ -93,11 +93,11 @@ internal static partial class IntegrationLogger
     public static void FailureDuringEvent(this ILogger logger, Exception exception, string wsId, string key) =>
         FailureDuringEventAction(logger, wsId, key, exception);
 
-    [LoggerMessage(EventId = 18, EventName = nameof(TimeoutWaitingForGlobalSemaphore), Level = LogLevel.Information,
+    [LoggerMessage(EventId = 18, EventName = nameof(TimeoutWaitingForGlobalSemaphore), Level = LogLevel.Warning,
         Message = "Failed to acquire global semaphore for client {ClientKey} within timeout.")]
     public static partial void TimeoutWaitingForGlobalSemaphore(this ILogger logger, in AdbTvClientKey clientKey);
 
-    [LoggerMessage(EventId = 19, EventName = nameof(TimeoutWaitingForDeviceSemaphore), Level = LogLevel.Information,
+    [LoggerMessage(EventId = 19, EventName = nameof(TimeoutWaitingForDeviceSemaphore), Level = LogLevel.Warning,
         Message = "Failed to acquire device semaphore for client {ClientKey} within timeout.")]
     public static partial void TimeoutWaitingForDeviceSemaphore(this ILogger logger, in AdbTvClientKey clientKey);
 
