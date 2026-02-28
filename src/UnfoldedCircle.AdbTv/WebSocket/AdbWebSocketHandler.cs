@@ -108,6 +108,55 @@ internal sealed partial class AdbWebSocketHandler(
         }
     }
 
+    protected override ValueTask<EntityCommandResult> OnClimateHvacModeCommandAsync(System.Net.WebSockets.WebSocket socket,
+        ClimateEntityCommandMsgData payload,
+        HvacMode hvacMode,
+        string wsId,
+        CancellationTokenWrapper cancellationTokenWrapper,
+        CancellationToken commandCancellationToken)
+        => ValueTask.FromResult(EntityCommandResult.Other);
+
+    protected override ValueTask<EntityCommandResult> OnClimatePowerCommandAsync(System.Net.WebSockets.WebSocket socket,
+        ClimateEntityCommandMsgData payload,
+        bool powerOn,
+        string wsId,
+        CancellationTokenWrapper cancellationTokenWrapper,
+        CancellationToken commandCancellationToken)
+        => ValueTask.FromResult(EntityCommandResult.Other);
+
+    protected override ValueTask<EntityCommandResult> OnClimateTargetTemperatureCommandAsync(System.Net.WebSockets.WebSocket socket,
+        ClimateEntityCommandMsgData payload,
+        float targetTemperature,
+        string wsId,
+        CancellationTokenWrapper cancellationTokenWrapper,
+        CancellationToken commandCancellationToken)
+        => ValueTask.FromResult(EntityCommandResult.Other);
+
+    protected override ValueTask<SelectCommandResult> OnSelectOptionCommandAsync(System.Net.WebSockets.WebSocket socket,
+        SelectEntityCommandMsgData payload,
+        string option,
+        string wsId,
+        CancellationTokenWrapper cancellationTokenWrapper,
+        CancellationToken commandCancellationToken)
+        => ValueTask.FromResult(new SelectCommandResult(EntityCommandResult.Other, string.Empty));
+
+    protected override ValueTask<SelectCommandResult> OnSelectFirstLastCommandAsync(System.Net.WebSockets.WebSocket socket,
+        SelectEntityCommandMsgData payload,
+        bool first,
+        string wsId,
+        CancellationTokenWrapper cancellationTokenWrapper,
+        CancellationToken commandCancellationToken)
+        => ValueTask.FromResult(new SelectCommandResult(EntityCommandResult.Other, string.Empty));
+
+    protected override ValueTask<SelectCommandResult> OnSelectNextPreviousCommandAsync(System.Net.WebSockets.WebSocket socket,
+        SelectEntityCommandMsgData payload,
+        bool next,
+        bool cycle,
+        string wsId,
+        CancellationTokenWrapper cancellationTokenWrapper,
+        CancellationToken commandCancellationToken)
+        => ValueTask.FromResult(new SelectCommandResult(EntityCommandResult.Other, string.Empty));
+
     protected override async ValueTask<bool> IsEntityReachableAsync(string wsId, string entityId, CancellationToken cancellationToken)
         => await TryGetAdbTvClientHolderAsync(wsId, entityId, IdentifierType.EntityId, cancellationToken) is not null;
 

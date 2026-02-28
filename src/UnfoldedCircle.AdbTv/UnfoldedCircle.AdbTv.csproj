@@ -47,7 +47,7 @@
 
     <ItemGroup>
         <PackageReference Include="AdvancedSharpAdbClient" Version="3.6.16" />
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.9">
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.18">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
@@ -55,7 +55,7 @@
         <PackageReference Include="Theodicean.SourceGenerators" Version="0.0.4" PrivateAssets="all" ExcludeAssets="runtime">
             <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.6" />
+        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.7-pre01" />
     </ItemGroup>
 
 </Project>
