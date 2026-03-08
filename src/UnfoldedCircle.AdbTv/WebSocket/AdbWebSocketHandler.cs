@@ -344,8 +344,8 @@ internal sealed partial class AdbWebSocketHandler(
         var driverMetadata = await _configurationService.GetDriverMetadataAsync(cancellationToken);
         var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
         var macAddress = payload.MsgData.InputValues[AdbTvServerConstants.MacAddressKey];
-        var deviceId = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.DeviceIdKey, macAddress);
-        var entityName = payload.MsgData.InputValues.GetValueOrNull(AdbTvServerConstants.EntityName, $"{driverMetadata.Name["en"]} {ipAddress}");
+        var deviceId = payload.MsgData.InputValues.GetStringValueOrDefault(AdbTvServerConstants.DeviceIdKey, macAddress);
+        var entityName = payload.MsgData.InputValues.GetStringValueOrDefault(AdbTvServerConstants.EntityName, $"{driverMetadata.Name["en"]} {ipAddress}");
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
             : 5555;
