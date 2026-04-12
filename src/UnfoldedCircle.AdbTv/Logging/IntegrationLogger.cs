@@ -105,13 +105,13 @@ internal static partial class IntegrationLogger
     public static void ActionFailedWillNotRetry(this ILogger logger, Exception exception) =>
         ActionFailedWillNotRetryAction(logger, exception);
 
-    [LoggerMessage(EventId = 19, EventName = nameof(AdbPrivateKeysNotFoundForBackup), Level = LogLevel.Warning,
+    [LoggerMessage(EventId = 19, EventName = nameof(AdbPrivateKeyNotFoundForBackup), Level = LogLevel.Warning,
         Message = "ADB private key not found for backup at path '{PrivateKeyPath}'.")]
-    public static partial void AdbPrivateKeysNotFoundForBackup(this ILogger logger, string privateKeyPath);
+    public static partial void AdbPrivateKeyNotFoundForBackup(this ILogger logger, string privateKeyPath);
 
-    [LoggerMessage(EventId = 20, EventName = nameof(AdbPublicKeysNotFoundForBackup), Level = LogLevel.Warning,
+    [LoggerMessage(EventId = 20, EventName = nameof(AdbPublicKeyNotFoundForBackup), Level = LogLevel.Warning,
         Message = "ADB public key not found for backup at path '{PublicKeyPath}'.")]
-    public static partial void AdbPublicKeysNotFoundForBackup(this ILogger logger, string publicKeyPath);
+    public static partial void AdbPublicKeyNotFoundForBackup(this ILogger logger, string publicKeyPath);
 
     [LoggerMessage(EventId = 21, EventName = nameof(BackupDataNullDuringRestore), Level = LogLevel.Error,
         Message = "[{WSId}] BackupData null during restore.")]

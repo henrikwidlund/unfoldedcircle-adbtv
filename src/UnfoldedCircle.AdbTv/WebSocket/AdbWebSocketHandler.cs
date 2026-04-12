@@ -455,13 +455,13 @@ internal sealed partial class AdbWebSocketHandler(
         var publicKey = Path.Combine(adbKeyDirectory, "adbkey.pub");
         if (!File.Exists(privateKey))
         {
-            _logger.AdbPrivateKeysNotFoundForBackup(privateKey);
+            _logger.AdbPrivateKeyNotFoundForBackup(privateKey);
             throw new FileNotFoundException("No private key found for backup.", privateKey);
         }
 
         if (!File.Exists(publicKey))
         {
-            _logger.AdbPublicKeysNotFoundForBackup(publicKey);
+            _logger.AdbPublicKeyNotFoundForBackup(publicKey);
             throw new FileNotFoundException("No public key found for backup.", publicKey);
         }
 
