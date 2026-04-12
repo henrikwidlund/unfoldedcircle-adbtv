@@ -461,8 +461,8 @@ internal sealed partial class AdbWebSocketHandler(
 
         if (!File.Exists(publicKey))
         {
-            _logger.AdbPublicKeysNotFoundForBackup(adbKeyDirectory);
-            throw new FileNotFoundException("No public key found for backup.", privateKey);
+            _logger.AdbPublicKeysNotFoundForBackup(publicKey);
+            throw new FileNotFoundException("No public key found for backup.", publicKey);
         }
 
         return JsonSerializer.Serialize(new BackupData(config,
@@ -475,7 +475,11 @@ internal sealed partial class AdbWebSocketHandler(
     {
         var vendorKeys = Environment.GetEnvironmentVariable("ADB_VENDOR_KEYS");
         if (!string.IsNullOrEmpty(vendorKeys))
-            return Path.GetDirectoryName(vendorKeys.Split(':')[0])!;
+        {
+            var separatorIndex = vendorKeys.IndexOf(Path.PathSeparator, StringComparison.Ordinal);
+            var firstVendorKey = separatorIndex >= 0 ? vendorKeys[..separatorIndex] : vendorKeys;
+            return Path.GetDirectoryName(firstVendorKey)!;
+        }
 
         var sdkHome = Environment.GetEnvironmentVariable("ANDROID_SDK_HOME");
         if (!string.IsNullOrEmpty(sdkHome))

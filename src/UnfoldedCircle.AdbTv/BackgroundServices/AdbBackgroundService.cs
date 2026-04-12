@@ -11,6 +11,8 @@ public sealed class AdbBackgroundService : IHostedService, IDisposable
         get;
         set
         {
+            if (field == value)
+                return;
             field = value;
             // Fire and forget
             _ = StartOrStop(!value, CancellationToken.None);
