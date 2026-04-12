@@ -462,7 +462,7 @@ internal sealed partial class AdbWebSocketHandler(
         if (!File.Exists(publicKey))
         {
             _logger.AdbPublicKeysNotFoundForBackup(adbKeyDirectory);
-            throw new FileNotFoundException("No private key found for backup.", privateKey);
+            throw new FileNotFoundException("No public key found for backup.", privateKey);
         }
 
         return JsonSerializer.Serialize(new BackupData(config,

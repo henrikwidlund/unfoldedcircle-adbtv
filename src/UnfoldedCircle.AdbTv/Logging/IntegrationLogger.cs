@@ -110,7 +110,7 @@ internal static partial class IntegrationLogger
     public static partial void AdbPrivateKeysNotFoundForBackup(this ILogger logger, string privateKeyPath);
 
     [LoggerMessage(EventId = 20, EventName = nameof(AdbPublicKeysNotFoundForBackup), Level = LogLevel.Warning,
-        Message = "ADB public key not found for backup at path '{publicKeyPath}'.")]
+        Message = "ADB public key not found for backup at path '{PublicKeyPath}'.")]
     public static partial void AdbPublicKeysNotFoundForBackup(this ILogger logger, string publicKeyPath);
 
     [LoggerMessage(EventId = 21, EventName = nameof(BackupDataNullDuringRestore), Level = LogLevel.Error,
