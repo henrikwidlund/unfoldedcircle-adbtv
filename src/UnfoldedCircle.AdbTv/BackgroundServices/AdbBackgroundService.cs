@@ -6,6 +6,17 @@ public sealed class AdbBackgroundService : IHostedService, IDisposable
 {
     private readonly CancellationTokenSource _keepAliveCancellationTokenSource = new();
 
+    public static bool RestoreInProgress
+    {
+        get;
+        set
+        {
+            field = value;
+            // Fire and forget
+            _ = StartOrStop(!value, CancellationToken.None);
+        }
+    }
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -19,7 +30,7 @@ public sealed class AdbBackgroundService : IHostedService, IDisposable
     {
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(5));
         while (!_keepAliveCancellationTokenSource.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(_keepAliveCancellationTokenSource.Token))
-            await StartOrStop(true, _keepAliveCancellationTokenSource.Token);
+            await StartOrStop(!RestoreInProgress, _keepAliveCancellationTokenSource.Token);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

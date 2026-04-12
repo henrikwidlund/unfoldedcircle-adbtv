@@ -8,7 +8,9 @@ using AdvancedSharpAdbClient.DeviceCommands;
 using Microsoft.Extensions.Options;
 
 using UnfoldedCircle.AdbTv.AdbTv;
+using UnfoldedCircle.AdbTv.BackgroundServices;
 using UnfoldedCircle.AdbTv.Configuration;
+using UnfoldedCircle.AdbTv.Json;
 using UnfoldedCircle.AdbTv.Logging;
 using UnfoldedCircle.AdbTv.Response;
 using UnfoldedCircle.AdbTv.WoL;
@@ -338,6 +340,36 @@ internal sealed partial class AdbWebSocketHandler(
         return await GetSetupResultForClient(wsId, configurationItem.EntityId, cancellationToken);
     }
 
+    protected override async ValueTask<RestoreResult> HandleRestoreFromBackupAsync(string wsId, string jsonRestoreData, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var adbKeyDirectory = GetAdbKeyDirectory();
+            var backupData = JsonSerializer.Deserialize(jsonRestoreData, AdbJsonSerializerContext.Default.BackupData);
+            if (backupData is null)
+            {
+                _logger.BackupDataNullDuringRestore(wsId);
+                return RestoreResult.Failure;
+            }
+
+            await _configurationService.UpdateConfigurationAsync(backupData.Configuration, cancellationToken);
+            AdbBackgroundService.RestoreInProgress = true;
+            _adbTvClientFactory.RemoveAllClients();
+            await File.WriteAllBytesAsync(Path.Combine(adbKeyDirectory, "adbkey"), Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
+            await File.WriteAllBytesAsync(Path.Combine(adbKeyDirectory, "adbkey.pub"), Convert.FromBase64String(backupData.PublicKey), cancellationToken);
+            return RestoreResult.Success;
+        }
+        catch (Exception e)
+        {
+            _logger.ExceptionDuringRestore(e, wsId);
+            return RestoreResult.Failure;
+        }
+        finally
+        {
+            AdbBackgroundService.RestoreInProgress = false;
+        }
+    }
+
     protected override async ValueTask<SetupDriverUserDataResult> HandleCreateNewEntity(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
@@ -414,6 +446,43 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override MediaPlayerEntityCommandMsgData<MediaPlayerCommandId>? DeserializeMediaPlayerCommandPayload(JsonDocument jsonDocument)
         => null;
+
+    protected override async ValueTask<string> GetJsonBackupDataAsync(CancellationToken cancellationToken)
+    {
+        var config = await _configurationService.GetConfigurationAsync(cancellationToken);
+        var adbKeyDirectory = GetAdbKeyDirectory();
+        var privateKey = Path.Combine(adbKeyDirectory, "adbkey");
+        var publicKey = Path.Combine(adbKeyDirectory, "adbkey.pub");
+        if (!File.Exists(privateKey))
+        {
+            _logger.AdbPrivateKeysNotFoundForBackup(privateKey);
+            throw new FileNotFoundException("No private key found for backup.", privateKey);
+        }
+
+        if (!File.Exists(publicKey))
+        {
+            _logger.AdbPublicKeysNotFoundForBackup(adbKeyDirectory);
+            throw new FileNotFoundException("No private key found for backup.", privateKey);
+        }
+
+        return JsonSerializer.Serialize(new BackupData(config,
+                Convert.ToBase64String(await File.ReadAllBytesAsync(publicKey, cancellationToken)),
+                Convert.ToBase64String(await File.ReadAllBytesAsync(privateKey, cancellationToken))),
+            AdbJsonSerializerContext.Default.BackupData);
+    }
+
+    private static string GetAdbKeyDirectory()
+    {
+        var vendorKeys = Environment.GetEnvironmentVariable("ADB_VENDOR_KEYS");
+        if (!string.IsNullOrEmpty(vendorKeys))
+            return Path.GetDirectoryName(vendorKeys.Split(':')[0])!;
+
+        var sdkHome = Environment.GetEnvironmentVariable("ANDROID_SDK_HOME");
+        if (!string.IsNullOrEmpty(sdkHome))
+            return Path.Combine(sdkHome, ".android");
+
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".android");
+    }
 
     protected override async ValueTask<SettingsPage> CreateNewEntitySettingsPageAsync(CancellationToken cancellationToken)
     {
