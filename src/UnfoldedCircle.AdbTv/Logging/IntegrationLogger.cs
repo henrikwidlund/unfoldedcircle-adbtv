@@ -1,5 +1,4 @@
 using UnfoldedCircle.AdbTv.AdbTv;
-using UnfoldedCircle.AdbTv.WebSocket;
 
 namespace UnfoldedCircle.AdbTv.Logging;
 
@@ -30,24 +29,16 @@ internal static partial class IntegrationLogger
     public static partial void NoConfigurationsFound(this ILogger logger, string wsId);
 
     [LoggerMessage(EventId = 5, EventName = nameof(NoConfigurationFoundForIdentifier), Level = LogLevel.Information,
-        Message = "[{WSId}] WS: No configuration found for identifier '{Identifier}' with type {Type}")]
-    public static partial void NoConfigurationFoundForIdentifier(this ILogger logger, string wsId, string? identifier, in AdbWebSocketHandler.IdentifierType type);
+        Message = "[{WSId}] WS: No configuration found for identifier '{Identifier}'")]
+    public static partial void NoConfigurationFoundForIdentifier(this ILogger logger, string wsId, string? identifier);
 
-    [LoggerMessage(EventId = 6, EventName = nameof(NoConfigurationFoundForDeviceId), Level = LogLevel.Information,
-        Message = "[{WSId}] WS: No configuration found for device ID '{DeviceId}'")]
-    public static partial void NoConfigurationFoundForDeviceId(this ILogger logger, string wsId, in ReadOnlyMemory<char> deviceId);
-
-    [LoggerMessage(EventId = 7, EventName = nameof(NoConfigurationFoundForDeviceIdString), Level = LogLevel.Information,
-        Message = "[{WSId}] WS: No configuration found for device ID '{DeviceId}'")]
-    public static partial void NoConfigurationFoundForDeviceIdString(this ILogger logger, string wsId, string deviceId);
-
-    private static readonly Action<ILogger, string, string?, AdbWebSocketHandler.IdentifierType, Exception> FailedToGetAdbTvClientAction = LoggerMessage.Define<string, string?, AdbWebSocketHandler.IdentifierType>(
+    private static readonly Action<ILogger, string, string?, Exception> FailedToGetAdbTvClientAction = LoggerMessage.Define<string, string?>(
         LogLevel.Error,
         new EventId(8, nameof(FailedToGetAdbTvClient)),
-        "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}' with type {Type}");
+        "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}'");
 
-    public static void FailedToGetAdbTvClient(this ILogger logger, Exception exception, string wsId, string? identifier, in AdbWebSocketHandler.IdentifierType type) =>
-        FailedToGetAdbTvClientAction(logger, wsId, identifier, type, exception);
+    public static void FailedToGetAdbTvClient(this ILogger logger, Exception exception, string wsId, string? identifier) =>
+        FailedToGetAdbTvClientAction(logger, wsId, identifier, exception);
 
     private static readonly Action<ILogger, string, string, Exception> FailedToCheckClientApprovedAction = LoggerMessage.Define<string, string>(
         LogLevel.Error,
@@ -124,4 +115,32 @@ internal static partial class IntegrationLogger
 
     public static void ExceptionDuringRestore(this ILogger logger, Exception exception, string wsId) =>
         ExceptionDuringRestoreAction(logger, wsId, exception);
+
+    [LoggerMessage(EventId = 23, EventName = nameof(AdbTvClientKeyNotFound), Level = LogLevel.Warning,
+        Message = "[{WSId}] Could not find AdbTvClientKey for entity ID '{EntityId}'")]
+    public static partial void AdbTvClientKeyNotFound(this ILogger logger, string wsId, string entityId);
+
+    [LoggerMessage(EventId = 25, EventName = nameof(AdbTvClientHolderNotFound), Level = LogLevel.Warning,
+        Message = "[{WSId}] Could not find AdbTvClientHolder for entity ID '{EntityId}'")]
+    public static partial void AdbTvClientHolderNotFound(this ILogger logger, string wsId, string entityId);
+
+    [LoggerMessage(EventId = 26, EventName = nameof(SelectFirstLastNoAppsFound), Level = LogLevel.Warning,
+        Message = "[{WSId}] Select first/last app for entity ID '{EntityId}' failed because no apps were found.")]
+    public static partial void SelectFirstLastNoAppsFound(this ILogger logger, string wsId, string entityId);
+
+    [LoggerMessage(EventId = 27, EventName = nameof(PopulateAppsYieldedNoApps), Level = LogLevel.Warning,
+        Message = "[{WSId}] Populate apps for entity ID '{EntityId}' yielded no apps.")]
+    public static partial void PopulateAppsYieldedNoApps(this ILogger logger, string wsId, string entityId);
+
+    [LoggerMessage(EventId = 28, EventName = nameof(SelectNextPreviousNoAppsFound), Level = LogLevel.Warning,
+        Message = "[{WSId}] Select next/previous app for entity ID '{EntityId}' failed because no apps were found.")]
+    public static partial void SelectNextPreviousNoAppsFound(this ILogger logger, string wsId, string entityId);
+
+    [LoggerMessage(EventId = 29, EventName = nameof(SelectNextPreviousNoAppsOutOfBounds), Level = LogLevel.Warning,
+        Message = "[{WSId}] Select next/previous app for entity ID '{EntityId}' failed because the next index {NextIndex} is out of bounds for apps count {AppsCount}.")]
+    public static partial void SelectNextPreviousNoAppsOutOfBounds(this ILogger logger, string wsId, string entityId, int nextIndex, int appsCount);
+
+    [LoggerMessage(EventId = 30, EventName = nameof(DeviceNotOnlineDuringSetupResult), Level = LogLevel.Warning,
+        Message = "[{WSId}] Device for entity ID '{EntityId}' is not online.")]
+    public static partial void DeviceNotOnlineDuringSetupResult(this ILogger logger, string wsId, string entityId);
 }

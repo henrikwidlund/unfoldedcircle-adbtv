@@ -243,33 +243,57 @@ internal sealed partial class AdbWebSocketHandler
     };
 
     private static IEnumerable<AvailableEntity> GetAvailableEntities(
-        List<AdbConfigurationItem>? entities,
-        GetAvailableEntitiesMsg payload)
+        List<AdbConfigurationItem>? entities)
     {
         if (entities is not { Count: > 0 })
             yield break;
 
-        var hasDeviceIdFilter = !string.IsNullOrEmpty(payload.MsgData.Filter?.DeviceId);
         foreach (var adbConfigurationItem in entities)
         {
-            if (hasDeviceIdFilter)
-            {
-                var configDeviceId = adbConfigurationItem.DeviceId.AsSpan();
-                // we have a device id filter, so if the config device id is null, there is no match
-                if (configDeviceId.IsEmpty)
-                    continue;
-                if (!configDeviceId.Equals(payload.MsgData.Filter!.DeviceId.AsSpan().GetBaseIdentifier(), StringComparison.OrdinalIgnoreCase))
-                    continue;
-            }
-
             yield return new RemoteAvailableEntity
             {
                 EntityId = adbConfigurationItem.EntityId.GetIdentifier(EntityType.Remote),
                 EntityType = EntityType.Remote,
                 Name = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = adbConfigurationItem.EntityName },
-                DeviceId = adbConfigurationItem.DeviceId.GetNullableIdentifier(EntityType.Remote),
                 Features = AdbTvEntitySettings.RemoteFeatures,
                 Options = RemoteOptions
+            };
+
+            yield return new SelectAvailableEntity
+            {
+                EntityId = adbConfigurationItem.EntityId.GetIdentifier(EntityType.Select, AdbTvServerConstants.AppListSelectSuffix),
+                EntityType = EntityType.Select,
+                Name = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = $"{adbConfigurationItem.EntityName} App List" }
+            };
+
+            yield return new MediaPlayerAvailableEntity
+            {
+                EntityId = adbConfigurationItem.EntityId.GetIdentifier(EntityType.MediaPlayer),
+                EntityType = EntityType.MediaPlayer,
+                Name = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = adbConfigurationItem.EntityName },
+                Features =
+                [
+                    MediaPlayerEntityFeature.OnOff,
+                    MediaPlayerEntityFeature.Toggle,
+                    MediaPlayerEntityFeature.VolumeUpDown,
+                    MediaPlayerEntityFeature.MuteToggle,
+                    MediaPlayerEntityFeature.Dpad,
+                    MediaPlayerEntityFeature.Numpad,
+                    MediaPlayerEntityFeature.Home,
+                    MediaPlayerEntityFeature.Info,
+                    MediaPlayerEntityFeature.SelectSource,
+                    MediaPlayerEntityFeature.Settings
+                ],
+                Options = new Dictionary<string, ISet<string>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["simple_commands"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        AdbTvRemoteCommands.AudioTvSpeakers,
+                        AdbTvRemoteCommands.AudioExternalDevice,
+                        AdbTvRemoteCommands.PowerStateOn,
+                        AdbTvRemoteCommands.PowerStateOff
+                    }
+                }
             };
         }
     }

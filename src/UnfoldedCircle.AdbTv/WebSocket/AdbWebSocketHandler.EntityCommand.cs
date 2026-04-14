@@ -70,8 +70,67 @@ internal sealed partial class AdbWebSocketHandler
                 _ => (command, CommandType.Unknown)
             };
         }
+    }
 
-        static (string Command, CommandType CommandType) GetHdmiCommand(in HdmiPort hdmiPort, in Manufacturer manufacturer)
+        private static (string Command, CommandType CommandType) GetMappedCommand(AdbMediaPlayerCommandId command,
+        in Manufacturer? manufacturer,
+        string? source)
+    {
+        var localManufacturer = manufacturer ?? Manufacturer.Android;
+        return command switch
+        {
+            AdbMediaPlayerCommandId.On => (AdbTvConstants.Wakeup, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Off => (AdbTvConstants.Sleep, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Toggle => (AdbTvConstants.Power, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.VolumeUp => (AdbTvConstants.VolumeUp, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.VolumeDown => (AdbTvConstants.VolumeDown, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.MuteToggle => (AdbTvConstants.Mute, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.ChannelUp => (AdbTvConstants.ChannelUp, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.ChannelDown => (AdbTvConstants.ChannelDown, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.CursorUp => (AdbTvConstants.DpadUp, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.CursorDown => (AdbTvConstants.DpadDown, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.CursorLeft => (AdbTvConstants.DpadLeft, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.CursorRight => (AdbTvConstants.DpadRight, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.CursorEnter => (AdbTvConstants.DpadCenter, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Home => (AdbTvConstants.Home, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Back => (AdbTvConstants.Back, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Settings => (AdbTvConstants.Settings, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Digit0 => (AdbTvConstants.Key0, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Digit1 => (AdbTvConstants.Key1, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Digit2 => (AdbTvConstants.Key2, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Digit3 => (AdbTvConstants.Key3, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Digit4 => (AdbTvConstants.Key4, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Digit5 => (AdbTvConstants.Key5, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Digit6 => (AdbTvConstants.Key6, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Digit7 => (AdbTvConstants.Key7, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Digit8 => (AdbTvConstants.Key8, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Digit9 => (AdbTvConstants.Key9, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.Info => (AdbTvConstants.Info, CommandType.KeyEvent),
+            AdbMediaPlayerCommandId.SelectSource => GetAppOrHdmiCommand(source, localManufacturer),
+            AdbMediaPlayerCommandId.AudioTvSpeakers => (AdbAdvancedCommands.AudioTvSpeakers, CommandType.Raw),
+            AdbMediaPlayerCommandId.AudioExternalDevice => (AdbAdvancedCommands.AudioExternalDevice, CommandType.Raw),
+            AdbMediaPlayerCommandId.PowerStateOn => (AdbTvRemoteCommands.PowerStateOn, CommandType.NoOp),
+            AdbMediaPlayerCommandId.PowerStateOff => (AdbTvRemoteCommands.PowerStateOff, CommandType.NoOp),
+            _ => (string.Empty, CommandType.Unknown)
+        };
+
+        static (string Command, CommandType CommandType) GetAppOrHdmiCommand(string? source, in Manufacturer manufacturer)
+        {
+            if (string.IsNullOrEmpty(source))
+                return (string.Empty, CommandType.Unknown);
+
+            return source switch
+            {
+                AdbTvRemoteCommands.InputHdmi1 => GetHdmiCommand(HdmiPort.Hdmi1, manufacturer),
+                AdbTvRemoteCommands.InputHdmi2 => GetHdmiCommand(HdmiPort.Hdmi2, manufacturer),
+                AdbTvRemoteCommands.InputHdmi3 => GetHdmiCommand(HdmiPort.Hdmi3, manufacturer),
+                AdbTvRemoteCommands.InputHdmi4 => GetHdmiCommand(HdmiPort.Hdmi4, manufacturer),
+                _ => (source, CommandType.App)
+            };
+        }
+    }
+
+    private static (string Command, CommandType CommandType) GetHdmiCommand(in HdmiPort hdmiPort, in Manufacturer manufacturer)
         {
             var portNumber = hdmiPort switch
             {
@@ -111,7 +170,6 @@ internal sealed partial class AdbWebSocketHandler
                 _ => (portNumber, CommandType.KeyEvent)
             };
         }
-    }
 
     private enum HdmiPort : sbyte
     {
