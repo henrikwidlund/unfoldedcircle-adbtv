@@ -92,10 +92,14 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
     {
-        await StartApp(wsId, payload.MsgData.EntityId, option, cancellationTokenWrapper.RequestAborted);
-        var alternateLookup = _entityIdActiveAppMap.GetAlternateLookup<ReadOnlySpan<char>>();
-        alternateLookup[payload.MsgData.EntityId.AsSpan().GetBaseIdentifier()] = option;
-        return new SelectCommandResult(EntityCommandResult.Other, option);
+        if (await StartApp(wsId, payload.MsgData.EntityId, option, cancellationTokenWrapper.RequestAborted))
+        {
+            var alternateLookup = _entityIdActiveAppMap.GetAlternateLookup<ReadOnlySpan<char>>();
+            alternateLookup[payload.MsgData.EntityId.AsSpan().GetBaseIdentifier()] = option;
+            return new SelectCommandResult(EntityCommandResult.Other, option);
+        }
+
+        return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
     }
 
     private async ValueTask<bool> StartApp(string wsId, string entityId, string appIdentifier, CancellationToken cancellationToken)
@@ -119,7 +123,8 @@ internal sealed partial class AdbWebSocketHandler(
             return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
 
         var alternateLookup = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
-        var apps = alternateLookup[payload.MsgData.EntityId.AsSpan().GetBaseIdentifier()];
+        var baseIdentifier = payload.MsgData.EntityId.AsMemory().GetBaseIdentifier();
+        var apps = alternateLookup[baseIdentifier.Span];
         if (apps.Count == 0)
         {
             _logger.SelectFirstLastNoAppsFound(wsId, payload.MsgData.EntityId);
@@ -130,8 +135,14 @@ internal sealed partial class AdbWebSocketHandler(
             ? apps[0]
             : apps[^1];
 
-        await StartApp(wsId, payload.MsgData.EntityId, app, commandCancellationToken);
-        return new SelectCommandResult(EntityCommandResult.Other, app);
+        if (await StartApp(wsId, payload.MsgData.EntityId, app, commandCancellationToken))
+        {
+            var activeEntityAppAlternativeLookup = _entityIdActiveAppMap.GetAlternateLookup<ReadOnlySpan<char>>();
+            activeEntityAppAlternativeLookup[baseIdentifier.Span] = app;
+            return new SelectCommandResult(EntityCommandResult.Other, app);
+        }
+
+        return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
     }
 
     private async ValueTask<bool> PopulateApps(string wsId, string entityId, CancellationToken cancellationToken)
@@ -200,9 +211,12 @@ internal sealed partial class AdbWebSocketHandler(
         }
 
         var app = apps[nextIndex];
-        await StartApp(wsId, payload.MsgData.EntityId, app, commandCancellationToken);
-        entityIdActiveAppMapAlternate[baseIdentifier.Span] = app;
-        return new SelectCommandResult(EntityCommandResult.Other, app);
+        if (await StartApp(wsId, payload.MsgData.EntityId, app, commandCancellationToken))
+        {
+            entityIdActiveAppMapAlternate[baseIdentifier.Span] = app;
+            return new SelectCommandResult(EntityCommandResult.Other, app);
+        }
+        return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
     }
 
     protected override async ValueTask<bool> IsEntityReachableAsync(string wsId, string entityId, CancellationToken cancellationToken)

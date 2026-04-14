@@ -156,12 +156,6 @@ public enum AdbMediaPlayerCommandId : sbyte
     Home,
 
     /// <summary>
-    /// Menu
-    /// </summary>
-    [Display(Name = MediaPlayerCommandIdConstants.Menu)]
-    Menu,
-
-    /// <summary>
     /// Information menu / what's playing.
     /// </summary>
     [Display(Name = MediaPlayerCommandIdConstants.Info)]
