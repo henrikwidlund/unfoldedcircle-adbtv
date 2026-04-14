@@ -6,7 +6,6 @@ internal static class AdbTvServerConstants
     internal const string MacAddressKey = "mac_address";
     internal const string MacAddressRegex = "^([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})$";
     internal const string PortKey = "port";
-    internal const string DeviceIdKey = "device_id";
     internal const string EntityName = "entity_name";
     internal const string MaxMessageHandlingWaitTimeInSecondsKey = "max_message_handling_wait_time_in_seconds";
     internal const string Manufacturer = "manufacturer";

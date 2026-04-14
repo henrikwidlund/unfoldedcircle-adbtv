@@ -1,5 +1,4 @@
 using UnfoldedCircle.AdbTv.AdbTv;
-using UnfoldedCircle.AdbTv.Configuration;
 using UnfoldedCircle.Models.Events;
 using UnfoldedCircle.Models.Shared;
 using UnfoldedCircle.Models.Sync;
@@ -34,27 +33,27 @@ internal static class AdbTvResponsePayloadHelpers
             }
         }, UnfoldedCircleJsonSerializerContext.Default.DriverSetupChangeEvent);
 
-    internal static IEnumerable<EntityStateChanged> GetEntityStates(IEnumerable<string> entityIdDeviceIds)
+    internal static IEnumerable<EntityStateChanged> GetEntityStates(IEnumerable<string> entityIds)
     {
-        foreach (var entityIdDeviceId in entityIdDeviceIds)
+        foreach (var entityId in entityIds)
         {
             yield return new RemoteEntityStateChanged
             {
-                EntityId = entityIdDeviceId.GetIdentifier(EntityType.Remote),
+                EntityId = entityId.GetIdentifier(EntityType.Remote),
                 EntityType = EntityType.Remote,
                 Attributes = [RemoteEntityAttribute.State]
             };
 
             yield return new SelectEntityStateChanged
             {
-                EntityId = entityIdDeviceId.GetIdentifier(EntityType.Select, AdbTvServerConstants.AppListSelectSuffix),
+                EntityId = entityId.GetIdentifier(EntityType.Select, AdbTvServerConstants.AppListSelectSuffix),
                 EntityType = EntityType.Select,
                 Attributes = [SelectEntityAttribute.State]
             };
 
             yield return new MediaPlayerEntityStateChanged
             {
-                EntityId = entityIdDeviceId.GetIdentifier(EntityType.MediaPlayer),
+                EntityId = entityId.GetIdentifier(EntityType.MediaPlayer),
                 EntityType = EntityType.MediaPlayer,
                 Attributes = [MediaPlayerEntityAttribute.SourceList, MediaPlayerEntityAttribute.State]
             };

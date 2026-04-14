@@ -39,24 +39,12 @@ internal sealed partial class AdbWebSocketHandler
 
     private async Task<AdbTvClientKey[]?> TryGetAdbTvClientKeysAsync(
         string wsId,
-        string? deviceId,
         CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
             _logger.NoConfigurationsFound(wsId);
-            return null;
-        }
-
-        if (!string.IsNullOrEmpty(deviceId))
-        {
-            var localDeviceId = deviceId.AsMemory().GetBaseIdentifier();
-            var entity = configuration.Entities.FirstOrDefault(x => x.DeviceId?.AsSpan().Equals(localDeviceId.Span, StringComparison.OrdinalIgnoreCase) == true);
-            if (entity is not null)
-                return [new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer)];
-
-            _logger.NoConfigurationFoundForDeviceId(wsId, localDeviceId);
             return null;
         }
 
@@ -67,23 +55,12 @@ internal sealed partial class AdbWebSocketHandler
 
     private async Task<List<AdbConfigurationItem>?> GetEntitiesAsync(
         string wsId,
-        string? deviceId,
         CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         if (configuration.Entities.Count == 0)
         {
             _logger.NoConfigurationsFound(wsId);
-            return null;
-        }
-
-        if (!string.IsNullOrEmpty(deviceId))
-        {
-            var entity = configuration.Entities.FirstOrDefault(x => string.Equals(x.DeviceId, deviceId, StringComparison.OrdinalIgnoreCase));
-            if (entity is not null)
-                return [entity];
-
-            _logger.NoConfigurationFoundForDeviceIdString(wsId, deviceId);
             return null;
         }
 
@@ -106,10 +83,18 @@ internal sealed partial class AdbWebSocketHandler
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cancellationTokenSource.Token);
             var adbTvClientKey = await TryGetAdbTvClientKeyAsync(wsId, entityId, linkedCancellationTokenSource.Token);
             if (adbTvClientKey is null)
+            {
+                _logger.AdbTvClientKeyNotFound(wsId, entityId);
                 return null;
+            }
 
             var deviceClient = await _adbTvClientFactory.TryGetOrCreateClientAsync(adbTvClientKey.Value, linkedCancellationTokenSource.Token);
-            return deviceClient is null ? null : new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
+            if (deviceClient is null)
+            {
+                _logger.AdbTvClientHolderNotFound(wsId, entityId);
+                return null;
+            }
+            return new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
         }
         catch (Exception e)
         {
@@ -154,10 +139,9 @@ internal sealed partial class AdbWebSocketHandler
 
     private async ValueTask<bool> TryDisconnectAdbClientsAsync(
         string wsId,
-        string? deviceId,
         CancellationToken cancellationToken)
     {
-        if (await TryGetAdbTvClientKeysAsync(wsId, deviceId, cancellationToken) is not { Length: > 0 } adbTvClientKeys)
+        if (await TryGetAdbTvClientKeysAsync(wsId, cancellationToken) is not { Length: > 0 } adbTvClientKeys)
             return false;
 
         await TryDisconnectAdbClientsAsync(adbTvClientKeys, cancellationToken);

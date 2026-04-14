@@ -44,7 +44,7 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
     {
-        var manufacturer = (await GetEntitiesAsync(wsId, null, commandCancellationToken))
+        var manufacturer = (await GetEntitiesAsync(wsId, commandCancellationToken))
             ?.FirstOrDefault(x => x.EntityId.Equals(payload.MsgData.EntityId, StringComparison.OrdinalIgnoreCase))?.Manufacturer ?? Manufacturer.Android;
         (string commandToSend, CommandType commandType) = GetMappedCommand(command, manufacturer);
         var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, commandCancellationToken);
@@ -121,7 +121,11 @@ internal sealed partial class AdbWebSocketHandler(
         var alternateLookup = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
         var apps = alternateLookup[payload.MsgData.EntityId.AsSpan().GetBaseIdentifier()];
         if (apps.Count == 0)
+        {
+            _logger.SelectFirstLastNoAppsFound(wsId, payload.MsgData.EntityId);
             return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
+        }
+
         var app = first
             ? apps[0]
             : apps[^1];
@@ -139,7 +143,10 @@ internal sealed partial class AdbWebSocketHandler(
 
         var adbClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
         if (adbClientHolder is null)
+        {
+            _logger.PopulateAppsYieldedNoApps(wsId, entityId);
             return false;
+        }
 
         var apps = new List<string>();
         await foreach (string appIdentifier in adbClientHolder.Client.AdbClient.ExecuteRemoteEnumerableAsync("pm list packages -3", adbClientHolder.Client.Device, System.Text.Encoding.UTF8, cancellationToken))
@@ -165,7 +172,10 @@ internal sealed partial class AdbWebSocketHandler(
         var entityIdActiveAppMapAlternate = _entityIdActiveAppMap.GetAlternateLookup<ReadOnlySpan<char>>();
         var apps = entityIdAppsMapAlternate[baseIdentifier.Span];
         if (apps.Count == 0)
+        {
+            _logger.SelectNextPreviousNoAppsFound(wsId, payload.MsgData.EntityId);
             return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
+        }
 
         if (!entityIdActiveAppMapAlternate.TryGetValue(baseIdentifier.Span, out var activeApp) ||
             !apps.Contains(activeApp))
@@ -183,7 +193,10 @@ internal sealed partial class AdbWebSocketHandler(
         else
         {
             if (nextIndex >= apps.Count || nextIndex < 0)
+            {
+                _logger.SelectNextPreviousNoAppsOutOfBounds(wsId, payload.MsgData.EntityId, nextIndex, apps.Count);
                 return new SelectCommandResult(EntityCommandResult.Failure, activeApp);
+            }
         }
 
         var app = apps[nextIndex];
@@ -216,7 +229,7 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override async ValueTask OnConnectAsync(ConnectEvent payload, string wsId, CancellationToken cancellationToken)
     {
-        var adbTvClientKeys = await TryGetAdbTvClientKeysAsync(wsId, null, cancellationToken);
+        var adbTvClientKeys = await TryGetAdbTvClientKeysAsync(wsId, cancellationToken);
         if (adbTvClientKeys is { Length: > 0 })
         {
             foreach (var adbTvClientKey in adbTvClientKeys)
@@ -225,7 +238,7 @@ internal sealed partial class AdbWebSocketHandler(
     }
 
     protected override ValueTask<bool> OnDisconnectAsync(DisconnectEvent payload, string wsId, CancellationToken cancellationToken)
-        => TryDisconnectAdbClientsAsync(wsId, payload.MsgData?.DeviceId, cancellationToken);
+        => TryDisconnectAdbClientsAsync(wsId, cancellationToken);
 
     protected override ValueTask OnAbortDriverSetupAsync(AbortDriverSetupEvent payload, string wsId, CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
@@ -411,7 +424,7 @@ internal sealed partial class AdbWebSocketHandler(
             => ValueTask.FromResult(DeviceState.Connected);
 
     protected override async ValueTask<IReadOnlyCollection<AvailableEntity>> OnGetAvailableEntitiesAsync(GetAvailableEntitiesMsg payload, string wsId, CancellationToken cancellationToken)
-        => GetAvailableEntities(await GetEntitiesAsync(wsId, payload.MsgData.Filter?.DeviceId, cancellationToken), payload).ToArray();
+        => GetAvailableEntities(await GetEntitiesAsync(wsId, cancellationToken), payload).ToArray();
 
     protected override async ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, SubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
@@ -430,6 +443,7 @@ internal sealed partial class AdbWebSocketHandler(
             var alternateLookup = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
             if (!alternateLookup.TryGetValue(baseIdentifier, out var apps))
                 apps = [];
+
             if (entityType == EntityType.MediaPlayer)
             {
                 string[] sources = [..apps, AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3, AdbTvRemoteCommands.InputHdmi4];
@@ -467,7 +481,7 @@ internal sealed partial class AdbWebSocketHandler(
     }
 
     protected override async ValueTask<EntityStateChanged[]> OnGetEntityStatesAsync(GetEntityStatesMsg payload, string wsId, CancellationToken cancellationToken)
-        => await GetEntitiesAsync(wsId, payload.MsgData?.DeviceId, cancellationToken) is { } entities
+        => await GetEntitiesAsync(wsId, cancellationToken) is { } entities
             ? AdbTvResponsePayloadHelpers.GetEntityStates(entities.Select(static x => x.EntityId)).ToArray()
             : [];
 
@@ -544,7 +558,6 @@ internal sealed partial class AdbWebSocketHandler(
         var driverMetadata = await _configurationService.GetDriverMetadataAsync(cancellationToken);
         var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
         var macAddress = payload.MsgData.InputValues[AdbTvServerConstants.MacAddressKey];
-        var deviceId = payload.MsgData.InputValues.GetStringValueOrDefault(AdbTvServerConstants.DeviceIdKey, macAddress);
         var entityName = payload.MsgData.InputValues.GetStringValueOrDefault(AdbTvServerConstants.EntityName, $"{driverMetadata.Name["en"]} {ipAddress}");
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
             ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
@@ -567,7 +580,6 @@ internal sealed partial class AdbWebSocketHandler(
                 Host = ipAddress,
                 MacAddress = macAddress,
                 Port = port,
-                DeviceId = deviceId,
                 EntityName = entityName,
                 EntityId = macAddress,
                 Manufacturer = manufacturer
@@ -602,9 +614,10 @@ internal sealed partial class AdbWebSocketHandler(
 
     private async ValueTask<SetupDriverUserDataResult> GetSetupResultForClient(string wsId, string entityId, CancellationToken cancellationToken)
     {
-        if (await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken).ConfigureAwait(false) is
-            not { Client.Device.State: AdvancedSharpAdbClient.Models.DeviceState.Online })
+        if (await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken)
+            is not { Client.Device.State: AdvancedSharpAdbClient.Models.DeviceState.Online })
         {
+            _logger.DeviceNotOnlineDuringSetupResult(wsId, entityId);
             return SetupDriverUserDataResult.Error;
         }
 

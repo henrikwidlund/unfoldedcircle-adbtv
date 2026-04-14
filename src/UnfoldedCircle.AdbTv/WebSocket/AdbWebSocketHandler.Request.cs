@@ -249,19 +249,8 @@ internal sealed partial class AdbWebSocketHandler
         if (entities is not { Count: > 0 })
             yield break;
 
-        var hasDeviceIdFilter = !string.IsNullOrEmpty(payload.MsgData.Filter?.DeviceId);
         foreach (var adbConfigurationItem in entities)
         {
-            if (hasDeviceIdFilter)
-            {
-                var configDeviceId = adbConfigurationItem.DeviceId.AsSpan();
-                // we have a device id filter, so if the config device id is null, there is no match
-                if (configDeviceId.IsEmpty)
-                    continue;
-                if (!configDeviceId.Equals(payload.MsgData.Filter!.DeviceId.AsSpan().GetBaseIdentifier(), StringComparison.OrdinalIgnoreCase))
-                    continue;
-            }
-
             yield return new RemoteAvailableEntity
             {
                 EntityId = adbConfigurationItem.EntityId.GetIdentifier(EntityType.Remote),
