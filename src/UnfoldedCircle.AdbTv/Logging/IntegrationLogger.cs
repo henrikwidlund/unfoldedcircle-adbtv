@@ -30,8 +30,8 @@ internal static partial class IntegrationLogger
     public static partial void NoConfigurationsFound(this ILogger logger, string wsId);
 
     [LoggerMessage(EventId = 5, EventName = nameof(NoConfigurationFoundForIdentifier), Level = LogLevel.Information,
-        Message = "[{WSId}] WS: No configuration found for identifier '{Identifier}' with type {Type}")]
-    public static partial void NoConfigurationFoundForIdentifier(this ILogger logger, string wsId, string? identifier, in AdbWebSocketHandler.IdentifierType type);
+        Message = "[{WSId}] WS: No configuration found for identifier '{Identifier}'")]
+    public static partial void NoConfigurationFoundForIdentifier(this ILogger logger, string wsId, string? identifier);
 
     [LoggerMessage(EventId = 6, EventName = nameof(NoConfigurationFoundForDeviceId), Level = LogLevel.Information,
         Message = "[{WSId}] WS: No configuration found for device ID '{DeviceId}'")]
@@ -41,13 +41,13 @@ internal static partial class IntegrationLogger
         Message = "[{WSId}] WS: No configuration found for device ID '{DeviceId}'")]
     public static partial void NoConfigurationFoundForDeviceIdString(this ILogger logger, string wsId, string deviceId);
 
-    private static readonly Action<ILogger, string, string?, AdbWebSocketHandler.IdentifierType, Exception> FailedToGetAdbTvClientAction = LoggerMessage.Define<string, string?, AdbWebSocketHandler.IdentifierType>(
+    private static readonly Action<ILogger, string, string?, Exception> FailedToGetAdbTvClientAction = LoggerMessage.Define<string, string?>(
         LogLevel.Error,
         new EventId(8, nameof(FailedToGetAdbTvClient)),
-        "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}' with type {Type}");
+        "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}'");
 
-    public static void FailedToGetAdbTvClient(this ILogger logger, Exception exception, string wsId, string? identifier, in AdbWebSocketHandler.IdentifierType type) =>
-        FailedToGetAdbTvClientAction(logger, wsId, identifier, type, exception);
+    public static void FailedToGetAdbTvClient(this ILogger logger, Exception exception, string wsId, string? identifier) =>
+        FailedToGetAdbTvClientAction(logger, wsId, identifier, exception);
 
     private static readonly Action<ILogger, string, string, Exception> FailedToCheckClientApprovedAction = LoggerMessage.Define<string, string>(
         LogLevel.Error,

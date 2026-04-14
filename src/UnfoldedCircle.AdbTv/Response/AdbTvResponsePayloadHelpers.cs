@@ -1,3 +1,4 @@
+using UnfoldedCircle.AdbTv.AdbTv;
 using UnfoldedCircle.AdbTv.Configuration;
 using UnfoldedCircle.Models.Events;
 using UnfoldedCircle.Models.Shared;
@@ -41,8 +42,21 @@ internal static class AdbTvResponsePayloadHelpers
             {
                 EntityId = entityIdDeviceId.EntityId.GetIdentifier(EntityType.Remote),
                 EntityType = EntityType.Remote,
-                Attributes = [RemoteEntityAttribute.State],
-                DeviceId = entityIdDeviceId.DeviceId.GetNullableIdentifier(EntityType.Remote)
+                Attributes = [RemoteEntityAttribute.State]
+            };
+
+            yield return new SelectEntityStateChanged
+            {
+                EntityId = entityIdDeviceId.EntityId.GetIdentifier(EntityType.Select, AdbTvServerConstants.AppListSelectSuffix),
+                EntityType = EntityType.Select,
+                Attributes = [SelectEntityAttribute.State]
+            };
+
+            yield return new MediaPlayerEntityStateChanged
+            {
+                EntityId = entityIdDeviceId.EntityId.GetIdentifier(EntityType.MediaPlayer),
+                EntityType = EntityType.MediaPlayer,
+                Attributes = [MediaPlayerEntityAttribute.SourceList, MediaPlayerEntityAttribute.State]
             };
         }
     }

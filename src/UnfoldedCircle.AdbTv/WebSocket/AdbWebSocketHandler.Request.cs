@@ -267,9 +267,46 @@ internal sealed partial class AdbWebSocketHandler
                 EntityId = adbConfigurationItem.EntityId.GetIdentifier(EntityType.Remote),
                 EntityType = EntityType.Remote,
                 Name = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = adbConfigurationItem.EntityName },
-                DeviceId = adbConfigurationItem.DeviceId.GetNullableIdentifier(EntityType.Remote),
                 Features = AdbTvEntitySettings.RemoteFeatures,
                 Options = RemoteOptions
+            };
+
+            yield return new SelectAvailableEntity
+            {
+                EntityId = adbConfigurationItem.EntityId.GetIdentifier(EntityType.Select, AdbTvServerConstants.AppListSelectSuffix),
+                EntityType = EntityType.Select,
+                Name = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = $"{adbConfigurationItem.EntityName} App List" }
+            };
+
+            yield return new MediaPlayerAvailableEntity
+            {
+                EntityId = adbConfigurationItem.EntityId.GetIdentifier(EntityType.MediaPlayer),
+                EntityType = EntityType.MediaPlayer,
+                Name = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = adbConfigurationItem.EntityName },
+                Features =
+                [
+                    MediaPlayerEntityFeature.OnOff,
+                    MediaPlayerEntityFeature.Toggle,
+                    MediaPlayerEntityFeature.VolumeUpDown,
+                    MediaPlayerEntityFeature.MuteToggle,
+                    MediaPlayerEntityFeature.Dpad,
+                    MediaPlayerEntityFeature.Numpad,
+                    MediaPlayerEntityFeature.Home,
+                    MediaPlayerEntityFeature.Menu,
+                    MediaPlayerEntityFeature.Info,
+                    MediaPlayerEntityFeature.SelectSource,
+                    MediaPlayerEntityFeature.Settings
+                ],
+                Options = new Dictionary<string, ISet<string>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["simple_commands"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        AdbTvRemoteCommands.AudioTvSpeakers,
+                        AdbTvRemoteCommands.AudioExternalDevice,
+                        AdbTvRemoteCommands.PowerStateOn,
+                        AdbTvRemoteCommands.PowerStateOff
+                    }
+                }
             };
         }
     }
