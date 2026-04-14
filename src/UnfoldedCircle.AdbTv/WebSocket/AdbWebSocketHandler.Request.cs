@@ -292,7 +292,6 @@ internal sealed partial class AdbWebSocketHandler
                     MediaPlayerEntityFeature.Dpad,
                     MediaPlayerEntityFeature.Numpad,
                     MediaPlayerEntityFeature.Home,
-                    MediaPlayerEntityFeature.Menu,
                     MediaPlayerEntityFeature.Info,
                     MediaPlayerEntityFeature.SelectSource,
                     MediaPlayerEntityFeature.Settings

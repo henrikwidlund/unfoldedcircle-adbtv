@@ -14,7 +14,7 @@ internal sealed partial class AdbWebSocketHandler
 {
     private async Task<AdbTvClientKey?> TryGetAdbTvClientKeyAsync(
         string wsId,
-        string? entityId,
+        string entityId,
         CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
@@ -24,10 +24,10 @@ internal sealed partial class AdbWebSocketHandler
             return null;
         }
 
-        var localIdentifier = entityId?.AsMemory().GetBaseIdentifier();
+        var localIdentifier = entityId.AsMemory().GetBaseIdentifier();
 
         var entity = localIdentifier is { Span.IsEmpty: false }
-            ? configuration.Entities.FirstOrDefault(x => x.EntityId.AsSpan().Equals(localIdentifier.Value.Span, StringComparison.OrdinalIgnoreCase))
+            ? configuration.Entities.FirstOrDefault(x => x.EntityId.AsSpan().Equals(localIdentifier.Span, StringComparison.OrdinalIgnoreCase))
             : null;
 
         if (entity is not null)
@@ -97,7 +97,7 @@ internal sealed partial class AdbWebSocketHandler
 
     private async Task<AdbTvClientHolder?> TryGetAdbTvClientHolderAsync(
         string wsId,
-        string? entityId,
+        string entityId,
         CancellationToken cancellationToken)
     {
         try

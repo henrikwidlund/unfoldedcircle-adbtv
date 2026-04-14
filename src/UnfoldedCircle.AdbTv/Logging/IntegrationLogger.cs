@@ -1,5 +1,4 @@
 using UnfoldedCircle.AdbTv.AdbTv;
-using UnfoldedCircle.AdbTv.WebSocket;
 
 namespace UnfoldedCircle.AdbTv.Logging;
 
