@@ -254,7 +254,7 @@ internal sealed partial class AdbWebSocketHandler
             {
                 EntityId = adbConfigurationItem.EntityId.GetIdentifier(EntityType.Remote),
                 EntityType = EntityType.Remote,
-                Name = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = adbConfigurationItem.EntityName },
+                Name = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = $"{adbConfigurationItem.EntityName}  Remote" },
                 Features = AdbTvEntitySettings.RemoteFeatures,
                 Options = RemoteOptions
             };
