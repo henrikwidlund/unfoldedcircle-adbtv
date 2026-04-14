@@ -243,8 +243,7 @@ internal sealed partial class AdbWebSocketHandler
     };
 
     private static IEnumerable<AvailableEntity> GetAvailableEntities(
-        List<AdbConfigurationItem>? entities,
-        GetAvailableEntitiesMsg payload)
+        List<AdbConfigurationItem>? entities)
     {
         if (entities is not { Count: > 0 })
             yield break;

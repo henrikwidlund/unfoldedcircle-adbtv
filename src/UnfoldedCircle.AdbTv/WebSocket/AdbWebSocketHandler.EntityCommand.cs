@@ -72,48 +72,7 @@ internal sealed partial class AdbWebSocketHandler
         }
     }
 
-    private static (string Command, CommandType CommandType) GetHdmiCommand(in HdmiPort hdmiPort, in Manufacturer manufacturer)
-        {
-            var portNumber = hdmiPort switch
-            {
-                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Hisense => "2",
-                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Philips => "5",
-                HdmiPort.Hdmi1 when manufacturer is Manufacturer.PhilipsAlternate => "2",
-                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Sony => "1",
-                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Tcl => "15",
-                HdmiPort.Hdmi1 => AdbTvConstants.Hdmi1,
-                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Hisense => "3",
-                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Philips => "6",
-                HdmiPort.Hdmi2 when manufacturer is Manufacturer.PhilipsAlternate => "3",
-                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Sony => "2",
-                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Tcl => "16",
-                HdmiPort.Hdmi2 => AdbTvConstants.Hdmi2,
-                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Hisense => "4",
-                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Philips => "7",
-                HdmiPort.Hdmi3 when manufacturer is Manufacturer.PhilipsAlternate => "4",
-                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Sony => "3",
-                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Tcl => "17",
-                HdmiPort.Hdmi3 => AdbTvConstants.Hdmi3,
-                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Hisense => "5",
-                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Philips => "8",
-                HdmiPort.Hdmi4 when manufacturer is Manufacturer.PhilipsAlternate => "5",
-                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Sony => "4",
-                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Tcl => "18",
-                HdmiPort.Hdmi4 => AdbTvConstants.Hdmi4,
-                _ => throw new ArgumentOutOfRangeException(nameof(hdmiPort), hdmiPort, null)
-            };
-            return manufacturer switch
-            {
-                Manufacturer.Hisense => (AdbAdvancedCommands.HisenseHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
-                Manufacturer.Philips => (AdbAdvancedCommands.PhilipsHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
-                Manufacturer.PhilipsAlternate => (AdbAdvancedCommands.PhilipsAlternateHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
-                Manufacturer.Sony => (AdbAdvancedCommands.SonyHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
-                Manufacturer.Tcl => (AdbAdvancedCommands.TclHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
-                _ => (portNumber, CommandType.KeyEvent)
-            };
-        }
-
-    private static (string Command, CommandType CommandType) GetMappedCommand(AdbMediaPlayerCommandId command,
+        private static (string Command, CommandType CommandType) GetMappedCommand(AdbMediaPlayerCommandId command,
         in Manufacturer? manufacturer,
         string? source)
     {
@@ -170,6 +129,47 @@ internal sealed partial class AdbWebSocketHandler
             };
         }
     }
+
+    private static (string Command, CommandType CommandType) GetHdmiCommand(in HdmiPort hdmiPort, in Manufacturer manufacturer)
+        {
+            var portNumber = hdmiPort switch
+            {
+                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Hisense => "2",
+                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Philips => "5",
+                HdmiPort.Hdmi1 when manufacturer is Manufacturer.PhilipsAlternate => "2",
+                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Sony => "1",
+                HdmiPort.Hdmi1 when manufacturer is Manufacturer.Tcl => "15",
+                HdmiPort.Hdmi1 => AdbTvConstants.Hdmi1,
+                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Hisense => "3",
+                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Philips => "6",
+                HdmiPort.Hdmi2 when manufacturer is Manufacturer.PhilipsAlternate => "3",
+                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Sony => "2",
+                HdmiPort.Hdmi2 when manufacturer is Manufacturer.Tcl => "16",
+                HdmiPort.Hdmi2 => AdbTvConstants.Hdmi2,
+                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Hisense => "4",
+                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Philips => "7",
+                HdmiPort.Hdmi3 when manufacturer is Manufacturer.PhilipsAlternate => "4",
+                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Sony => "3",
+                HdmiPort.Hdmi3 when manufacturer is Manufacturer.Tcl => "17",
+                HdmiPort.Hdmi3 => AdbTvConstants.Hdmi3,
+                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Hisense => "5",
+                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Philips => "8",
+                HdmiPort.Hdmi4 when manufacturer is Manufacturer.PhilipsAlternate => "5",
+                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Sony => "4",
+                HdmiPort.Hdmi4 when manufacturer is Manufacturer.Tcl => "18",
+                HdmiPort.Hdmi4 => AdbTvConstants.Hdmi4,
+                _ => throw new ArgumentOutOfRangeException(nameof(hdmiPort), hdmiPort, null)
+            };
+            return manufacturer switch
+            {
+                Manufacturer.Hisense => (AdbAdvancedCommands.HisenseHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
+                Manufacturer.Philips => (AdbAdvancedCommands.PhilipsHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
+                Manufacturer.PhilipsAlternate => (AdbAdvancedCommands.PhilipsAlternateHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
+                Manufacturer.Sony => (AdbAdvancedCommands.SonyHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
+                Manufacturer.Tcl => (AdbAdvancedCommands.TclHdmi.Replace(AdbAdvancedCommands.PortNumberPlaceholder, portNumber, StringComparison.Ordinal), CommandType.Raw),
+                _ => (portNumber, CommandType.KeyEvent)
+            };
+        }
 
     private enum HdmiPort : sbyte
     {

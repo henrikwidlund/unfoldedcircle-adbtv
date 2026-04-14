@@ -424,7 +424,7 @@ internal sealed partial class AdbWebSocketHandler(
             => ValueTask.FromResult(DeviceState.Connected);
 
     protected override async ValueTask<IReadOnlyCollection<AvailableEntity>> OnGetAvailableEntitiesAsync(GetAvailableEntitiesMsg payload, string wsId, CancellationToken cancellationToken)
-        => GetAvailableEntities(await GetEntitiesAsync(wsId, cancellationToken), payload).ToArray();
+        => GetAvailableEntities(await GetEntitiesAsync(wsId, cancellationToken)).ToArray();
 
     protected override async ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, SubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
