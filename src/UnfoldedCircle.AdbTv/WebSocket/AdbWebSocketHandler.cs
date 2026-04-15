@@ -169,6 +169,9 @@ internal sealed partial class AdbWebSocketHandler(
 
         if (await semaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken))
         {
+            if (alternateLookup.ContainsKey(baseIdentifier.Span))
+                return true;
+
             try
             {
                 var adbClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
