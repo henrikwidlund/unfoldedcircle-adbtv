@@ -44,13 +44,14 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
     {
+        var baseIdentifier = payload.MsgData.EntityId.AsMemory().GetBaseIdentifier();
         var manufacturer = (await GetEntitiesAsync(wsId, commandCancellationToken))
-            ?.FirstOrDefault(x => x.EntityId.Equals(payload.MsgData.EntityId, StringComparison.OrdinalIgnoreCase))?.Manufacturer ?? Manufacturer.Android;
+            ?.FirstOrDefault(x => x.EntityId.Equals(baseIdentifier.Span, StringComparison.OrdinalIgnoreCase))?.Manufacturer ?? Manufacturer.Android;
         (string commandToSend, CommandType commandType) = GetMappedCommand(command, manufacturer);
         var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, commandCancellationToken);
         if (adbTvClientHolder is null)
         {
-            _logger.CouldNotFindAdbClient(wsId, payload.MsgData.EntityId.AsMemory().GetBaseIdentifier());
+            _logger.CouldNotFindAdbClient(wsId, baseIdentifier);
             return EntityCommandResult.Failure;
         }
 
@@ -145,6 +146,9 @@ internal sealed partial class AdbWebSocketHandler(
         return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
     }
 
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _appFetchSemaphores = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Lock _appFetchLock = new();
+
     private async ValueTask<bool> PopulateApps(string wsId, string entityId, CancellationToken cancellationToken)
     {
         var baseIdentifier = entityId.AsMemory().GetBaseIdentifier();
@@ -152,19 +156,46 @@ internal sealed partial class AdbWebSocketHandler(
         if (alternateLookup.ContainsKey(baseIdentifier.Span))
             return true;
 
-        var adbClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
-        if (adbClientHolder is null)
+        SemaphoreSlim? semaphore;
+        lock (_appFetchLock)
         {
-            _logger.PopulateAppsYieldedNoApps(wsId, entityId);
-            return false;
+            var alternateAppFetchSemaphores = _appFetchSemaphores.GetAlternateLookup<ReadOnlySpan<char>>();
+            if (!alternateAppFetchSemaphores.TryGetValue(baseIdentifier.Span, out semaphore) || semaphore == null)
+            {
+                semaphore = new SemaphoreSlim(1, 1);
+                alternateAppFetchSemaphores[baseIdentifier.Span] = semaphore;
+            }
         }
 
-        var apps = new List<string>();
-        await foreach (string appIdentifier in adbClientHolder.Client.AdbClient.ExecuteRemoteEnumerableAsync("pm list packages -3", adbClientHolder.Client.Device, System.Text.Encoding.UTF8, cancellationToken))
-            apps.Add(appIdentifier.Replace("package:", string.Empty, StringComparison.OrdinalIgnoreCase).Trim());
+        if (await semaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken))
+        {
+            try
+            {
+                if (alternateLookup.ContainsKey(baseIdentifier.Span))
+                    return true;
 
-        alternateLookup[baseIdentifier.Span] = apps;
-        return true;
+                var adbClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
+                if (adbClientHolder is null)
+                {
+                    _logger.PopulateAppsYieldedNoApps(wsId, entityId);
+                    return false;
+                }
+
+                var apps = new List<string>();
+                await foreach (string appIdentifier in adbClientHolder.Client.AdbClient.ExecuteRemoteEnumerableAsync("pm list packages -3", adbClientHolder.Client.Device, System.Text.Encoding.UTF8, cancellationToken))
+                    apps.Add(appIdentifier.Replace("package:", string.Empty, StringComparison.OrdinalIgnoreCase).Trim());
+
+                alternateLookup[baseIdentifier.Span] = apps;
+                return true;
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }
+
+        _logger.FailedToAcquireSemaphoreForPopulateApps(wsId, entityId);
+        return false;
     }
 
     protected override async ValueTask<SelectCommandResult> OnSelectNextPreviousCommandAsync(System.Net.WebSockets.WebSocket socket,
@@ -435,7 +466,7 @@ internal sealed partial class AdbWebSocketHandler(
     }
 
     protected override ValueTask<DeviceState> OnGetDeviceStateAsync(GetDeviceStateMsg payload, string wsId, CancellationToken cancellationToken)
-            => ValueTask.FromResult(DeviceState.Connected);
+        => ValueTask.FromResult(DeviceState.Connected);
 
     protected override async ValueTask<IReadOnlyCollection<AvailableEntity>> OnGetAvailableEntitiesAsync(GetAvailableEntitiesMsg payload, string wsId, CancellationToken cancellationToken)
         => GetAvailableEntities(await GetEntitiesAsync(wsId, cancellationToken)).ToArray();

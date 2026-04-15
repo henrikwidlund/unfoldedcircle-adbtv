@@ -72,7 +72,7 @@ internal sealed partial class AdbWebSocketHandler
         }
     }
 
-        private static (string Command, CommandType CommandType) GetMappedCommand(AdbMediaPlayerCommandId command,
+    private static (string Command, CommandType CommandType) GetMappedCommand(AdbMediaPlayerCommandId command,
         in Manufacturer? manufacturer,
         string? source)
     {
