@@ -143,4 +143,8 @@ internal static partial class IntegrationLogger
     [LoggerMessage(EventId = 30, EventName = nameof(DeviceNotOnlineDuringSetupResult), Level = LogLevel.Warning,
         Message = "[{WSId}] Device for entity ID '{EntityId}' is not online.")]
     public static partial void DeviceNotOnlineDuringSetupResult(this ILogger logger, string wsId, string entityId);
+
+    [LoggerMessage(EventId = 31, EventName = nameof(FailedToAcquireSemaphoreForPopulateApps), Level = LogLevel.Warning,
+        Message = "[{WSId}] Failed to acquire semaphore for populating apps for entity ID '{EntityId}' within timeout.")]
+    public static partial void FailedToAcquireSemaphoreForPopulateApps(this ILogger logger, string wsId, string entityId);
 }
