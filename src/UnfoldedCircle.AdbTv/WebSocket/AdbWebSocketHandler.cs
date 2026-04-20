@@ -455,7 +455,7 @@ internal sealed partial class AdbWebSocketHandler(
                     break;
                 case EntityType.Select:
                     await SendMessageAsync(socket,
-                        ResponsePayloadHelpers.CreateSelectStateChangedResponsePayload(
+                        ResponsePayloadHelpers.CreateSelectStateChangedPayload(
                             new SelectStateChangedEventMessageDataAttributes { State = selectState },
                             subscribedEntity.EntityId, AdbTvServerConstants.AppListSelectSuffix),
                         wsId,
@@ -499,7 +499,7 @@ internal sealed partial class AdbWebSocketHandler(
             else if (entityType == EntityType.Select)
             {
                 await SendMessageAsync(socket,
-                    ResponsePayloadHelpers.CreateSelectStateChangedResponsePayload(new SelectStateChangedEventMessageDataAttributes { Options = apps.ToArray() }, msgDataEntityId, AdbTvServerConstants.AppListSelectSuffix),
+                    ResponsePayloadHelpers.CreateSelectStateChangedPayload(new SelectStateChangedEventMessageDataAttributes { Options = apps.ToArray() }, msgDataEntityId, AdbTvServerConstants.AppListSelectSuffix),
                     wsId, commandCancellationToken);
             }
         }
