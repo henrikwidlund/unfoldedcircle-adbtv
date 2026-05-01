@@ -60,7 +60,8 @@ jobs:
           # Build everything
           release_name="unfolded-circle-adbtv-$tag-${{ matrix.kind }}"
           
-          dotnet publish ./src/UnfoldedCircle.AdbTv/UnfoldedCircle.AdbTv.csproj -r ${{ matrix.target }} -c Release -o ./publish -p:Version="$ASSEMBLY_VERSION" -p:PublishAot=true
+          dotnet restore "./src/UnfoldedCircle.AdbTv/UnfoldedCircle.AdbTv.csproj" --use-lock-file --locked-mode -p:PublishAot=true
+          dotnet publish "./src/UnfoldedCircle.AdbTv/UnfoldedCircle.AdbTv.csproj" -r ${{ matrix.target }} -c Release -o ./publish -p:Version="$ASSEMBLY_VERSION" -p:PublishAot=true --no-restore
           if [ "${{ matrix.target }}" == "linux-arm64" ]; then
             mkdir driverdir && mkdir driverdir/bin && mkdir driverdir/config && mkdir driverdir/data
             cp publish/driver.json driverdir/driver.json
