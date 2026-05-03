@@ -177,12 +177,12 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    public void RemoveAllClients()
+    public async ValueTask RemoveAllClients()
     {
         foreach (var (key, connection) in _clients)
         {
             if (_clients.TryRemove(key, out _))
-                _ = connection.DisposeAsync();
+                await connection.DisposeAsync();
         }
     }
 

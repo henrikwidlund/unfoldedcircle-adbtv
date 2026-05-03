@@ -22,8 +22,6 @@ This is a limitation of the ADB protocol, where it is not possible to query the 
 
 ### Prerequisites
 - IP and MAC address of the device you want to control.
-- When installing on the remote, the remote must be on firmware version 2.6.3 or later or the driver will crash
-because it can't start adb.
 - Developer Settings enabled on the device you want to control. This is usually done by taping 7 times on your device name.
 Please search for device specific instructions on how to enable Developer Settings.
 

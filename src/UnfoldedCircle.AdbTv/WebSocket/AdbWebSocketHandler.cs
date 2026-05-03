@@ -287,11 +287,8 @@ internal sealed partial class AdbWebSocketHandler(
     protected override ValueTask OnAbortDriverSetupAsync(AbortDriverSetupEvent payload, string wsId, CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
 
-    protected override ValueTask OnEnterStandbyAsync(EnterStandbyEvent payload, string wsId, CancellationToken cancellationToken)
-    {
-        _adbTvClientFactory.RemoveAllClients();
-        return ValueTask.CompletedTask;
-    }
+    protected override async ValueTask OnEnterStandbyAsync(EnterStandbyEvent payload, string wsId, CancellationToken cancellationToken)
+        => await _adbTvClientFactory.RemoveAllClients();
 
     protected override ValueTask OnExitStandbyAsync(ExitStandbyEvent payload, string wsId, CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
@@ -575,9 +572,9 @@ internal sealed partial class AdbWebSocketHandler(
             }
 
             await _configurationService.UpdateConfigurationAsync(backupData.Configuration, cancellationToken);
-            _adbTvClientFactory.RemoveAllClients();
+            await _adbTvClientFactory.RemoveAllClients();
+            Directory.CreateDirectory(adbKeyDirectory);
             await File.WriteAllBytesAsync(Path.Combine(adbKeyDirectory, "adbkey"), Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
-            await File.WriteAllBytesAsync(Path.Combine(adbKeyDirectory, "adbkey.pub"), Convert.FromBase64String(backupData.PublicKey), cancellationToken);
             AdbTvClientFactory.InvalidateAuthKey();
             return RestoreResult.Success;
         }
@@ -668,21 +665,13 @@ internal sealed partial class AdbWebSocketHandler(
         var config = await _configurationService.GetConfigurationAsync(cancellationToken);
         var adbKeyDirectory = GetAdbKeyDirectory();
         var privateKey = Path.Combine(adbKeyDirectory, "adbkey");
-        var publicKey = Path.Combine(adbKeyDirectory, "adbkey.pub");
         if (!File.Exists(privateKey))
         {
             _logger.AdbPrivateKeyNotFoundForBackup(privateKey);
             throw new FileNotFoundException("No private key found for backup.", privateKey);
         }
 
-        if (!File.Exists(publicKey))
-        {
-            _logger.AdbPublicKeyNotFoundForBackup(publicKey);
-            throw new FileNotFoundException("No public key found for backup.", publicKey);
-        }
-
         return JsonSerializer.Serialize(new BackupData(config,
-                Convert.ToBase64String(await File.ReadAllBytesAsync(publicKey, cancellationToken)),
                 Convert.ToBase64String(await File.ReadAllBytesAsync(privateKey, cancellationToken))),
             AdbJsonSerializerContext.Default.BackupData);
     }

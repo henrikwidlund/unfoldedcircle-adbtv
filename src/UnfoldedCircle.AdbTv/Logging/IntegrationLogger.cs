@@ -100,10 +100,6 @@ internal static partial class IntegrationLogger
         Message = "ADB private key not found for backup at path '{PrivateKeyPath}'.")]
     public static partial void AdbPrivateKeyNotFoundForBackup(this ILogger logger, string privateKeyPath);
 
-    [LoggerMessage(EventId = 20, EventName = nameof(AdbPublicKeyNotFoundForBackup), Level = LogLevel.Warning,
-        Message = "ADB public key not found for backup at path '{PublicKeyPath}'.")]
-    public static partial void AdbPublicKeyNotFoundForBackup(this ILogger logger, string publicKeyPath);
-
     [LoggerMessage(EventId = 21, EventName = nameof(BackupDataNullDuringRestore), Level = LogLevel.Error,
         Message = "[{WSId}] BackupData null during restore.")]
     public static partial void BackupDataNullDuringRestore(this ILogger logger, string wsId);
