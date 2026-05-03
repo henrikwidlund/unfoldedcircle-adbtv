@@ -5,8 +5,8 @@ namespace UnfoldedCircle.AdbTv.Logging;
 internal static partial class IntegrationLogger
 {
     [LoggerMessage(EventId = 1, EventName = nameof(DeviceNotOnline), Level = LogLevel.Warning,
-        Message = "Device {ClientKey} is not online. Connection result was '{ConnectionResult}', device state was {DeviceState}.")]
-    public static partial void DeviceNotOnline(this ILogger logger, in AdbTvClientKey clientKey, string? connectionResult, in AdvancedSharpAdbClient.Models.DeviceState? deviceState);
+        Message = "Device {ClientKey} is not online. Last connection error was '{ConnectionError}'.")]
+    public static partial void DeviceNotOnline(this ILogger logger, in AdbTvClientKey clientKey, string? connectionError);
 
     private static readonly Action<ILogger, AdbTvClientKey, Exception> FailedToCreateClientAction = LoggerMessage.Define<AdbTvClientKey>(
         LogLevel.Error,

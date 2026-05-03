@@ -43,13 +43,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="AdvancedSharpAdbClient" Version="3.6.16" />
         <PackageReference Include="Meziantou.Analyzer" Version="3.0.58">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="10.0.7" />
         <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta21" />
+        <PackageReference Include="Theodicean.SharpAdb" Version="0.0.1-pre01" />
         <PackageReference Include="Theodicean.SourceGenerators" Version="0.0.5" PrivateAssets="all" ExcludeAssets="runtime">
             <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>

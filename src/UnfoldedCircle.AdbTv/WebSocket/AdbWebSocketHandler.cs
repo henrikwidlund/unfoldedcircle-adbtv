@@ -3,12 +3,11 @@ using System.Collections.Frozen;
 using System.Globalization;
 using System.Net;
 
-using AdvancedSharpAdbClient.DeviceCommands;
-
 using Microsoft.Extensions.Options;
 
+using Theodicean.SharpAdb.Services;
+
 using UnfoldedCircle.AdbTv.AdbTv;
-using UnfoldedCircle.AdbTv.BackgroundServices;
 using UnfoldedCircle.AdbTv.Configuration;
 using UnfoldedCircle.AdbTv.Json;
 using UnfoldedCircle.AdbTv.Logging;
@@ -109,7 +108,7 @@ internal sealed partial class AdbWebSocketHandler(
         if (adbTvClientHolder is null)
             return false;
 
-        await adbTvClientHolder.Client.StartAppAsync(appIdentifier, cancellationToken);
+        await adbTvClientHolder.Connection.StartAppAsync(appIdentifier, cancellationToken);
         return true;
     }
 
@@ -182,7 +181,7 @@ internal sealed partial class AdbWebSocketHandler(
                 }
 
                 var apps = new List<string>();
-                await foreach (string appIdentifier in adbClientHolder.Client.AdbClient.ExecuteRemoteEnumerableAsync("pm list packages -3", adbClientHolder.Client.Device, System.Text.Encoding.UTF8, cancellationToken))
+                await foreach (string appIdentifier in adbClientHolder.Connection.ExecuteLinesAsync("pm list packages -3", cancellationToken))
                     apps.Add(appIdentifier.Replace("package:", string.Empty, StringComparison.OrdinalIgnoreCase).Trim());
 
                 alternateLookup[baseIdentifier.Span] = apps;
@@ -345,7 +344,7 @@ internal sealed partial class AdbWebSocketHandler(
                 if (isPowerOn)
                     await WakeOnLan.SendWakeOnLanAsync(adbTvClientHolder.ClientKey.MacAddress, IPAddress.Parse(adbTvClientHolder.ClientKey.IpAddress));
 
-                await adbTvClientHolder.Client.SendKeyEventAsync(command, cancellationToken);
+                await adbTvClientHolder.Connection.SendKeyEventAsync(Enum.Parse<KeyCode>(command), cancellationToken);
 
                 var result = isPowerOn ? EntityCommandResult.PowerOn
                     : isPowerOff ? EntityCommandResult.PowerOff
@@ -359,14 +358,10 @@ internal sealed partial class AdbWebSocketHandler(
 
                 return result;
             case CommandType.Raw:
-                await adbTvClientHolder.Client.AdbClient.ExecuteRemoteCommandAsync(command,
-                    adbTvClientHolder.Client.Device,
-                    cancellationToken);
+                await adbTvClientHolder.Connection.ExecuteAsync(command, cancellationToken);
                 return EntityCommandResult.Other;
             case CommandType.App:
-                await adbTvClientHolder.Client.AdbClient.StartAppAsync(adbTvClientHolder.Client.Device,
-                    command,
-                    cancellationToken);
+                await adbTvClientHolder.Connection.StartAppAsync(command, cancellationToken);
                 return EntityCommandResult.Other;
             case CommandType.NoOp:
                 var noOpIsPowerOn = command.Equals(AdbTvRemoteCommands.PowerStateOn, StringComparison.OrdinalIgnoreCase);
@@ -491,7 +486,7 @@ internal sealed partial class AdbWebSocketHandler(
 
             if (entityType == EntityType.MediaPlayer)
             {
-                string[] sources = [..apps, AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3, AdbTvRemoteCommands.InputHdmi4];
+                string[] sources = [.. apps, AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3, AdbTvRemoteCommands.InputHdmi4];
                 await SendMessageAsync(socket,
                     ResponsePayloadHelpers.CreateMediaPlayerStateChangedResponsePayload(new MediaPlayerStateChangedEventMessageDataAttributes { SourceList = sources },
                         msgDataEntityId), wsId, commandCancellationToken);
@@ -580,20 +575,16 @@ internal sealed partial class AdbWebSocketHandler(
             }
 
             await _configurationService.UpdateConfigurationAsync(backupData.Configuration, cancellationToken);
-            AdbBackgroundService.RestoreInProgress = true;
             _adbTvClientFactory.RemoveAllClients();
             await File.WriteAllBytesAsync(Path.Combine(adbKeyDirectory, "adbkey"), Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
             await File.WriteAllBytesAsync(Path.Combine(adbKeyDirectory, "adbkey.pub"), Convert.FromBase64String(backupData.PublicKey), cancellationToken);
+            AdbTvClientFactory.InvalidateAuthKey();
             return RestoreResult.Success;
         }
         catch (Exception e)
         {
             _logger.ExceptionDuringRestore(e, wsId);
             return RestoreResult.Failure;
-        }
-        finally
-        {
-            AdbBackgroundService.RestoreInProgress = false;
         }
     }
 
@@ -659,8 +650,7 @@ internal sealed partial class AdbWebSocketHandler(
 
     private async ValueTask<SetupDriverUserDataResult> GetSetupResultForClient(string wsId, string entityId, CancellationToken cancellationToken)
     {
-        if (await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken)
-            is not { Client.Device.State: AdvancedSharpAdbClient.Models.DeviceState.Online })
+        if (await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken) is null)
         {
             _logger.DeviceNotOnlineDuringSetupResult(wsId, entityId);
             return SetupDriverUserDataResult.Error;

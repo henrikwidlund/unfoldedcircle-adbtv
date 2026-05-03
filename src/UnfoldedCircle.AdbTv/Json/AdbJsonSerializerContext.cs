@@ -12,8 +12,8 @@ internal sealed partial class AdbJsonSerializerContext : JsonSerializerContext
     static AdbJsonSerializerContext()
     {
         Default = new AdbJsonSerializerContext(new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            });
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
     }
 }

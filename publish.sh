@@ -40,11 +40,6 @@ cp ./appsettings*.json ./driverdir/bin/
 cp ./driver ./driverdir/bin/
 cp ./*.pdb ./driverdir/bin/
 
-# Download the latest version of adb for arm64 and copy it to the bin directory
-curl -sL "$(curl -s https://api.github.com/repos/prife/adb/releases/latest | grep browser_download_url | cut -d\" -f4 | grep 'aarch64-29.0.6-optimize$')" -o adb
-chmod a+x adb
-mv adb driverdir/bin/
-
 # Package the driver directory into a tarball
 cd ./driverdir || exit
 tar -czvf ../../unfolded-circle-adbtv.tar.gz ./*

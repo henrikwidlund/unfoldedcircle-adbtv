@@ -21,11 +21,7 @@ RUN touch /app/publish/configured_entities.json && \
     chmod 644 /app/publish/configured_entities.json
 
 FROM base AS final
-USER root
-RUN apt-get -y update && apt-get install adb -y && apt-get clean
 USER $APP_UID
 WORKDIR /app
 COPY --from=publish /app/publish .
-RUN echo '#!/bin/sh\nadb start-server\nexec ./driver' > /app/entrypoint.sh \
-    && chmod +x /app/entrypoint.sh
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["./driver"]

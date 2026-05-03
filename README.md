@@ -32,15 +32,15 @@ Please search for device specific instructions on how to enable Developer Settin
 - The published binary is self-contained and doesn't require any additional software.
 It's compiled for Linux ARM64 and is meant to be running on the remote.
 - Use the [Docker Image](https://hub.docker.com/r/henrikwidlund/unfoldedcircle-adbtv) in the [Core Simulator](https://github.com/unfoldedcircle/core-simulator)
-- Other Operating Systems - Linux, macOS, Windows - are supported. Requires that you have ADB installed.
+- Other Operating Systems - Linux, macOS, Windows - are supported.
 
 ### Network
 
-| Service      | Port   | Protocol   | Location              |
-|--------------|--------|------------|-----------------------|
-| Server       | Random*  | HTTP (TCP) | Remote/other computer |
-| ADB          | 5555** | TCP        | Device to control     |
-| Wake on Lan  | 7 and 9      | UDP        | Device to control     |
+| Service     | Port    | Protocol   | Location              |
+|-------------|---------|------------|-----------------------|
+| Server      | Random* | HTTP (TCP) | Remote/other computer |
+| ADB         | 5555**  | TCP        | Device to control     |
+| Wake on Lan | 7 and 9 | UDP        | Device to control     |
 
 \* Server port can be adjusted by specifying the desired port with the `UC_INTEGRATION_HTTP_PORT` environment variable.
 \** ADB port can be adjusted during configuration if your device uses a different port.
