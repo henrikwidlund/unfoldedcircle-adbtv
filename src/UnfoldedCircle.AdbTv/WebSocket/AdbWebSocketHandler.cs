@@ -288,7 +288,7 @@ internal sealed partial class AdbWebSocketHandler(
         => ValueTask.CompletedTask;
 
     protected override async ValueTask OnEnterStandbyAsync(EnterStandbyEvent payload, string wsId, CancellationToken cancellationToken)
-        => await _adbTvClientFactory.RemoveAllClients();
+        => await AdbTvClientFactory.RemoveAllClients();
 
     protected override ValueTask OnExitStandbyAsync(ExitStandbyEvent payload, string wsId, CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
@@ -571,7 +571,7 @@ internal sealed partial class AdbWebSocketHandler(
             }
 
             await _configurationService.UpdateConfigurationAsync(backupData.Configuration, cancellationToken);
-            await _adbTvClientFactory.ReplacePrivateKeyAsync(Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
+            await AdbTvClientFactory.ReplacePrivateKeyAsync(Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
             return RestoreResult.Success;
         }
         catch (Exception e)
