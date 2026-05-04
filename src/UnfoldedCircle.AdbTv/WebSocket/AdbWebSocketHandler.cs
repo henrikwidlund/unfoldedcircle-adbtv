@@ -563,7 +563,6 @@ internal sealed partial class AdbWebSocketHandler(
     {
         try
         {
-            var adbKeyDirectory = GetAdbKeyDirectory();
             var backupData = JsonSerializer.Deserialize(jsonRestoreData, AdbJsonSerializerContext.Default.BackupData);
             if (backupData is null)
             {
@@ -572,23 +571,7 @@ internal sealed partial class AdbWebSocketHandler(
             }
 
             await _configurationService.UpdateConfigurationAsync(backupData.Configuration, cancellationToken);
-            await _adbTvClientFactory.RemoveAllClients();
-            Directory.CreateDirectory(adbKeyDirectory);
-            var adbKeyPath = Path.Combine(adbKeyDirectory, "adbkey");
-            var privateKeyBytes = Convert.FromBase64String(backupData.PrivateKey);
-            var fileStreamOptions = new FileStreamOptions
-            {
-                Mode = FileMode.Create,
-                Access = FileAccess.Write,
-                Share = FileShare.None
-            };
-
-            if (!OperatingSystem.IsWindows())
-                fileStreamOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-
-            await using (var adbKeyStream = new FileStream(adbKeyPath, fileStreamOptions))
-                await adbKeyStream.WriteAsync(privateKeyBytes, cancellationToken);
-            await AdbTvClientFactory.InvalidateAuthKey(cancellationToken);
+            await _adbTvClientFactory.ReplacePrivateKeyAsync(Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
             return RestoreResult.Success;
         }
         catch (Exception e)

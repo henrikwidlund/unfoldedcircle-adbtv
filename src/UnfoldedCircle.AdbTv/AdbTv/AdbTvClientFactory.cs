@@ -19,7 +19,6 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(4.5);
     // We will only have one key for all clients
     private static readonly SemaphoreSlim AuthKeyLock = new(1, 1);
-    private static readonly TimeSpan SemaphoreMaxWaitTime = TimeSpan.FromSeconds(1);
     private static AdbAuthKey? _cachedAuthKey;
 
     public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
@@ -202,7 +201,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
     internal static async ValueTask<AdbAuthKey> GetOrCreateAuthKey(CancellationToken cancellationToken)
     {
-        if (!await AuthKeyLock.WaitAsync(SemaphoreMaxWaitTime, cancellationToken))
+        if (!await AuthKeyLock.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
         {
             throw new TimeoutException("Timed out waiting to acquire auth key lock");
         }
@@ -251,7 +250,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
     internal static async ValueTask InvalidateAuthKey(CancellationToken cancellationToken)
     {
-        if (!await AuthKeyLock.WaitAsync(SemaphoreMaxWaitTime, cancellationToken))
+        if (!await AuthKeyLock.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
         {
             throw new TimeoutException("Timed out waiting to invalidate auth key lock");
         }
@@ -265,6 +264,41 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         {
             AuthKeyLock.Release();
         }
+    }
+
+    internal async ValueTask ReplacePrivateKeyAsync(byte[] pemBytes, CancellationToken cancellationToken)
+    {
+        if (!await AuthKeyLock.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
+            throw new TimeoutException("Timed out waiting to acquire auth key lock");
+
+        try
+        {
+            _cachedAuthKey?.Dispose();
+            _cachedAuthKey = null;
+
+            var directory = GetAdbKeyDirectory();
+            Directory.CreateDirectory(directory);
+            var privateKeyPath = Path.Combine(directory, "adbkey");
+
+            var fileStreamOptions = new FileStreamOptions
+            {
+                Mode = FileMode.Create,
+                Access = FileAccess.Write,
+                Share = FileShare.None
+            };
+
+            if (!OperatingSystem.IsWindows())
+                fileStreamOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+
+            await using var stream = new FileStream(privateKeyPath, fileStreamOptions);
+            await stream.WriteAsync(pemBytes, cancellationToken);
+        }
+        finally
+        {
+            AuthKeyLock.Release();
+        }
+
+        await RemoveAllClients();
     }
 
     private static string GetAdbKeyDirectory()
