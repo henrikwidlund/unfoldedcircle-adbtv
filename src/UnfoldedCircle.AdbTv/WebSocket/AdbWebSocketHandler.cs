@@ -660,7 +660,18 @@ internal sealed partial class AdbWebSocketHandler(
 
     private async ValueTask<SetupDriverUserDataResult> GetSetupResultForClient(string wsId, string entityId, CancellationToken cancellationToken)
     {
-        if (await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken) is null)
+        var holder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
+        if (holder is null || holder.Connection.FaultException is not null)
+        {
+            _logger.DeviceNotOnlineDuringSetupResult(wsId, entityId);
+            return SetupDriverUserDataResult.Error;
+        }
+
+        try
+        {
+            await holder.Connection.ExecuteAsync("true", cancellationToken);
+        }
+        catch (Exception)
         {
             _logger.DeviceNotOnlineDuringSetupResult(wsId, entityId);
             return SetupDriverUserDataResult.Error;

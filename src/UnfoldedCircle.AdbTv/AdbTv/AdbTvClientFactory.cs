@@ -100,7 +100,10 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                     _logger,
                     true,
                     cancellationToken))
+            {
+                await connection.DisposeAsync();
                 return null;
+            }
 
             _clients[adbTvClientKey] = connection;
             return connection;
@@ -248,7 +251,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
     internal static async ValueTask InvalidateAuthKey(CancellationToken cancellationToken)
     {
-        if (await AuthKeyLock.WaitAsync(SemaphoreMaxWaitTime, cancellationToken))
+        if (!await AuthKeyLock.WaitAsync(SemaphoreMaxWaitTime, cancellationToken))
         {
             throw new TimeoutException("Timed out waiting to invalidate auth key lock");
         }
