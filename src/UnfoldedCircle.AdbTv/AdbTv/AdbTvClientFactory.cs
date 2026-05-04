@@ -287,12 +287,9 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         if (File.Exists(path))
             return false;
 
-        // For non-existent paths, infer from shape: a trailing separator or no file extension means directory.
-        // ADB key files conventionally have an extension (.pem, .adb_key, .key); a bare path like
-        // "/etc/adb_keys" is treated as a directory, matching the upstream ADB convention.
-        if (path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar))
-            return true;
-
-        return string.IsNullOrEmpty(Path.GetExtension(path));
+        // For non-existent paths, only a trailing separator signals a directory. Otherwise treat as a file
+        // path so callers like ADB_VENDOR_KEYS=/config/adbkey resolve to the file itself, since adbkey
+        // files conventionally have no extension.
+        return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar);
     }
 }
