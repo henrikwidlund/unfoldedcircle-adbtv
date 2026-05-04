@@ -121,7 +121,7 @@ internal sealed partial class AdbWebSocketHandler
                 await using var connection = await AdbConnection.ConnectTcpAsync(
                     adbTvClientKey.Value.IpAddress,
                     adbTvClientKey.Value.Port,
-                    [await AdbTvClientFactory.GetOrCreateAuthKey(cancellationToken)],
+                    [await AdbTvClientFactory.GetOrCreateAuthKey(linkedCancellationTokenSource.Token)],
                     options: null,
                     linkedCancellationTokenSource.Token);
                 await connection.ExecuteAsync("true", linkedCancellationTokenSource.Token);

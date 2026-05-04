@@ -670,7 +670,7 @@ internal sealed partial class AdbWebSocketHandler(
     protected override async ValueTask<string> GetJsonBackupDataAsync(CancellationToken cancellationToken)
     {
         var config = await _configurationService.GetConfigurationAsync(cancellationToken);
-        var privateKey = Path.Combine(AdbTvClientFactory.GetAdbKeyDirectory(), "adbkey");
+        var privateKey = AdbTvClientFactory.GetAdbKeyPath();
         if (!File.Exists(privateKey))
         {
             _logger.AdbPrivateKeyNotFoundForBackup(privateKey);

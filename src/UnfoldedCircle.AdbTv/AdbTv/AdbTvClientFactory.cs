@@ -211,9 +211,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             if (_cachedAuthKey is { } existing)
                 return existing;
 
-            var directory = GetAdbKeyDirectory();
-            Directory.CreateDirectory(directory);
-            var privateKeyPath = Path.Combine(directory, "adbkey");
+            var privateKeyPath = GetAdbKeyPath();
+            Directory.CreateDirectory(Path.GetDirectoryName(privateKeyPath)!);
 
             AdbAuthKey key;
             if (File.Exists(privateKeyPath))
@@ -258,9 +257,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             _cachedAuthKey?.Dispose();
             _cachedAuthKey = null;
 
-            var directory = GetAdbKeyDirectory();
-            Directory.CreateDirectory(directory);
-            var privateKeyPath = Path.Combine(directory, "adbkey");
+            var privateKeyPath = GetAdbKeyPath();
+            Directory.CreateDirectory(Path.GetDirectoryName(privateKeyPath)!);
 
             var fileStreamOptions = new FileStreamOptions
             {
@@ -283,18 +281,19 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         await RemoveAllClients();
     }
 
-    internal static string GetAdbKeyDirectory()
+    internal static string GetAdbKeyPath()
     {
         var vendorKeys = Environment.GetEnvironmentVariable("ADB_VENDOR_KEYS");
         if (!string.IsNullOrEmpty(vendorKeys))
         {
             var separatorIndex = vendorKeys.IndexOf(Path.PathSeparator, StringComparison.Ordinal);
             var firstVendorKey = separatorIndex >= 0 ? vendorKeys[..separatorIndex] : vendorKeys;
-            // ADB_VENDOR_KEYS entries can be either a directory containing keys or a path to a key file.
-            return Directory.Exists(firstVendorKey) ? firstVendorKey : Path.GetDirectoryName(firstVendorKey)!;
+            // ADB_VENDOR_KEYS entries can be either a directory containing the key, or the key file itself.
+            return Directory.Exists(firstVendorKey) ? Path.Combine(firstVendorKey, "adbkey") : firstVendorKey;
         }
 
         var sdkHome = Environment.GetEnvironmentVariable("ANDROID_SDK_HOME");
-        return Path.Combine(!string.IsNullOrEmpty(sdkHome) ? sdkHome : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".android");
+        var directory = Path.Combine(!string.IsNullOrEmpty(sdkHome) ? sdkHome : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".android");
+        return Path.Combine(directory, "adbkey");
     }
 }
