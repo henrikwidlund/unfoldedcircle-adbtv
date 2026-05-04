@@ -254,13 +254,13 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
             await using var stream = new FileStream(privateKeyPath, fileStreamOptions);
             await stream.WriteAsync(pemBytes, cancellationToken);
+
+            await RemoveAllClients();
         }
         finally
         {
             AuthKeyLock.Release();
         }
-
-        await RemoveAllClients();
     }
 
     internal static string GetAdbKeyPath()
@@ -288,9 +288,13 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             return false;
 
         // For non-existent paths, prefer directory semantics because ADB_VENDOR_KEYS commonly points to
-        // a directory containing adbkey. Still honor explicit file paths such as .../adbkey.
+        // a directory containing adbkey. Still honor explicit file paths such as .../adbkey or
+        // custom filenames like .../tv.pem.
         if (path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar))
             return true;
-        return !string.Equals(Path.GetFileName(path), "adbkey", StringComparison.Ordinal);
+
+        var fileName = Path.GetFileName(path);
+        return !string.Equals(fileName, "adbkey", StringComparison.Ordinal) &&
+               string.IsNullOrEmpty(Path.GetExtension(fileName));
     }
 }
