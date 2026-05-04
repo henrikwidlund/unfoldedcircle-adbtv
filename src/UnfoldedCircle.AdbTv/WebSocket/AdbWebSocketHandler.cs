@@ -670,8 +670,7 @@ internal sealed partial class AdbWebSocketHandler(
     protected override async ValueTask<string> GetJsonBackupDataAsync(CancellationToken cancellationToken)
     {
         var config = await _configurationService.GetConfigurationAsync(cancellationToken);
-        var adbKeyDirectory = GetAdbKeyDirectory();
-        var privateKey = Path.Combine(adbKeyDirectory, "adbkey");
+        var privateKey = Path.Combine(AdbTvClientFactory.GetAdbKeyDirectory(), "adbkey");
         if (!File.Exists(privateKey))
         {
             _logger.AdbPrivateKeyNotFoundForBackup(privateKey);
@@ -681,23 +680,6 @@ internal sealed partial class AdbWebSocketHandler(
         return JsonSerializer.Serialize(new BackupData(config,
                 Convert.ToBase64String(await File.ReadAllBytesAsync(privateKey, cancellationToken))),
             AdbJsonSerializerContext.Default.BackupData);
-    }
-
-    private static string GetAdbKeyDirectory()
-    {
-        var vendorKeys = Environment.GetEnvironmentVariable("ADB_VENDOR_KEYS");
-        if (!string.IsNullOrEmpty(vendorKeys))
-        {
-            var separatorIndex = vendorKeys.IndexOf(Path.PathSeparator, StringComparison.Ordinal);
-            var firstVendorKey = separatorIndex >= 0 ? vendorKeys[..separatorIndex] : vendorKeys;
-            return Path.GetDirectoryName(firstVendorKey)!;
-        }
-
-        var sdkHome = Environment.GetEnvironmentVariable("ANDROID_SDK_HOME");
-        if (!string.IsNullOrEmpty(sdkHome))
-            return Path.Combine(sdkHome, ".android");
-
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".android");
     }
 
     protected override async ValueTask<SettingsPage> CreateNewEntitySettingsPageAsync(CancellationToken cancellationToken)

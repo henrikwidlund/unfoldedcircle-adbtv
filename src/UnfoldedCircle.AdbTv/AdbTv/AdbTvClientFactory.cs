@@ -248,24 +248,6 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    internal static async ValueTask InvalidateAuthKey(CancellationToken cancellationToken)
-    {
-        if (!await AuthKeyLock.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
-        {
-            throw new TimeoutException("Timed out waiting to invalidate auth key lock");
-        }
-
-        try
-        {
-            _cachedAuthKey?.Dispose();
-            _cachedAuthKey = null;
-        }
-        finally
-        {
-            AuthKeyLock.Release();
-        }
-    }
-
     internal async ValueTask ReplacePrivateKeyAsync(byte[] pemBytes, CancellationToken cancellationToken)
     {
         if (!await AuthKeyLock.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
@@ -301,14 +283,15 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         await RemoveAllClients();
     }
 
-    private static string GetAdbKeyDirectory()
+    internal static string GetAdbKeyDirectory()
     {
         var vendorKeys = Environment.GetEnvironmentVariable("ADB_VENDOR_KEYS");
         if (!string.IsNullOrEmpty(vendorKeys))
         {
             var separatorIndex = vendorKeys.IndexOf(Path.PathSeparator, StringComparison.Ordinal);
             var firstVendorKey = separatorIndex >= 0 ? vendorKeys[..separatorIndex] : vendorKeys;
-            return Path.GetDirectoryName(firstVendorKey)!;
+            // ADB_VENDOR_KEYS entries can be either a directory containing keys or a path to a key file.
+            return Directory.Exists(firstVendorKey) ? firstVendorKey : Path.GetDirectoryName(firstVendorKey)!;
         }
 
         var sdkHome = Environment.GetEnvironmentVariable("ANDROID_SDK_HOME");
