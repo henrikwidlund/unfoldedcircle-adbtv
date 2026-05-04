@@ -271,11 +271,28 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             var separatorIndex = vendorKeys.IndexOf(Path.PathSeparator, StringComparison.Ordinal);
             var firstVendorKey = separatorIndex >= 0 ? vendorKeys[..separatorIndex] : vendorKeys;
             // ADB_VENDOR_KEYS entries can be either a directory containing the key, or the key file itself.
-            return Directory.Exists(firstVendorKey) ? Path.Combine(firstVendorKey, "adbkey") : firstVendorKey;
+            return IsDirectoryPath(firstVendorKey) ? Path.Combine(firstVendorKey, "adbkey") : firstVendorKey;
         }
 
         var sdkHome = Environment.GetEnvironmentVariable("ANDROID_SDK_HOME");
         var directory = Path.Combine(!string.IsNullOrEmpty(sdkHome) ? sdkHome : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".android");
         return Path.Combine(directory, "adbkey");
+    }
+
+    private static bool IsDirectoryPath(string path)
+    {
+        // Existing inode wins.
+        if (Directory.Exists(path))
+            return true;
+        if (File.Exists(path))
+            return false;
+
+        // For non-existent paths, infer from shape: a trailing separator or no file extension means directory.
+        // ADB key files conventionally have an extension (.pem, .adb_key, .key); a bare path like
+        // "/etc/adb_keys" is treated as a directory, matching the upstream ADB convention.
+        if (path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar))
+            return true;
+
+        return string.IsNullOrEmpty(Path.GetExtension(path));
     }
 }
