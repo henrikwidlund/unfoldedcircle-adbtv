@@ -2,12 +2,6 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
-      "AdvancedSharpAdbClient": {
-        "type": "Direct",
-        "requested": "[3.6.16, )",
-        "resolved": "3.6.16",
-        "contentHash": "w5p3s+9Rkx9tmn5S5KU0XSTap5YWGHOvQOw/40M0d7eGOHf7idhX+kizWPmnP1ahbkic/yiX03SMYNR1mJSAVw=="
-      },
       "Meziantou.Analyzer": {
         "type": "Direct",
         "requested": "[3.0.58, )",
@@ -35,6 +29,12 @@
           "NetEscapades.EnumGenerators.Generators": "1.0.0-beta21",
           "NetEscapades.EnumGenerators.RuntimeDependencies": "1.0.0-beta21"
         }
+      },
+      "Theodicean.SharpAdb": {
+        "type": "Direct",
+        "requested": "[0.0.1-pre01, )",
+        "resolved": "0.0.1-pre01",
+        "contentHash": "itr4RfB1jWvmVAwfESejdDmpdf4kJ3Ba5hCoCsx9siQqxUBe8wCCxCJLHa1HVJHo4OlWzAI/O4KG3pgbuPjGgQ=="
       },
       "Theodicean.SourceGenerators": {
         "type": "Direct",

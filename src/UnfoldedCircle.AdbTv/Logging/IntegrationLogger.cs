@@ -5,8 +5,8 @@ namespace UnfoldedCircle.AdbTv.Logging;
 internal static partial class IntegrationLogger
 {
     [LoggerMessage(EventId = 1, EventName = nameof(DeviceNotOnline), Level = LogLevel.Warning,
-        Message = "Device {ClientKey} is not online. Connection result was '{ConnectionResult}', device state was {DeviceState}.")]
-    public static partial void DeviceNotOnline(this ILogger logger, in AdbTvClientKey clientKey, string? connectionResult, in AdvancedSharpAdbClient.Models.DeviceState? deviceState);
+        Message = "Device {ClientKey} is not online. Last connection error was '{ConnectionError}'.")]
+    public static partial void DeviceNotOnline(this ILogger logger, in AdbTvClientKey clientKey, string? connectionError);
 
     private static readonly Action<ILogger, AdbTvClientKey, Exception> FailedToCreateClientAction = LoggerMessage.Define<AdbTvClientKey>(
         LogLevel.Error,
@@ -99,10 +99,6 @@ internal static partial class IntegrationLogger
     [LoggerMessage(EventId = 19, EventName = nameof(AdbPrivateKeyNotFoundForBackup), Level = LogLevel.Warning,
         Message = "ADB private key not found for backup at path '{PrivateKeyPath}'.")]
     public static partial void AdbPrivateKeyNotFoundForBackup(this ILogger logger, string privateKeyPath);
-
-    [LoggerMessage(EventId = 20, EventName = nameof(AdbPublicKeyNotFoundForBackup), Level = LogLevel.Warning,
-        Message = "ADB public key not found for backup at path '{PublicKeyPath}'.")]
-    public static partial void AdbPublicKeyNotFoundForBackup(this ILogger logger, string publicKeyPath);
 
     [LoggerMessage(EventId = 21, EventName = nameof(BackupDataNullDuringRestore), Level = LogLevel.Error,
         Message = "[{WSId}] BackupData null during restore.")]

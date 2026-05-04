@@ -1,11 +1,9 @@
 using System.Collections.Concurrent;
-using System.Collections.Frozen;
 using System.Diagnostics;
-using System.Globalization;
 
-using AdvancedSharpAdbClient;
-using AdvancedSharpAdbClient.DeviceCommands;
-using AdvancedSharpAdbClient.Models;
+using Theodicean.SharpAdb;
+using Theodicean.SharpAdb.Auth;
+using Theodicean.SharpAdb.Services;
 
 using UnfoldedCircle.AdbTv.Cancellation;
 using UnfoldedCircle.AdbTv.Logging;
@@ -15,45 +13,29 @@ namespace UnfoldedCircle.AdbTv.AdbTv;
 public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 {
     private readonly ILogger<AdbTvClientFactory> _logger = logger;
-    private readonly ConcurrentDictionary<AdbTvClientKey, DeviceClient> _clients = new();
-    private readonly ConcurrentDictionary<AdbTvClientKey, SemaphoreSlim> _clientSemaphores = new();
+    private static readonly ConcurrentDictionary<AdbTvClientKey, AdbConnection> Clients = new();
+    private static readonly ConcurrentDictionary<AdbTvClientKey, SemaphoreSlim> ClientSemaphores = new();
 
     private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(4.5);
+    // We will only have one key for all clients
+    private static readonly SemaphoreSlim AuthKeyLock = new(1, 1);
+    private static AdbAuthKey? _cachedAuthKey;
 
-    public async ValueTask<DeviceClient?> TryGetOrCreateClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
+    public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
-        var clientSemaphore = _clientSemaphores.GetOrAdd(adbTvClientKey, static _ => new SemaphoreSlim(1, 1));
-        if (!_clients.TryGetValue(adbTvClientKey, out var deviceClient))
-        {
-            if (await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
-            {
-                try
-                {
-                    // a new client was just added by another thread, assume healthy since it was just added.
-                    if (_clients.TryGetValue(adbTvClientKey, out deviceClient))
-                        return deviceClient;
-
-                    return await CreateDeviceClientAsync(adbTvClientKey, cancellationToken);
-                }
-                finally
-                {
-                    clientSemaphore.Release();
-                }
-            }
-
-            _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
-            return _clients!.GetValueOrDefault(adbTvClientKey, null);
-        }
-
+        var clientSemaphore = ClientSemaphores.GetOrAdd(adbTvClientKey, static _ => new SemaphoreSlim(1, 1));
         if (!await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
         {
             _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
-            return _clients!.GetValueOrDefault(adbTvClientKey, null);
+            return null;
         }
 
         try
         {
-            return await GetHealthyClientAsync(adbTvClientKey, deviceClient, cancellationToken);
+            if (Clients.TryGetValue(adbTvClientKey, out var connection))
+                return await GetHealthyConnectionAsync(adbTvClientKey, connection, cancellationToken);
+
+            return await CreateConnectionAsync(adbTvClientKey, cancellationToken);
         }
         finally
         {
@@ -61,43 +43,51 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    private async ValueTask<DeviceClient?> CreateDeviceClientAsync(
+    private async ValueTask<AdbConnection?> CreateConnectionAsync(
         AdbTvClientKey adbTvClientKey,
         CancellationToken cancellationToken)
     {
         try
         {
             var startTime = Stopwatch.GetTimestamp();
-            var adbClient = new AdbClient();
-            string? connectResult = await ConnectResultAsync(adbTvClientKey, adbClient, _logger, startTime, cancellationToken);
-
-            startTime = Stopwatch.GetTimestamp();
-            DeviceClient? deviceClient = null;
-            var serial = $"{adbTvClientKey.IpAddress}:{adbTvClientKey.Port.ToString(NumberFormatInfo.InvariantInfo)}";
+            AdbConnection? connection = null;
+            Exception? lastException = null;
             while (Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations && !cancellationToken.IsCancellationRequested)
             {
-                var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
-                    x.Serial.Equals(serial, StringComparison.InvariantCulture));
-                deviceClient = deviceData?.CreateDeviceClient();
-                if (deviceClient is { Device.State: DeviceState.Online } || deviceClient is not null && !RetryStates.Contains(deviceClient.Device.State))
+                try
+                {
+                    connection = await AdbConnection.ConnectTcpAsync(
+                        adbTvClientKey.IpAddress,
+                        adbTvClientKey.Port,
+                        [await GetOrCreateAuthKey(cancellationToken)],
+                        options: null,
+                        cancellationToken);
                     break;
-
-                await Task.Delay(100, cancellationToken);
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    lastException = e;
+                    await Task.Delay(100, cancellationToken);
+                }
             }
 
-            if (deviceClient is not { Device.State: DeviceState.Online })
+            if (connection is null)
             {
-                _logger.DeviceNotOnline(adbTvClientKey, connectResult, deviceClient?.Device.State);
+                _logger.DeviceNotOnline(adbTvClientKey, lastException?.Message);
                 return null;
             }
 
-            await RunWithRetryAsync(() => deviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClient.Device, cancellationToken),
-                _logger,
-                true,
-                cancellationToken);
+            if (!await RunWithRetryAsync(() => connection.ExecuteAsync("true", cancellationToken),
+                    _logger,
+                    true,
+                    cancellationToken))
+            {
+                await connection.DisposeAsync();
+                return null;
+            }
 
-            _clients[adbTvClientKey] = deviceClient;
-            return deviceClient;
+            Clients[adbTvClientKey] = connection;
+            return connection;
         }
         catch (Exception e)
         {
@@ -106,79 +96,31 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    private static async ValueTask<string?> ConnectResultAsync(
+    private async ValueTask<AdbConnection?> GetHealthyConnectionAsync(
         AdbTvClientKey adbTvClientKey,
-        AdbClient adbClient,
-        ILogger<AdbTvClientFactory> logger,
-        long startTime,
+        AdbConnection connection,
         CancellationToken cancellationToken)
     {
-        string? connectResult;
-        do
-        {
-            connectResult = await RunWithRetryWithReturnAsync(() =>
-                    adbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken),
-                logger,
-                true,
-                cancellationToken);
-            if (!IsAdbConnectedResult(connectResult))
-            {
-                await Task.Delay(100, cancellationToken);
-            }
-        } while (!IsAdbConnectedResult(connectResult) &&
-                 Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations && !cancellationToken.IsCancellationRequested);
-
-        return connectResult;
-    }
-
-    private async ValueTask<DeviceClient?> GetHealthyClientAsync(
-        AdbTvClientKey adbTvClientKey,
-        DeviceClient deviceClient,
-        CancellationToken cancellationToken)
-    {
-        var connectResult = await RunWithRetryWithReturnAsync(() =>
-                deviceClient.AdbClient.ConnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken),
-            _logger,
-            true,
-            cancellationToken);
-
-        if (IsAdbConnectedResult(connectResult) &&
-            await RunWithRetryAsync(() =>
-                    deviceClient.AdbClient.ExecuteRemoteCommandAsync("true", deviceClient.Device, cancellationToken),
+        if (connection.FaultException is null &&
+            await RunWithRetryAsync(() => connection.ExecuteAsync("true", cancellationToken),
                 _logger,
                 true,
                 cancellationToken))
         {
-            return deviceClient;
+            return connection;
         }
 
-        return await CreateDeviceClientAsync(adbTvClientKey, cancellationToken);
-    }
-
-    private static bool IsAdbConnectedResult(string? connectResult) =>
-        connectResult?.StartsWith("already connected to ", StringComparison.OrdinalIgnoreCase) is true
-        || connectResult?.StartsWith("connected to ", StringComparison.OrdinalIgnoreCase) is true;
-
-    private static async ValueTask<T?> RunWithRetryWithReturnAsync<T>(Func<Task<T>> func,
-        ILogger<AdbTvClientFactory> logger,
-        bool allowRetry,
-        CancellationToken cancellationToken)
-    {
+        Clients.TryRemove(adbTvClientKey, out _);
         try
         {
-            return await func();
+            await connection.DisposeAsync();
         }
-        catch (Exception e)
+        catch
         {
-            if (allowRetry)
-            {
-                logger.ActionFailedWillRetry(e);
-                await Task.SafeDelay(500, cancellationToken);
-                return await RunWithRetryWithReturnAsync(func, logger, false, cancellationToken);
-            }
-
-            throw;
+            // Best effort
         }
+
+        return await CreateConnectionAsync(adbTvClientKey, cancellationToken);
     }
 
     private static async ValueTask<bool> RunWithRetryAsync(Func<Task> func,
@@ -205,22 +147,13 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    private static readonly FrozenSet<DeviceState> RetryStates =
-    [
-        DeviceState.Connecting,
-        DeviceState.Offline,
-        DeviceState.Unauthorized,
-        DeviceState.Unknown
-    ];
-
-    public async ValueTask TryRemoveClientAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
+    public async ValueTask TryRemoveClientAsync(AdbTvClientKey adbTvClientKey)
     {
-        // We don't remove the semaphore since it might be used again, and people do not have enough TVs for this to be an issue
-        if (_clients.TryRemove(adbTvClientKey, out var deviceClient))
+        if (Clients.TryRemove(adbTvClientKey, out var connection))
         {
             try
             {
-                await deviceClient.AdbClient.DisconnectAsync(adbTvClientKey.IpAddress, adbTvClientKey.Port, cancellationToken);
+                await connection.DisposeAsync();
             }
             catch (Exception e)
             {
@@ -230,5 +163,138 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    public void RemoveAllClients() => _clients.Clear();
+    public static async ValueTask RemoveAllClients()
+    {
+        foreach (var (key, connection) in Clients)
+        {
+            if (!Clients.TryRemove(key, out _))
+                continue;
+
+            try
+            {
+                await connection.DisposeAsync();
+            }
+            catch
+            {
+                // Intentionally ignore
+            }
+        }
+    }
+
+    internal static async ValueTask<AdbAuthKey> GetOrCreateAuthKey(CancellationToken cancellationToken)
+    {
+        if (!await AuthKeyLock.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
+        {
+            throw new TimeoutException("Timed out waiting to acquire auth key lock");
+        }
+
+        try
+        {
+            if (_cachedAuthKey is { } existing)
+                return existing;
+
+            var privateKeyPath = GetAdbKeyPath();
+            Directory.CreateDirectory(Path.GetDirectoryName(privateKeyPath)!);
+
+            AdbAuthKey key;
+            if (File.Exists(privateKeyPath))
+            {
+                key = AdbAuthKey.LoadFromPem(await File.ReadAllTextAsync(privateKeyPath, cancellationToken));
+            }
+            else
+            {
+                key = AdbAuthKey.Generate();
+
+                var fileStreamOptions = new FileStreamOptions
+                {
+                    Mode = FileMode.Create,
+                    Access = FileAccess.Write,
+                    Share = FileShare.None
+                };
+
+                if (!OperatingSystem.IsWindows())
+                    fileStreamOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+
+                await using var adbKeyStream = new FileStream(privateKeyPath, fileStreamOptions);
+                await using var streamWriter = new StreamWriter(adbKeyStream);
+                await streamWriter.WriteAsync(key.ExportPrivateKeyPem().AsMemory(), cancellationToken);
+            }
+
+            _cachedAuthKey = key;
+            return key;
+        }
+        finally
+        {
+            AuthKeyLock.Release();
+        }
+    }
+
+    internal static async ValueTask ReplacePrivateKeyAsync(byte[] pemBytes, CancellationToken cancellationToken)
+    {
+        if (!await AuthKeyLock.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
+            throw new TimeoutException("Timed out waiting to acquire auth key lock");
+
+        try
+        {
+            _cachedAuthKey?.Dispose();
+            _cachedAuthKey = null;
+
+            var privateKeyPath = GetAdbKeyPath();
+            Directory.CreateDirectory(Path.GetDirectoryName(privateKeyPath)!);
+
+            var fileStreamOptions = new FileStreamOptions
+            {
+                Mode = FileMode.Create,
+                Access = FileAccess.Write,
+                Share = FileShare.None
+            };
+
+            if (!OperatingSystem.IsWindows())
+                fileStreamOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+
+            await using var stream = new FileStream(privateKeyPath, fileStreamOptions);
+            await stream.WriteAsync(pemBytes, cancellationToken);
+
+            await RemoveAllClients();
+        }
+        finally
+        {
+            AuthKeyLock.Release();
+        }
+    }
+
+    internal static string GetAdbKeyPath()
+    {
+        var vendorKeys = Environment.GetEnvironmentVariable("ADB_VENDOR_KEYS");
+        if (!string.IsNullOrEmpty(vendorKeys))
+        {
+            var separatorIndex = vendorKeys.IndexOf(Path.PathSeparator, StringComparison.Ordinal);
+            var firstVendorKey = separatorIndex >= 0 ? vendorKeys[..separatorIndex] : vendorKeys;
+            // ADB_VENDOR_KEYS entries can be either a directory containing the key, or the key file itself.
+            return IsDirectoryPath(firstVendorKey) ? Path.Combine(firstVendorKey, "adbkey") : firstVendorKey;
+        }
+
+        var sdkHome = Environment.GetEnvironmentVariable("ANDROID_SDK_HOME");
+        var directory = Path.Combine(!string.IsNullOrEmpty(sdkHome) ? sdkHome : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".android");
+        return Path.Combine(directory, "adbkey");
+    }
+
+    private static bool IsDirectoryPath(string path)
+    {
+        // Existing inode wins.
+        if (Directory.Exists(path))
+            return true;
+        if (File.Exists(path))
+            return false;
+
+        // For non-existent paths, prefer directory semantics because ADB_VENDOR_KEYS commonly points to
+        // a directory containing adbkey. Still honor explicit file paths such as .../adbkey or
+        // custom filenames like .../tv.pem.
+        if (path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar))
+            return true;
+
+        var fileName = Path.GetFileName(path);
+        return !string.Equals(fileName, "adbkey", StringComparison.Ordinal) &&
+               string.IsNullOrEmpty(Path.GetExtension(fileName));
+    }
 }

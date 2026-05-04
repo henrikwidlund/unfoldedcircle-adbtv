@@ -1,7 +1,5 @@
-using System.Globalization;
-
-using AdvancedSharpAdbClient;
-using AdvancedSharpAdbClient.DeviceCommands;
+using Theodicean.SharpAdb;
+using Theodicean.SharpAdb.Services;
 
 using UnfoldedCircle.AdbTv.AdbTv;
 using UnfoldedCircle.AdbTv.Configuration;
@@ -88,13 +86,13 @@ internal sealed partial class AdbWebSocketHandler
                 return null;
             }
 
-            var deviceClient = await _adbTvClientFactory.TryGetOrCreateClientAsync(adbTvClientKey.Value, linkedCancellationTokenSource.Token);
-            if (deviceClient is null)
+            var connection = await _adbTvClientFactory.TryGetOrCreateAdbConnectionAsync(adbTvClientKey.Value, linkedCancellationTokenSource.Token);
+            if (connection is null)
             {
                 _logger.AdbTvClientHolderNotFound(wsId, entityId);
                 return null;
             }
-            return new AdbTvClientHolder(deviceClient, adbTvClientKey.Value);
+            return new AdbTvClientHolder(connection, adbTvClientKey.Value);
         }
         catch (Exception e)
         {
@@ -114,21 +112,51 @@ internal sealed partial class AdbWebSocketHandler
             if (adbTvClientKey is null)
                 return false;
 
-            var adbClient = new AdbClient();
-            string connectResult;
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(7));
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
                 cancellationTokenSource.Token);
-            do
-            {
-                connectResult = await adbClient.ConnectAsync(adbTvClientKey.Value.IpAddress, adbTvClientKey.Value.Port, linkedCancellationTokenSource.Token);
-            } while (!connectResult.StartsWith("already connected to ", StringComparison.OrdinalIgnoreCase)
-                     && !connectResult.StartsWith("connected to ", StringComparison.OrdinalIgnoreCase));
 
-            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-            var deviceData = (await adbClient.GetDevicesAsync(cancellationToken)).FirstOrDefault(x =>
-                x.Serial.Equals($"{adbTvClientKey.Value.IpAddress}:{adbTvClientKey.Value.Port.ToString(NumberFormatInfo.InvariantInfo)}", StringComparison.OrdinalIgnoreCase));
-            return deviceData is { State: AdvancedSharpAdbClient.Models.DeviceState.Online };
+            var authKey = await AdbTvClientFactory.GetOrCreateAuthKey(linkedCancellationTokenSource.Token);
+            while (true)
+            {
+                try
+                {
+                    await using var connection = await AdbConnection.ConnectTcpAsync(
+                        adbTvClientKey.Value.IpAddress,
+                        adbTvClientKey.Value.Port,
+                        [authKey],
+                        options: null,
+                        linkedCancellationTokenSource.Token);
+                    await connection.ExecuteAsync("true", linkedCancellationTokenSource.Token);
+                    return true;
+                }
+                catch (AdbAuthenticationException)
+                {
+                    try
+                    {
+                        await Task.Delay(250, linkedCancellationTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return false;
+                    }
+                }
+                catch (OperationCanceledException) when (linkedCancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    return false;
+                }
+                catch
+                {
+                    try
+                    {
+                        await Task.Delay(250, linkedCancellationTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return false;
+                    }
+                }
+            }
         }
         catch (Exception e)
         {
@@ -153,10 +181,10 @@ internal sealed partial class AdbWebSocketHandler
         IEnumerable<AdbTvClientKey> adbTvClientKeys,
         CancellationToken cancellationToken) =>
         await Parallel.ForEachAsync(adbTvClientKeys, new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
-            async (adbTvClientKey, localCancellationToken) =>
+            async (adbTvClientKey, _) =>
             {
-                await _adbTvClientFactory.TryRemoveClientAsync(adbTvClientKey, localCancellationToken);
+                await _adbTvClientFactory.TryRemoveClientAsync(adbTvClientKey);
             });
 
-    private sealed record AdbTvClientHolder(DeviceClient Client, in AdbTvClientKey ClientKey);
+    private sealed record AdbTvClientHolder(AdbConnection Connection, in AdbTvClientKey ClientKey);
 }
