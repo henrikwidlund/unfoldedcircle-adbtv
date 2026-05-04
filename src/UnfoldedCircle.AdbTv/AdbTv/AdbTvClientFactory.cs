@@ -18,7 +18,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
     private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(4.5);
     // We will only have one key for all clients
-    private static readonly Lock AuthKeyLock = new();
+    private static readonly SemaphoreSlim AuthKeyLock = new(1, 1);
+    private static readonly TimeSpan SemaphoreMaxWaitTime = TimeSpan.FromSeconds(1);
     private static AdbAuthKey? _cachedAuthKey;
 
     public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
@@ -77,7 +78,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                     connection = await AdbConnection.ConnectTcpAsync(
                         adbTvClientKey.IpAddress,
                         adbTvClientKey.Port,
-                        [GetOrCreateAuthKey()],
+                        [await GetOrCreateAuthKey(cancellationToken)],
                         options: null,
                         cancellationToken);
                     break;
@@ -95,10 +96,11 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 return null;
             }
 
-            await RunWithRetryAsync(() => connection.ExecuteAsync("true", cancellationToken),
-                _logger,
-                true,
-                cancellationToken);
+            if (!await RunWithRetryAsync(() => connection.ExecuteAsync("true", cancellationToken),
+                    _logger,
+                    true,
+                    cancellationToken))
+                return null;
 
             _clients[adbTvClientKey] = connection;
             return connection;
@@ -181,14 +183,28 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     {
         foreach (var (key, connection) in _clients)
         {
-            if (_clients.TryRemove(key, out _))
+            if (!_clients.TryRemove(key, out _))
+                continue;
+
+            try
+            {
                 await connection.DisposeAsync();
+            }
+            catch
+            {
+                // Intentionally ignore
+            }
         }
     }
 
-    internal static AdbAuthKey GetOrCreateAuthKey()
+    internal static async ValueTask<AdbAuthKey> GetOrCreateAuthKey(CancellationToken cancellationToken)
     {
-        lock (AuthKeyLock)
+        if (!await AuthKeyLock.WaitAsync(SemaphoreMaxWaitTime, cancellationToken))
+        {
+            throw new TimeoutException("Timed out waiting to acquire auth key lock");
+        }
+
+        try
         {
             if (_cachedAuthKey is { } existing)
                 return existing;
@@ -200,25 +216,51 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             AdbAuthKey key;
             if (File.Exists(privateKeyPath))
             {
-                key = AdbAuthKey.LoadFromPem(File.ReadAllText(privateKeyPath));
+                key = AdbAuthKey.LoadFromPem(await File.ReadAllTextAsync(privateKeyPath, cancellationToken));
             }
             else
             {
                 key = AdbAuthKey.Generate();
-                File.WriteAllText(privateKeyPath, key.ExportPrivateKeyPem());
+
+                var fileStreamOptions = new FileStreamOptions
+                {
+                    Mode = FileMode.Create,
+                    Access = FileAccess.Write,
+                    Share = FileShare.None
+                };
+
+                if (!OperatingSystem.IsWindows())
+                    fileStreamOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+
+                await using var adbKeyStream = new FileStream(privateKeyPath, fileStreamOptions);
+                await using var streamWriter = new StreamWriter(adbKeyStream);
+                await streamWriter.WriteAsync(key.ExportPrivateKeyPem().AsMemory(), cancellationToken);
             }
 
             _cachedAuthKey = key;
             return key;
         }
+        finally
+        {
+            AuthKeyLock.Release();
+        }
     }
 
-    internal static void InvalidateAuthKey()
+    internal static async ValueTask InvalidateAuthKey(CancellationToken cancellationToken)
     {
-        lock (AuthKeyLock)
+        if (await AuthKeyLock.WaitAsync(SemaphoreMaxWaitTime, cancellationToken))
+        {
+            throw new TimeoutException("Timed out waiting to invalidate auth key lock");
+        }
+
+        try
         {
             _cachedAuthKey?.Dispose();
             _cachedAuthKey = null;
+        }
+        finally
+        {
+            AuthKeyLock.Release();
         }
     }
 

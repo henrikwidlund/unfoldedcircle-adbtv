@@ -574,8 +574,21 @@ internal sealed partial class AdbWebSocketHandler(
             await _configurationService.UpdateConfigurationAsync(backupData.Configuration, cancellationToken);
             await _adbTvClientFactory.RemoveAllClients();
             Directory.CreateDirectory(adbKeyDirectory);
-            await File.WriteAllBytesAsync(Path.Combine(adbKeyDirectory, "adbkey"), Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
-            AdbTvClientFactory.InvalidateAuthKey();
+            var adbKeyPath = Path.Combine(adbKeyDirectory, "adbkey");
+            var privateKeyBytes = Convert.FromBase64String(backupData.PrivateKey);
+            var fileStreamOptions = new FileStreamOptions
+            {
+                Mode = FileMode.Create,
+                Access = FileAccess.Write,
+                Share = FileShare.None
+            };
+
+            if (!OperatingSystem.IsWindows())
+                fileStreamOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+
+            await using (var adbKeyStream = new FileStream(adbKeyPath, fileStreamOptions))
+                await adbKeyStream.WriteAsync(privateKeyBytes, cancellationToken);
+            await AdbTvClientFactory.InvalidateAuthKey(cancellationToken);
             return RestoreResult.Success;
         }
         catch (Exception e)
