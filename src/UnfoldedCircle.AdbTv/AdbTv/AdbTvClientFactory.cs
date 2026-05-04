@@ -13,8 +13,8 @@ namespace UnfoldedCircle.AdbTv.AdbTv;
 public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 {
     private readonly ILogger<AdbTvClientFactory> _logger = logger;
-    private readonly ConcurrentDictionary<AdbTvClientKey, AdbConnection> _clients = new();
-    private readonly ConcurrentDictionary<AdbTvClientKey, SemaphoreSlim> _clientSemaphores = new();
+    private static readonly ConcurrentDictionary<AdbTvClientKey, AdbConnection> Clients = new();
+    private static readonly ConcurrentDictionary<AdbTvClientKey, SemaphoreSlim> ClientSemaphores = new();
 
     private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(4.5);
     // We will only have one key for all clients
@@ -23,14 +23,14 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
     public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
-        var clientSemaphore = _clientSemaphores.GetOrAdd(adbTvClientKey, static _ => new SemaphoreSlim(1, 1));
-        if (!_clients.TryGetValue(adbTvClientKey, out var connection))
+        var clientSemaphore = ClientSemaphores.GetOrAdd(adbTvClientKey, static _ => new SemaphoreSlim(1, 1));
+        if (!Clients.TryGetValue(adbTvClientKey, out var connection))
         {
             if (await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
             {
                 try
                 {
-                    if (_clients.TryGetValue(adbTvClientKey, out connection))
+                    if (Clients.TryGetValue(adbTvClientKey, out connection))
                         return connection;
 
                     return await CreateConnectionAsync(adbTvClientKey, cancellationToken);
@@ -42,13 +42,13 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             }
 
             _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
-            return _clients!.GetValueOrDefault(adbTvClientKey, null);
+            return Clients!.GetValueOrDefault(adbTvClientKey, null);
         }
 
         if (!await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
         {
             _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
-            return _clients!.GetValueOrDefault(adbTvClientKey, null);
+            return Clients!.GetValueOrDefault(adbTvClientKey, null);
         }
 
         try
@@ -104,7 +104,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 return null;
             }
 
-            _clients[adbTvClientKey] = connection;
+            Clients[adbTvClientKey] = connection;
             return connection;
         }
         catch (Exception e)
@@ -128,7 +128,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             return connection;
         }
 
-        _clients.TryRemove(adbTvClientKey, out _);
+        Clients.TryRemove(adbTvClientKey, out _);
         try
         {
             await connection.DisposeAsync();
@@ -167,7 +167,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
     public async ValueTask TryRemoveClientAsync(AdbTvClientKey adbTvClientKey)
     {
-        if (_clients.TryRemove(adbTvClientKey, out var connection))
+        if (Clients.TryRemove(adbTvClientKey, out var connection))
         {
             try
             {
@@ -181,11 +181,11 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    public async ValueTask RemoveAllClients()
+    public static async ValueTask RemoveAllClients()
     {
-        foreach (var (key, connection) in _clients)
+        foreach (var (key, connection) in Clients)
         {
-            if (!_clients.TryRemove(key, out _))
+            if (!Clients.TryRemove(key, out _))
                 continue;
 
             try
@@ -248,7 +248,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    internal async ValueTask ReplacePrivateKeyAsync(byte[] pemBytes, CancellationToken cancellationToken)
+    internal static async ValueTask ReplacePrivateKeyAsync(byte[] pemBytes, CancellationToken cancellationToken)
     {
         if (!await AuthKeyLock.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
             throw new TimeoutException("Timed out waiting to acquire auth key lock");
