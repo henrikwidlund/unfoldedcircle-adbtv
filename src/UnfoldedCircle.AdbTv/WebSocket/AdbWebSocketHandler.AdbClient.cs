@@ -116,20 +116,39 @@ internal sealed partial class AdbWebSocketHandler
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
                 cancellationTokenSource.Token);
 
-            try
+            var authKey = await AdbTvClientFactory.GetOrCreateAuthKey(linkedCancellationTokenSource.Token);
+            while (true)
             {
-                await using var connection = await AdbConnection.ConnectTcpAsync(
-                    adbTvClientKey.Value.IpAddress,
-                    adbTvClientKey.Value.Port,
-                    [await AdbTvClientFactory.GetOrCreateAuthKey(linkedCancellationTokenSource.Token)],
-                    options: null,
-                    linkedCancellationTokenSource.Token);
-                await connection.ExecuteAsync("true", linkedCancellationTokenSource.Token);
-                return true;
-            }
-            catch (AdbAuthenticationException)
-            {
-                return false;
+                try
+                {
+                    await using var connection = await AdbConnection.ConnectTcpAsync(
+                        adbTvClientKey.Value.IpAddress,
+                        adbTvClientKey.Value.Port,
+                        [authKey],
+                        options: null,
+                        linkedCancellationTokenSource.Token);
+                    await connection.ExecuteAsync("true", linkedCancellationTokenSource.Token);
+                    return true;
+                }
+                catch (AdbAuthenticationException)
+                {
+                    return false;
+                }
+                catch (OperationCanceledException) when (linkedCancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    return false;
+                }
+                catch
+                {
+                    try
+                    {
+                        await Task.Delay(250, linkedCancellationTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return false;
+                    }
+                }
             }
         }
         catch (Exception e)

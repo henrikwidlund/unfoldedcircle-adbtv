@@ -24,36 +24,18 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
         var clientSemaphore = ClientSemaphores.GetOrAdd(adbTvClientKey, static _ => new SemaphoreSlim(1, 1));
-        if (!Clients.TryGetValue(adbTvClientKey, out var connection))
-        {
-            if (await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
-            {
-                try
-                {
-                    if (Clients.TryGetValue(adbTvClientKey, out connection))
-                        return connection;
-
-                    return await CreateConnectionAsync(adbTvClientKey, cancellationToken);
-                }
-                finally
-                {
-                    clientSemaphore.Release();
-                }
-            }
-
-            _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
-            return Clients!.GetValueOrDefault(adbTvClientKey, null);
-        }
-
         if (!await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
         {
             _logger.TimeoutWaitingForSemaphore(adbTvClientKey);
-            return Clients!.GetValueOrDefault(adbTvClientKey, null);
+            return null;
         }
 
         try
         {
-            return await GetHealthyConnectionAsync(adbTvClientKey, connection, cancellationToken);
+            if (Clients.TryGetValue(adbTvClientKey, out var connection))
+                return await GetHealthyConnectionAsync(adbTvClientKey, connection, cancellationToken);
+
+            return await CreateConnectionAsync(adbTvClientKey, cancellationToken);
         }
         finally
         {
