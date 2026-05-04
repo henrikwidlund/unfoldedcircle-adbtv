@@ -287,9 +287,10 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         if (File.Exists(path))
             return false;
 
-        // For non-existent paths, only a trailing separator signals a directory. Otherwise treat as a file
-        // path so callers like ADB_VENDOR_KEYS=/config/adbkey resolve to the file itself, since adbkey
-        // files conventionally have no extension.
-        return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar);
+        // For non-existent paths, prefer directory semantics because ADB_VENDOR_KEYS commonly points to
+        // a directory containing adbkey. Still honor explicit file paths such as .../adbkey.
+        if (path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar))
+            return true;
+        return !string.Equals(Path.GetFileName(path), "adbkey", StringComparison.Ordinal);
     }
 }
