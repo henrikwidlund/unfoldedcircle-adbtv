@@ -132,7 +132,14 @@ internal sealed partial class AdbWebSocketHandler
                 }
                 catch (AdbAuthenticationException)
                 {
-                    return false;
+                    try
+                    {
+                        await Task.Delay(250, linkedCancellationTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return false;
+                    }
                 }
                 catch (OperationCanceledException) when (linkedCancellationTokenSource.Token.IsCancellationRequested)
                 {
