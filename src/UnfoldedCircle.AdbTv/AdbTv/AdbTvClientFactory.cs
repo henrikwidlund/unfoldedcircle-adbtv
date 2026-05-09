@@ -49,20 +49,30 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     {
         try
         {
+            var authKey = await GetOrCreateAuthKey(cancellationToken);
+
             var startTime = Stopwatch.GetTimestamp();
             AdbConnection? connection = null;
             Exception? lastException = null;
             while (Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations && !cancellationToken.IsCancellationRequested)
             {
+                using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                // reasonably short timeout for individual connection attempts to allow for retries if the device is still coming online
+                attemptCts.CancelAfter(TimeSpan.FromSeconds(1.5));
                 try
                 {
                     connection = await AdbConnection.ConnectTcpAsync(
                         adbTvClientKey.IpAddress,
                         adbTvClientKey.Port,
-                        [await GetOrCreateAuthKey(cancellationToken)],
+                        [authKey],
                         options: null,
-                        cancellationToken);
+                        attemptCts.Token);
                     break;
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    lastException ??= new TimeoutException("Connect attempt exceeded per-attempt timeout");
+                    // fall through to retry within budget
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
@@ -158,7 +168,6 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             catch (Exception e)
             {
                 _logger.FailedToRemoveClient(e, adbTvClientKey);
-                throw;
             }
         }
     }
@@ -217,7 +226,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
                 await using var adbKeyStream = new FileStream(privateKeyPath, fileStreamOptions);
                 await using var streamWriter = new StreamWriter(adbKeyStream);
-                await streamWriter.WriteAsync(key.ExportPrivateKeyPem().AsMemory(), cancellationToken);
+                // always allow to persist the key
+                await streamWriter.WriteAsync(key.ExportPrivateKeyPem().AsMemory(), CancellationToken.None);
             }
 
             _cachedAuthKey = key;

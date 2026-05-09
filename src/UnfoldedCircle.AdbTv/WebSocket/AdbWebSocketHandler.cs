@@ -469,32 +469,46 @@ internal sealed partial class AdbWebSocketHandler(
         if (payload.MsgData?.EntityIds is not { Length: > 0 })
             return;
 
-        foreach (string msgDataEntityId in payload.MsgData.EntityIds)
+        var alternateLookup = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
+        await Parallel.ForEachAsync(payload.MsgData.EntityIds, new ParallelOptions
         {
-            cancellationTokenWrapper.AddSubscribedEntity(msgDataEntityId);
-            var entityType = msgDataEntityId.AsSpan().GetEntityTypeFromIdentifier();
-            if (entityType is EntityType.MediaPlayer or EntityType.Select)
-                await PopulateApps(wsId, msgDataEntityId, commandCancellationToken);
-
-            var baseIdentifier = msgDataEntityId.AsSpan().GetBaseIdentifier();
-            var alternateLookup = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
-            if (!alternateLookup.TryGetValue(baseIdentifier, out var apps))
-                apps = [];
-
-            if (entityType == EntityType.MediaPlayer)
+            CancellationToken = commandCancellationToken,
+            MaxDegreeOfParallelism = Math.Max(Environment.ProcessorCount, 4)
+        }, async (msgDataEntityId, token) =>
+        {
+            try
             {
-                string[] sources = [.. apps, AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3, AdbTvRemoteCommands.InputHdmi4];
-                await SendMessageAsync(socket,
-                    ResponsePayloadHelpers.CreateMediaPlayerStateChangedResponsePayload(new MediaPlayerStateChangedEventMessageDataAttributes { SourceList = sources },
-                        msgDataEntityId), wsId, commandCancellationToken);
+                cancellationTokenWrapper.AddSubscribedEntity(msgDataEntityId);
+                var entityType = msgDataEntityId.AsSpan().GetEntityTypeFromIdentifier();
+                if (entityType is EntityType.MediaPlayer or EntityType.Select)
+                    await PopulateApps(wsId, msgDataEntityId, token);
+
+                var baseIdentifier = msgDataEntityId.AsSpan().GetBaseIdentifier();
+                if (!alternateLookup.TryGetValue(baseIdentifier, out var apps))
+                    apps = [];
+
+                if (entityType == EntityType.MediaPlayer)
+                {
+                    string[] sources = [.. apps, AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3, AdbTvRemoteCommands.InputHdmi4];
+                    await SendMessageAsync(socket,
+                        ResponsePayloadHelpers.CreateMediaPlayerStateChangedResponsePayload(new MediaPlayerStateChangedEventMessageDataAttributes { SourceList = sources },
+                            msgDataEntityId), wsId, token);
+                }
+                else if (entityType == EntityType.Select)
+                {
+                    await SendMessageAsync(socket,
+                        ResponsePayloadHelpers.CreateSelectStateChangedPayload(new SelectStateChangedEventMessageDataAttributes { Options = apps.ToArray() }, msgDataEntityId, AdbTvServerConstants.AppListSelectSuffix),
+                        wsId, token);
+                }
             }
-            else if (entityType == EntityType.Select)
+            catch (Exception e)
             {
-                await SendMessageAsync(socket,
-                    ResponsePayloadHelpers.CreateSelectStateChangedPayload(new SelectStateChangedEventMessageDataAttributes { Options = apps.ToArray() }, msgDataEntityId, AdbTvServerConstants.AppListSelectSuffix),
-                    wsId, commandCancellationToken);
+                // This is expected from control flow, no need to spam logs
+                if (e is OperationCanceledException)
+                    return;
+                _logger.LogFailureDuringSubscribeEvents(e, wsId, msgDataEntityId);
             }
-        }
+        });
     }
 
     protected override async ValueTask OnUnsubscribeEventsAsync(UnsubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
