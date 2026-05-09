@@ -54,6 +54,9 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             Exception? lastException = null;
             while (Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations && !cancellationToken.IsCancellationRequested)
             {
+                using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                // reasonably short timeout for individual connection attempts to allow for retries if the device is still coming online
+                attemptCts.CancelAfter(TimeSpan.FromSeconds(1.5));
                 try
                 {
                     connection = await AdbConnection.ConnectTcpAsync(
@@ -63,6 +66,11 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                         options: null,
                         cancellationToken);
                     break;
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    lastException ??= new TimeoutException("Connect attempt exceeded per-attempt timeout");
+                    // fall through to retry within budget
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
