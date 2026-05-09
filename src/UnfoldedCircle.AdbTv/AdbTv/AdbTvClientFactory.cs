@@ -62,12 +62,12 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                     connection = await AdbConnection.ConnectTcpAsync(
                         adbTvClientKey.IpAddress,
                         adbTvClientKey.Port,
-                        [await GetOrCreateAuthKey(cancellationToken)],
+                        [await GetOrCreateAuthKey(attemptCts.Token)],
                         options: null,
-                        cancellationToken);
+                        attemptCts.Token);
                     break;
                 }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (!attemptCts.Token.IsCancellationRequested)
                 {
                     lastException ??= new TimeoutException("Connect attempt exceeded per-attempt timeout");
                     // fall through to retry within budget
