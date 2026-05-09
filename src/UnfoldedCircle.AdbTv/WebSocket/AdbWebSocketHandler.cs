@@ -463,52 +463,82 @@ internal sealed partial class AdbWebSocketHandler(
     protected override async ValueTask<IReadOnlyCollection<AvailableEntity>> OnGetAvailableEntitiesAsync(GetAvailableEntitiesMsg payload, string wsId, CancellationToken cancellationToken)
         => GetAvailableEntities(await GetEntitiesAsync(wsId, cancellationToken)).ToArray();
 
-    protected override async ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, SubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
+    protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, SubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
     {
         if (payload.MsgData?.EntityIds is not { Length: > 0 })
-            return;
+            return ValueTask.CompletedTask;
 
+        foreach (var entityId in payload.MsgData.EntityIds)
+            cancellationTokenWrapper.AddSubscribedEntity(entityId);
+
+        var groupedEntities = payload.MsgData.EntityIds
+            .GroupBy(static x => x.AsMemory().GetBaseIdentifier(), ReadOnlyMemoryCharComparer.Instance)
+            .ToArray();
         var alternateLookup = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
-        await Parallel.ForEachAsync(payload.MsgData.EntityIds, new ParallelOptions
+
+        // Subscribe response must not block on per-device availability checks. A single offline device can take
+        // several seconds to fail, and N offline devices easily blow past the per-message handling budget.
+        // Run populate + entity_change emission as fire-and-forget under ApplicationStopping; the subscribe
+        // handler itself completes immediately
+        _ = Task.Run(() => PopulateAndEmitEntityChangesAsync(socket, groupedEntities, wsId, alternateLookup, cancellationTokenWrapper.ApplicationStopping),
+            cancellationTokenWrapper.ApplicationStopping);
+
+        return ValueTask.CompletedTask;
+    }
+
+    private Task PopulateAndEmitEntityChangesAsync(
+        System.Net.WebSockets.WebSocket socket,
+        IReadOnlyCollection<IGrouping<ReadOnlyMemory<char>, string>> groupedEntities,
+        string wsId,
+        ConcurrentDictionary<string, List<string>>.AlternateLookup<ReadOnlySpan<char>> alternateLookup,
+        CancellationToken cancellationToken) =>
+        Parallel.ForEachAsync(groupedEntities, new ParallelOptions
         {
-            CancellationToken = commandCancellationToken,
+            CancellationToken = cancellationToken,
             MaxDegreeOfParallelism = Math.Max(Environment.ProcessorCount, 4)
-        }, async (msgDataEntityId, token) =>
+        }, (entityIdGroup, token) => PopulateAndEmitGroupAsync(socket, entityIdGroup, wsId, alternateLookup, token));
+
+    private async ValueTask PopulateAndEmitGroupAsync(
+        System.Net.WebSockets.WebSocket socket,
+        IGrouping<ReadOnlyMemory<char>, string> entityIdGroup,
+        string wsId,
+        ConcurrentDictionary<string, List<string>>.AlternateLookup<ReadOnlySpan<char>> alternateLookup,
+        CancellationToken cancellationToken)
+    {
+        try
         {
-            try
-            {
-                cancellationTokenWrapper.AddSubscribedEntity(msgDataEntityId);
-                var entityType = msgDataEntityId.AsSpan().GetEntityTypeFromIdentifier();
-                if (entityType is EntityType.MediaPlayer or EntityType.Select)
-                    await PopulateApps(wsId, msgDataEntityId, token);
+            var typeEntityMap = entityIdGroup.ToDictionary(static x => x.AsSpan().GetEntityTypeFromIdentifier(), static x => x);
+            if (typeEntityMap.TryGetValue(EntityType.MediaPlayer, out var probeEntityId)
+                || typeEntityMap.TryGetValue(EntityType.Select, out probeEntityId))
+                await PopulateApps(wsId, probeEntityId, cancellationToken);
 
-                var baseIdentifier = msgDataEntityId.AsSpan().GetBaseIdentifier();
-                if (!alternateLookup.TryGetValue(baseIdentifier, out var apps))
-                    apps = [];
+            if (!alternateLookup.TryGetValue(entityIdGroup.Key.Span, out var apps))
+                apps = [];
 
-                if (entityType == EntityType.MediaPlayer)
-                {
-                    string[] sources = [.. apps, AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3, AdbTvRemoteCommands.InputHdmi4];
-                    await SendMessageAsync(socket,
-                        ResponsePayloadHelpers.CreateMediaPlayerStateChangedResponsePayload(new MediaPlayerStateChangedEventMessageDataAttributes { SourceList = sources },
-                            msgDataEntityId), wsId, token);
-                }
-                else if (entityType == EntityType.Select)
-                {
-                    await SendMessageAsync(socket,
-                        ResponsePayloadHelpers.CreateSelectStateChangedPayload(new SelectStateChangedEventMessageDataAttributes { Options = apps.ToArray() }, msgDataEntityId, AdbTvServerConstants.AppListSelectSuffix),
-                        wsId, token);
-                }
-            }
-            catch (Exception e)
+            if (typeEntityMap.TryGetValue(EntityType.MediaPlayer, out var mediaPlayerId))
             {
-                // This is expected from control flow, no need to spam logs
-                if (e is OperationCanceledException)
-                    return;
-                _logger.LogFailureDuringSubscribeEvents(e, wsId, msgDataEntityId);
+                string[] sources = [.. apps, AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3, AdbTvRemoteCommands.InputHdmi4];
+                await SendMessageAsync(socket,
+                    ResponsePayloadHelpers.CreateMediaPlayerStateChangedResponsePayload(new MediaPlayerStateChangedEventMessageDataAttributes { SourceList = sources },
+                        mediaPlayerId), wsId, cancellationToken);
             }
-        });
+            if (typeEntityMap.TryGetValue(EntityType.Select, out var selectEntityId))
+            {
+                await SendMessageAsync(socket,
+                    ResponsePayloadHelpers.CreateSelectStateChangedPayload(new SelectStateChangedEventMessageDataAttributes { Options = apps.ToArray() },
+                        selectEntityId, AdbTvServerConstants.AppListSelectSuffix),
+                    wsId, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // expected on shutdown
+        }
+        catch (Exception e)
+        {
+            _logger.LogFailureDuringSubscribeEvents(e, wsId, entityIdGroup.Key.ToString());
+        }
     }
 
     protected override async ValueTask OnUnsubscribeEventsAsync(UnsubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
@@ -795,4 +825,15 @@ internal sealed partial class AdbWebSocketHandler(
     }
 
     protected override FrozenSet<EntityType> SupportedEntityTypes { get; } = [EntityType.MediaPlayer, EntityType.Remote, EntityType.Select];
+}
+
+file sealed class ReadOnlyMemoryCharComparer : IEqualityComparer<ReadOnlyMemory<char>>
+{
+    public static readonly ReadOnlyMemoryCharComparer Instance = new();
+
+    public bool Equals(ReadOnlyMemory<char> x, ReadOnlyMemory<char> y)
+        => x.IsEmpty == y.IsEmpty && x.Length == y.Length && x.Span.Equals(y.Span, StringComparison.Ordinal);
+
+    public int GetHashCode(ReadOnlyMemory<char> obj)
+        => HashCode.Combine(obj.IsEmpty, obj.Length, string.GetHashCode(obj.Span, StringComparison.Ordinal));
 }
