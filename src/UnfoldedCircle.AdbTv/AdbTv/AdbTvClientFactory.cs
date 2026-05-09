@@ -168,7 +168,6 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             catch (Exception e)
             {
                 _logger.FailedToRemoveClient(e, adbTvClientKey);
-                throw;
             }
         }
     }
