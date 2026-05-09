@@ -146,9 +146,9 @@ internal static partial class IntegrationLogger
 
     private static readonly Action<ILogger, string, string, Exception> LogFailureDuringSubscribeEventsAction = LoggerMessage.Define<string, string>(
         LogLevel.Warning,
-        new EventId(32, nameof(LogFailureDuringSubscribeEventsAction)),
+        new EventId(32, nameof(LogFailureDuringSubscribeEvents)),
         "[{WSId}] Failure during subscribe events for entity ID '{EntityId}'.");
 
     public static void LogFailureDuringSubscribeEvents(this ILogger logger, Exception exception, string wsId, string entityId) =>
-        FailureDuringEventAction(logger, wsId, entityId, exception);
+        LogFailureDuringSubscribeEventsAction(logger, wsId, entityId, exception);
 }
