@@ -67,7 +67,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                         attemptCts.Token);
                     break;
                 }
-                catch (OperationCanceledException) when (attemptCts.Token.IsCancellationRequested)
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
                     lastException ??= new TimeoutException("Connect attempt exceeded per-attempt timeout");
                     // fall through to retry within budget
