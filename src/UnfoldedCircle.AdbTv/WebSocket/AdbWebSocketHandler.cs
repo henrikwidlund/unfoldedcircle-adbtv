@@ -334,7 +334,11 @@ internal sealed partial class AdbWebSocketHandler(
 
         var powerChanged = !_reportedPowerStates.TryGetValue(baseEntityId, out var previousPower) || previousPower != power;
         if (powerChanged)
+        {
             _reportedPowerStates[baseEntityId] = power;
+            if (holder is not null)
+                RemoteStates[holder.ClientKey] = MapRemote(power);
+        }
 
         // Fetch apps only when device is awake. Skips pm exec on Off / Dozing / Unknown — avoids any wake risk.
         List<string>? apps = null;
@@ -543,7 +547,7 @@ internal sealed partial class AdbWebSocketHandler(
                         .ToHashSet();
                     await UpdateEntityGroupAsync(socket, wsId, entityIdGroup.Key.ToString(), subs, token);
                 }
-                catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
                     // expected on shutdown
                 }
@@ -562,10 +566,10 @@ internal sealed partial class AdbWebSocketHandler(
         {
             switch (line)
             {
-                case "mWakefulness=Asleep":
-                case "mWakefulness=Dozing":
+                case var _ when line.Contains("mWakefulness=Asleep", StringComparison.Ordinal):
+                case var _ when line.Contains("mWakefulness=Dozing", StringComparison.Ordinal):
                     return PowerState.Off;
-                case "mWakefulness=Awake":
+                case var _ when line.Contains("mWakefulness=Awake", StringComparison.Ordinal):
                     return PowerState.On;
             }
         }
@@ -588,6 +592,9 @@ internal sealed partial class AdbWebSocketHandler(
             foreach (string msgDataEntityId in payload.MsgData.EntityIds)
             {
                 cancellationTokenWrapper.RemoveSubscribedEntity(msgDataEntityId);
+                var baseId = msgDataEntityId.AsSpan().GetBaseIdentifier();
+                _reportedPowerStates.GetAlternateLookup<ReadOnlySpan<char>>().TryRemove(baseId, out _);
+                _reportedAppCounts.GetAlternateLookup<ReadOnlySpan<char>>().TryRemove(baseId, out _);
 
                 if (await TryGetAdbTvClientKeyAsync(wsId, msgDataEntityId, cancellationTokenWrapper.ApplicationStopping) is { } adbClientKey)
                     clientKeys.Add(adbClientKey);
@@ -595,7 +602,11 @@ internal sealed partial class AdbWebSocketHandler(
         }
         // If no specific device or entity was specified, dispose all clients for this websocket ID.
         else if (payload.MsgData is { DeviceId: null, EntityIds: null })
+        {
             cancellationTokenWrapper.RemoveAllSubscribedEntities();
+            _reportedPowerStates.Clear();
+            _reportedAppCounts.Clear();
+        }
 
         await TryDisconnectAdbClientsAsync(clientKeys, cancellationTokenWrapper.ApplicationStopping);
     }
