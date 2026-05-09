@@ -52,10 +52,6 @@ internal static partial class IntegrationLogger
         Message = "[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'")]
     public static partial void CouldNotFindAdbClient(this ILogger logger, string wsId, in ReadOnlyMemory<char> entityId);
 
-    [LoggerMessage(EventId = 11, EventName = nameof(CouldNotFindAdbClientString), Level = LogLevel.Warning,
-        Message = "[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'")]
-    public static partial void CouldNotFindAdbClientString(this ILogger logger, string wsId, string entityId);
-
     [LoggerMessage(EventId = 12, EventName = nameof(UnknownCommand), Level = LogLevel.Warning,
         Message = "Unknown command '{Command}'")]
     public static partial void UnknownCommand(this ILogger logger, string command);
@@ -144,11 +140,11 @@ internal static partial class IntegrationLogger
         Message = "[{WSId}] Failed to acquire semaphore for populating apps for entity ID '{EntityId}' within timeout.")]
     public static partial void FailedToAcquireSemaphoreForPopulateApps(this ILogger logger, string wsId, string entityId);
 
-    private static readonly Action<ILogger, string, string, Exception> LogFailureDuringSubscribeEventsAction = LoggerMessage.Define<string, string>(
+    private static readonly Action<ILogger, string, string, Exception> FailureDuringSubscribeEventsAction = LoggerMessage.Define<string, string>(
         LogLevel.Warning,
-        new EventId(32, nameof(LogFailureDuringSubscribeEvents)),
+        new EventId(32, nameof(FailureDuringSubscribeEvents)),
         "[{WSId}] Failure during subscribe events for entity ID '{EntityId}'.");
 
-    public static void LogFailureDuringSubscribeEvents(this ILogger logger, Exception exception, string wsId, string entityId) =>
-        LogFailureDuringSubscribeEventsAction(logger, wsId, entityId, exception);
+    public static void FailureDuringSubscribeEvents(this ILogger logger, Exception exception, string wsId, string entityId) =>
+        FailureDuringSubscribeEventsAction(logger, wsId, entityId, exception);
 }
