@@ -17,8 +17,6 @@ Tested on Panasonic Z95B
 The downside is that this protocol is very slow, as such, you should use Bluetooth for as many commands as possible.
 - Reauthorization of the ADB connection is required when reinstalling/updating the integration when it is hosted
 on the remote. This is because the private key is removed when the integration is uninstalled. You can avoid having to reauthorize by restoring the config during the setup process.
-- The power states are dumb, it only tracks on or off when triggered via the integration.
-This is a limitation of the ADB protocol, where it is not possible to query the power state without turning on the device.
 
 ### Prerequisites
 - IP and MAC address of the device you want to control.
