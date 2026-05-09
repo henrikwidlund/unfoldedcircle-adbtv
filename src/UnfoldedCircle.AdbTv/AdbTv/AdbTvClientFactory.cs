@@ -67,7 +67,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                         attemptCts.Token);
                     break;
                 }
-                catch (OperationCanceledException) when (!attemptCts.Token.IsCancellationRequested)
+                catch (OperationCanceledException) when (attemptCts.Token.IsCancellationRequested)
                 {
                     lastException ??= new TimeoutException("Connect attempt exceeded per-attempt timeout");
                     // fall through to retry within budget
@@ -225,7 +225,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
 
                 await using var adbKeyStream = new FileStream(privateKeyPath, fileStreamOptions);
                 await using var streamWriter = new StreamWriter(adbKeyStream);
-                await streamWriter.WriteAsync(key.ExportPrivateKeyPem().AsMemory(), cancellationToken);
+                // always allow to persist the key
+                await streamWriter.WriteAsync(key.ExportPrivateKeyPem().AsMemory(), CancellationToken.None);
             }
 
             _cachedAuthKey = key;
