@@ -49,6 +49,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     {
         try
         {
+            var authKey = await GetOrCreateAuthKey(cancellationToken);
+
             var startTime = Stopwatch.GetTimestamp();
             AdbConnection? connection = null;
             Exception? lastException = null;
@@ -62,7 +64,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                     connection = await AdbConnection.ConnectTcpAsync(
                         adbTvClientKey.IpAddress,
                         adbTvClientKey.Port,
-                        [await GetOrCreateAuthKey(attemptCts.Token)],
+                        [authKey],
                         options: null,
                         attemptCts.Token);
                     break;
