@@ -79,7 +79,7 @@ internal static partial class IntegrationLogger
     private static readonly Action<ILogger, string, string, Exception> FailureDuringEventAction = LoggerMessage.Define<string, string>(
         LogLevel.Error,
         new EventId(16, nameof(FailureDuringEvent)),
-        "{WSId} Failure during event for {Key}.");
+        "[{WSId}] Failure during event for {Key}.");
 
     public static void FailureDuringEvent(this ILogger logger, Exception exception, string wsId, string key) =>
         FailureDuringEventAction(logger, wsId, key, exception);
@@ -143,4 +143,12 @@ internal static partial class IntegrationLogger
     [LoggerMessage(EventId = 31, EventName = nameof(FailedToAcquireSemaphoreForPopulateApps), Level = LogLevel.Warning,
         Message = "[{WSId}] Failed to acquire semaphore for populating apps for entity ID '{EntityId}' within timeout.")]
     public static partial void FailedToAcquireSemaphoreForPopulateApps(this ILogger logger, string wsId, string entityId);
+
+    private static readonly Action<ILogger, string, string, Exception> LogFailureDuringSubscribeEventsAction = LoggerMessage.Define<string, string>(
+        LogLevel.Warning,
+        new EventId(32, nameof(LogFailureDuringSubscribeEventsAction)),
+        "[{WSId}] Failure during subscribe events for entity ID '{EntityId}'.");
+
+    public static void LogFailureDuringSubscribeEvents(this ILogger logger, Exception exception, string wsId, string entityId) =>
+        FailureDuringEventAction(logger, wsId, entityId, exception);
 }

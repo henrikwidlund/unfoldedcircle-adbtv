@@ -476,27 +476,37 @@ internal sealed partial class AdbWebSocketHandler(
             MaxDegreeOfParallelism = Math.Max(Environment.ProcessorCount, 4)
         }, async (msgDataEntityId, token) =>
         {
-            cancellationTokenWrapper.AddSubscribedEntity(msgDataEntityId);
-            var entityType = msgDataEntityId.AsSpan().GetEntityTypeFromIdentifier();
-            if (entityType is EntityType.MediaPlayer or EntityType.Select)
-                await PopulateApps(wsId, msgDataEntityId, token);
-
-            var baseIdentifier = msgDataEntityId.AsSpan().GetBaseIdentifier();
-            if (!alternateLookup.TryGetValue(baseIdentifier, out var apps))
-                apps = [];
-
-            if (entityType == EntityType.MediaPlayer)
+            try
             {
-                string[] sources = [.. apps, AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3, AdbTvRemoteCommands.InputHdmi4];
-                await SendMessageAsync(socket,
-                    ResponsePayloadHelpers.CreateMediaPlayerStateChangedResponsePayload(new MediaPlayerStateChangedEventMessageDataAttributes { SourceList = sources },
-                        msgDataEntityId), wsId, token);
+                cancellationTokenWrapper.AddSubscribedEntity(msgDataEntityId);
+                var entityType = msgDataEntityId.AsSpan().GetEntityTypeFromIdentifier();
+                if (entityType is EntityType.MediaPlayer or EntityType.Select)
+                    await PopulateApps(wsId, msgDataEntityId, token);
+
+                var baseIdentifier = msgDataEntityId.AsSpan().GetBaseIdentifier();
+                if (!alternateLookup.TryGetValue(baseIdentifier, out var apps))
+                    apps = [];
+
+                if (entityType == EntityType.MediaPlayer)
+                {
+                    string[] sources = [.. apps, AdbTvRemoteCommands.InputHdmi1, AdbTvRemoteCommands.InputHdmi2, AdbTvRemoteCommands.InputHdmi3, AdbTvRemoteCommands.InputHdmi4];
+                    await SendMessageAsync(socket,
+                        ResponsePayloadHelpers.CreateMediaPlayerStateChangedResponsePayload(new MediaPlayerStateChangedEventMessageDataAttributes { SourceList = sources },
+                            msgDataEntityId), wsId, token);
+                }
+                else if (entityType == EntityType.Select)
+                {
+                    await SendMessageAsync(socket,
+                        ResponsePayloadHelpers.CreateSelectStateChangedPayload(new SelectStateChangedEventMessageDataAttributes { Options = apps.ToArray() }, msgDataEntityId, AdbTvServerConstants.AppListSelectSuffix),
+                        wsId, token);
+                }
             }
-            else if (entityType == EntityType.Select)
+            catch (Exception e)
             {
-                await SendMessageAsync(socket,
-                    ResponsePayloadHelpers.CreateSelectStateChangedPayload(new SelectStateChangedEventMessageDataAttributes { Options = apps.ToArray() }, msgDataEntityId, AdbTvServerConstants.AppListSelectSuffix),
-                    wsId, token);
+                // This is expected from control flow, no need to spam logs
+                if (e is OperationCanceledException)
+                    return;
+                _logger.LogFailureDuringSubscribeEvents(e, wsId, msgDataEntityId);
             }
         });
     }
