@@ -306,7 +306,7 @@ internal sealed partial class AdbWebSocketHandler(
                 {
                     try
                     {
-                        await UpdateEntityGroupAsync(socket, wsId, group.Key, group.Value, token, false);
+                        await UpdateEntityGroupAsync(socket, wsId, group.Key, group.Value, false, token);
                     }
                     catch (OperationCanceledException) when (token.IsCancellationRequested)
                     {
@@ -333,8 +333,8 @@ internal sealed partial class AdbWebSocketHandler(
         string wsId,
         string baseEntityId,
         HashSet<SubscribedEntity> subscribedEntities,
-        CancellationToken cancellationToken,
-        bool forceEmit)
+        bool forceEmit,
+        CancellationToken cancellationToken)
     {
         var holder = await TryGetAdbTvClientHolderAsync(wsId, baseEntityId, cancellationToken);
         var power = holder is null
@@ -359,15 +359,13 @@ internal sealed partial class AdbWebSocketHandler(
         {
             var lookup = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
             if (lookup.TryGetValue(baseEntityId.AsSpan(), out apps)
-                && apps.Count > 0)
-            {
-                if (forceEmit
+                && apps.Count > 0
+                && (forceEmit
                     || !_reportedApps.TryGetValue(baseEntityId, out var reportedApps)
-                    || !ReferenceEquals(reportedApps, apps))
-                {
-                    appsChanged = true;
-                    _reportedApps[baseEntityId] = apps;
-                }
+                    || !ReferenceEquals(reportedApps, apps)))
+            {
+                appsChanged = true;
+                _reportedApps[baseEntityId] = apps;
             }
         }
 
@@ -558,7 +556,7 @@ internal sealed partial class AdbWebSocketHandler(
                     var subs = entityIdGroup
                         .Select(static eid => new SubscribedEntity(eid, eid.AsSpan().GetEntityTypeFromIdentifier()))
                         .ToHashSet();
-                    await UpdateEntityGroupAsync(socket, wsId, entityIdGroup.Key.ToString(), subs, token, forceEmit: true);
+                    await UpdateEntityGroupAsync(socket, wsId, entityIdGroup.Key.ToString(), subs, true, token);
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
