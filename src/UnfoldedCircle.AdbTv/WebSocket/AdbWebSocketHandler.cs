@@ -306,7 +306,7 @@ internal sealed partial class AdbWebSocketHandler(
                 {
                     try
                     {
-                        await UpdateEntityGroupAsync(socket, wsId, group.Key, group.Value, token);
+                        await UpdateEntityGroupAsync(socket, wsId, group.Key, group.Value, token, false);
                     }
                     catch (OperationCanceledException) when (token.IsCancellationRequested)
                     {
@@ -320,19 +320,30 @@ internal sealed partial class AdbWebSocketHandler(
         } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
     }
 
+    private static IGrouping<ReadOnlyMemory<char>, string>[] GroupIdentifiers(string[] entityIds)
+    {
+        return entityIds
+            .GroupBy(static x => x.AsMemory().GetBaseIdentifier(), ReadOnlyMemoryCharComparer.Instance)
+            .ToArray();
+    }
+
+
     private async Task UpdateEntityGroupAsync(
         System.Net.WebSockets.WebSocket socket,
         string wsId,
         string baseEntityId,
         HashSet<SubscribedEntity> subscribedEntities,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool forceEmit)
     {
         var holder = await TryGetAdbTvClientHolderAsync(wsId, baseEntityId, cancellationToken);
         var power = holder is null
             ? PowerState.Unknown
             : await GetPowerState(holder, cancellationToken);
 
-        var powerChanged = !_reportedPowerStates.TryGetValue(baseEntityId, out var previousPower) || previousPower != power;
+        var powerChanged = forceEmit
+            || !_reportedPowerStates.TryGetValue(baseEntityId, out var previousPower)
+            || previousPower != power;
         if (powerChanged)
         {
             _reportedPowerStates[baseEntityId] = power;
@@ -352,7 +363,7 @@ internal sealed partial class AdbWebSocketHandler(
             {
                 var oldHash = _reportedAppsHash.GetValueOrDefault(baseEntityId, 0);
                 var newHash = apps.Sum(static x => StringComparer.OrdinalIgnoreCase.GetHashCode(x));
-                if (oldHash != newHash)
+                if (forceEmit || oldHash != newHash)
                 {
                     appsChanged = true;
                     _reportedAppsHash[baseEntityId] = newHash;
@@ -534,9 +545,7 @@ internal sealed partial class AdbWebSocketHandler(
         foreach (var entityId in payload.MsgData.EntityIds)
             cancellationTokenWrapper.AddSubscribedEntity(entityId);
 
-        var groupedEntities = payload.MsgData.EntityIds
-            .GroupBy(static x => x.AsMemory().GetBaseIdentifier(), ReadOnlyMemoryCharComparer.Instance)
-            .ToArray();
+        var groupedEntities = GroupIdentifiers(payload.MsgData.EntityIds);
 
         // Subscribe response must not block on per-device availability checks. A single offline device can take
         // several seconds to fail. Run initial state emission as fire-and-forget under RequestAborted.
@@ -549,7 +558,7 @@ internal sealed partial class AdbWebSocketHandler(
                     var subs = entityIdGroup
                         .Select(static eid => new SubscribedEntity(eid, eid.AsSpan().GetEntityTypeFromIdentifier()))
                         .ToHashSet();
-                    await UpdateEntityGroupAsync(socket, wsId, entityIdGroup.Key.ToString(), subs, token);
+                    await UpdateEntityGroupAsync(socket, wsId, entityIdGroup.Key.ToString(), subs, token, forceEmit: true);
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
