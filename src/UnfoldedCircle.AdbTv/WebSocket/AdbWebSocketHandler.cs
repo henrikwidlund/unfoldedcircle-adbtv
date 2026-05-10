@@ -298,7 +298,7 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, SubscribedEntitiesHolder subscribedEntitiesHolder, CancellationToken cancellationToken)
     {
-        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(5));
         do
         {
             await Parallel.ForEachAsync(subscribedEntitiesHolder.SubscribedEntities, cancellationToken,
