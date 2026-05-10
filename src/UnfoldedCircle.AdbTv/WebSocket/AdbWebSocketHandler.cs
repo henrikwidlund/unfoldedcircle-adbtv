@@ -573,7 +573,7 @@ internal sealed partial class AdbWebSocketHandler(
 
     private static async Task<PowerState> GetPowerState(AdbTvClientHolder adbTvClientHolder, CancellationToken cancellationToken)
     {
-        await foreach (string line in adbTvClientHolder.Connection.ExecuteLinesAsync("\"dumpsys power | grep mWakefulness;\"", cancellationToken))
+        await foreach (string line in adbTvClientHolder.Connection.ExecuteLinesAsync("dumpsys power | grep mWakefulness;", cancellationToken))
         {
             switch (line)
             {
