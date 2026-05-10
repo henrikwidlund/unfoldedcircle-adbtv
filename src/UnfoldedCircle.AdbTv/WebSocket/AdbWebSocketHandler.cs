@@ -294,7 +294,7 @@ internal sealed partial class AdbWebSocketHandler(
         => ValueTask.CompletedTask;
 
     private readonly ConcurrentDictionary<string, PowerState> _reportedPowerStates = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, int> _reportedAppCounts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, int> _reportedAppsHash = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, SubscribedEntitiesHolder subscribedEntitiesHolder, CancellationToken cancellationToken)
     {
@@ -348,11 +348,15 @@ internal sealed partial class AdbWebSocketHandler(
         {
             var lookup = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
             if (lookup.TryGetValue(baseEntityId.AsSpan(), out apps)
-                && apps.Count > 0
-                && _reportedAppCounts.GetValueOrDefault(baseEntityId, 0) != apps.Count)
+                && apps.Count > 0)
             {
-                appsChanged = true;
-                _reportedAppCounts[baseEntityId] = apps.Count;
+                var oldHash = _reportedAppsHash.GetValueOrDefault(baseEntityId, 0);
+                var newHash = apps.Sum(static x => StringComparer.OrdinalIgnoreCase.GetHashCode(x));
+                if (oldHash != newHash)
+                {
+                    appsChanged = true;
+                    _reportedAppsHash[baseEntityId] = newHash;
+                }
             }
         }
 
@@ -594,7 +598,7 @@ internal sealed partial class AdbWebSocketHandler(
                 cancellationTokenWrapper.RemoveSubscribedEntity(msgDataEntityId);
                 var baseId = msgDataEntityId.AsSpan().GetBaseIdentifier();
                 _reportedPowerStates.GetAlternateLookup<ReadOnlySpan<char>>().TryRemove(baseId, out _);
-                _reportedAppCounts.GetAlternateLookup<ReadOnlySpan<char>>().TryRemove(baseId, out _);
+                _reportedAppsHash.GetAlternateLookup<ReadOnlySpan<char>>().TryRemove(baseId, out _);
 
                 if (await TryGetAdbTvClientKeyAsync(wsId, msgDataEntityId, cancellationTokenWrapper.ApplicationStopping) is { } adbClientKey)
                     clientKeys.Add(adbClientKey);
@@ -605,7 +609,7 @@ internal sealed partial class AdbWebSocketHandler(
         {
             cancellationTokenWrapper.RemoveAllSubscribedEntities();
             _reportedPowerStates.Clear();
-            _reportedAppCounts.Clear();
+            _reportedAppsHash.Clear();
         }
 
         await TryDisconnectAdbClientsAsync(clientKeys, cancellationTokenWrapper.ApplicationStopping);
