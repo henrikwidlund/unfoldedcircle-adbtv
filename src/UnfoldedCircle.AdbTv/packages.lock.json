@@ -32,9 +32,9 @@
       },
       "Theodicean.SharpAdb": {
         "type": "Direct",
-        "requested": "[0.0.1-pre01, )",
-        "resolved": "0.0.1-pre01",
-        "contentHash": "itr4RfB1jWvmVAwfESejdDmpdf4kJ3Ba5hCoCsx9siQqxUBe8wCCxCJLHa1HVJHo4OlWzAI/O4KG3pgbuPjGgQ=="
+        "requested": "[0.0.1, )",
+        "resolved": "0.0.1",
+        "contentHash": "2FTnJo+UH5yiZc6k2lWT6DmlJs7a+eFfFDmSoEWTG8jLqgnk5cVX1alq/RQWpHM+nNzIbYeG05BGvwHWWAMZzA=="
       },
       "Theodicean.SourceGenerators": {
         "type": "Direct",
