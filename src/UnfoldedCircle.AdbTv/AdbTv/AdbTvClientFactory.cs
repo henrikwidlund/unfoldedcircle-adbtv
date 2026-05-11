@@ -87,6 +87,9 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 return null;
             }
 
+            if (connection.AuthenticationMethod == AdbAuthenticationMethod.PublicKey)
+                _logger.PubkeyFallbackTriggered(adbTvClientKey);
+
             if (!await RunWithRetryAsync(() => connection.ExecuteAsync("true", cancellationToken),
                     _logger,
                     true,
@@ -190,17 +193,18 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    internal static async ValueTask<AdbAuthKey> GetOrCreateAuthKey(CancellationToken cancellationToken)
+    internal async ValueTask<AdbAuthKey> GetOrCreateAuthKey(CancellationToken cancellationToken)
     {
+        if (_cachedAuthKey is not null)
+            return _cachedAuthKey;
+
         if (!await AuthKeyLock.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
-        {
             throw new TimeoutException("Timed out waiting to acquire auth key lock");
-        }
 
         try
         {
-            if (_cachedAuthKey is { } existing)
-                return existing;
+            if (_cachedAuthKey is not null)
+                return _cachedAuthKey;
 
             var privateKeyPath = GetAdbKeyPath();
             Directory.CreateDirectory(Path.GetDirectoryName(privateKeyPath)!);
@@ -212,6 +216,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
             }
             else
             {
+                _logger.CreatingNewKey();
                 key = AdbAuthKey.Generate();
 
                 var fileStreamOptions = new FileStreamOptions
@@ -228,6 +233,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                 await using var streamWriter = new StreamWriter(adbKeyStream);
                 // always allow to persist the key
                 await streamWriter.WriteAsync(key.ExportPrivateKeyPem().AsMemory(), CancellationToken.None);
+                _logger.CreatedNewKey();
             }
 
             _cachedAuthKey = key;

@@ -116,7 +116,7 @@ internal sealed partial class AdbWebSocketHandler
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
                 cancellationTokenSource.Token);
 
-            var authKey = await AdbTvClientFactory.GetOrCreateAuthKey(linkedCancellationTokenSource.Token);
+            var authKey = await _adbTvClientFactory.GetOrCreateAuthKey(linkedCancellationTokenSource.Token);
             while (true)
             {
                 try

@@ -147,4 +147,14 @@ internal static partial class IntegrationLogger
 
     public static void FailureDuringSubscribeEvents(this ILogger logger, Exception exception, string wsId, string entityId) =>
         FailureDuringSubscribeEventsAction(logger, wsId, entityId, exception);
+
+    [LoggerMessage(EventId = 33, EventName = nameof(CreatingNewKey), Level = LogLevel.Information, Message = "Creating new key.")]
+    public static partial void CreatingNewKey(this ILogger logger);
+
+    [LoggerMessage(EventId = 34, EventName = nameof(CreatedNewKey), Level = LogLevel.Information, Message = "Created new key.")]
+    public static partial void CreatedNewKey(this ILogger logger);
+
+    [LoggerMessage(EventId = 35, EventName = nameof(PubkeyFallbackTriggered), Level = LogLevel.Warning,
+        Message = "ADB device {ClientKey} rejected signature auth; public key was pushed as fallback.")]
+    public static partial void PubkeyFallbackTriggered(this ILogger logger, in AdbTvClientKey clientKey);
 }
