@@ -676,7 +676,7 @@ internal sealed partial class AdbWebSocketHandler(
             }
 
             await _configurationService.UpdateConfigurationAsync(backupData.Configuration, cancellationToken);
-            await AdbTvClientFactory.ReplacePrivateKeyAsync(Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
+            await _adbTvClientFactory.ReplacePrivateKeyAsync(Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
             return RestoreResult.Success;
         }
         catch (Exception e)

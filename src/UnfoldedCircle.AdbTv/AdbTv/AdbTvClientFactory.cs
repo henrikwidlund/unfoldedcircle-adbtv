@@ -19,7 +19,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(4.5);
     // We will only have one key for all clients
     private static readonly SemaphoreSlim AuthKeyLock = new(1, 1);
-    private static AdbAuthKey? _cachedAuthKey;
+    private AdbAuthKey? _cachedAuthKey;
 
     public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
@@ -245,7 +245,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
         }
     }
 
-    internal static async ValueTask ReplacePrivateKeyAsync(byte[] pemBytes, CancellationToken cancellationToken)
+    internal async ValueTask ReplacePrivateKeyAsync(byte[] pemBytes, CancellationToken cancellationToken)
     {
         if (!await AuthKeyLock.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
             throw new TimeoutException("Timed out waiting to acquire auth key lock");
