@@ -16,9 +16,9 @@
       },
       "Microsoft.NET.ILLink.Tasks": {
         "type": "Direct",
-        "requested": "[10.0.8, )",
-        "resolved": "10.0.8",
-        "contentHash": "dVbSXGIFNR5nZcv2tOLoWI+a9T4jtFd77IYjuND+QVe360qWgAF7H0WtoopYhRw/+SgpGUTyrkrh+65+ClNnfw=="
+        "requested": "[10.0.3, )",
+        "resolved": "10.0.3",
+        "contentHash": "0B6nZyCHWXnvmlB559oduOspVdNOnpNXPjhpWVMovLPAsDVG7A4jJR9rzECf67JUzxP8/ee/wA8clwIzJcWNFA=="
       },
       "NetEscapades.EnumGenerators": {
         "type": "Direct",
@@ -38,9 +38,9 @@
       },
       "Theodicean.SourceGenerators": {
         "type": "Direct",
-        "requested": "[0.0.5, )",
-        "resolved": "0.0.5",
-        "contentHash": "CZ36BSeqkRXCDGKBeV6IcOiVLeKoZrv31JsbTFuiQpUVLyvGhVzCVesUlWMH5U/TU7xbAS3rE1AyS+sD1hx6Tg=="
+        "requested": "[0.0.6, )",
+        "resolved": "0.0.6",
+        "contentHash": "z8i9P0gX4SaFWrSl4B9eNvn5bUE35i/2UceGgDjY4mUKRJaXHGelRTMu5Lyq+2u2V0mwCHhtxR1Nn5QgmRcA8A=="
       },
       "Theodicean.UnfoldedCircle.Server": {
         "type": "Direct",
