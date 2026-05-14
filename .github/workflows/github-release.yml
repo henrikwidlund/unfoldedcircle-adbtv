@@ -65,7 +65,7 @@ jobs:
           if [ "${{ matrix.target }}" == "linux-arm64" ]; then
             mkdir driverdir && mkdir driverdir/bin && mkdir driverdir/config && mkdir driverdir/data
             cp publish/driver.json driverdir/driver.json
-            cp publish/appsettings*.json driverdir/bin/
+            cp publish/appsettings.json driverdir/config/
 
             cp publish/driver driverdir/bin/
             cp publish/driver.dbg driverdir/bin/
