@@ -33,8 +33,8 @@ jq --arg version "$unprefixed_version" --arg date "$date" \
 # Copy driver.json to the root of the driver directory
 cp ./driver.json ./driverdir/
 
-# Copy appsettings*.json to the bin directory
-cp ./appsettings*.json ./driverdir/bin/
+# Copy appsettings*.json to the config directory
+cp ./appsettings.json ./driverdir/config/
 
 # Copy driver (file) and *.pdb files from the publish directory to the bin directory in the driver directory
 cp ./driver ./driverdir/bin/
