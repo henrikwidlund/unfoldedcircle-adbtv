@@ -21,7 +21,17 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
     private static readonly SemaphoreSlim AuthKeyLock = new(1, 1);
     private AdbAuthKey? _cachedAuthKey;
 
-    private readonly AdbConnectOptions _runtimeConnectOptions = new() { Logger = loggerFactory.CreateLogger("Theodicean.SharpAdb") };
+    private readonly ILogger _sharpAdbLogger = loggerFactory.CreateLogger("Theodicean.SharpAdb");
+    private AdbConnectOptions SigOnlyConnectOptions => field ??= new AdbConnectOptions
+    {
+        Logger = _sharpAdbLogger,
+        SendPublicKeyOnAuthFailure = false,
+    };
+    private AdbConnectOptions PubkeyPushConnectOptions => field ??= new AdbConnectOptions
+    {
+        Logger = _sharpAdbLogger,
+        SendPublicKeyOnAuthFailure = true,
+    };
 
     public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
@@ -49,6 +59,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
         AdbTvClientKey adbTvClientKey,
         CancellationToken cancellationToken)
     {
+        const byte sigOnlyAttemptsBeforePubkeyPush = 2;
         try
         {
             var authKey = await GetOrCreateAuthKey(cancellationToken);
@@ -56,6 +67,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
             var startTime = Stopwatch.GetTimestamp();
             AdbConnection? connection = null;
             Exception? lastException = null;
+            byte attempt = 0;
             while (Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations && !cancellationToken.IsCancellationRequested)
             {
                 using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -63,11 +75,15 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
                 attemptCts.CancelAfter(TimeSpan.FromSeconds(1.5));
                 try
                 {
+                    var options = attempt < sigOnlyAttemptsBeforePubkeyPush
+                        ? SigOnlyConnectOptions
+                        : PubkeyPushConnectOptions;
+                    attempt++;
                     connection = await AdbConnection.ConnectTcpAsync(
                         adbTvClientKey.IpAddress,
                         adbTvClientKey.Port,
                         [authKey],
-                        _runtimeConnectOptions,
+                        options,
                         attemptCts.Token);
                     break;
                 }
