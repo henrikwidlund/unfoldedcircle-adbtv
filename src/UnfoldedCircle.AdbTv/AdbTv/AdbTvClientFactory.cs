@@ -10,16 +10,31 @@ using UnfoldedCircle.AdbTv.Logging;
 
 namespace UnfoldedCircle.AdbTv.AdbTv;
 
-public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
+public class AdbTvClientFactory
 {
-    private readonly ILogger<AdbTvClientFactory> _logger = logger;
+    private readonly ILogger<AdbTvClientFactory> _logger;
     private static readonly ConcurrentDictionary<AdbTvClientKey, AdbConnection> Clients = new();
     private static readonly ConcurrentDictionary<AdbTvClientKey, SemaphoreSlim> ClientSemaphores = new();
+
+    public AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
+    {
+        _logger = logger;
+        _runtimeConnectOptions = new AdbConnectOptions
+        {
+            OnBeforePublicKeyPush = (key, _) =>
+            {
+                _logger.PublicKeyPush(key.GetAdbFingerprint());
+                return ValueTask.CompletedTask;
+            }
+        };
+    }
 
     private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(4.5);
     // We will only have one key for all clients
     private static readonly SemaphoreSlim AuthKeyLock = new(1, 1);
     private AdbAuthKey? _cachedAuthKey;
+
+    private readonly AdbConnectOptions _runtimeConnectOptions;
 
     public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
@@ -65,7 +80,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
                         adbTvClientKey.IpAddress,
                         adbTvClientKey.Port,
                         [authKey],
-                        options: null,
+                        _runtimeConnectOptions,
                         attemptCts.Token);
                     break;
                 }

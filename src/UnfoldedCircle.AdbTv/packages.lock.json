@@ -4,9 +4,9 @@
     "net10.0": {
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.84, )",
-        "resolved": "3.0.84",
-        "contentHash": "KMe2CatTUixfMYWhKbQQlH68ZX0bhjH4iRGhU2H/MV+oExAB1q9/uJp+lZJVe0wLudLUbLvsfH4+iJ1ADKw9Hw=="
+        "requested": "[3.0.85, )",
+        "resolved": "3.0.85",
+        "contentHash": "GMTpPcWrTYxKu02P+/PoYsHbGO2/0u69UkpisTepd1Rwn3ToQrh2EorEXRsa0bW5ltX2LoOuryKKwQ4taxT8JA=="
       },
       "Microsoft.DotNet.ILCompiler": {
         "type": "Direct",
@@ -32,9 +32,9 @@
       },
       "Theodicean.SharpAdb": {
         "type": "Direct",
-        "requested": "[0.0.2, )",
-        "resolved": "0.0.2",
-        "contentHash": "iiSm4esxk5qRMrrABQSxYQvTQRn5huBOlctzs4ZhIsTbES0u07Aq6znO1/gPWGkt6iNr13MQtDU4iE0NTNEqPg=="
+        "requested": "[0.0.3-pre01, )",
+        "resolved": "0.0.3-pre01",
+        "contentHash": "hPRB+v0xhCShkwN1luNZvKpIYtBXWjlOuCGFJCRtCoXe25VN4JH+5tngsw2ptYFPRIMb54a5bvIbVMeeUuoyqw=="
       },
       "Theodicean.SourceGenerators": {
         "type": "Direct",
