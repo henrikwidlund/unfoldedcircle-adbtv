@@ -28,7 +28,8 @@ internal sealed partial class AdbWebSocketHandler(
     IConfigurationService<AdbConfigurationItem> configurationService,
     AdbTvClientFactory adbTvClientFactory,
     IOptions<UnfoldedCircleOptions> options,
-    ILogger<AdbWebSocketHandler> logger) : UnfoldedCircleWebSocketHandler<AdbMediaPlayerCommandId, AdbConfigurationItem>(configurationService, options, logger)
+    ILogger<AdbWebSocketHandler> logger,
+    ILoggerFactory loggerFactory) : UnfoldedCircleWebSocketHandler<AdbMediaPlayerCommandId, AdbConfigurationItem>(configurationService, options, logger)
 {
     private readonly AdbTvClientFactory _adbTvClientFactory = adbTvClientFactory;
 

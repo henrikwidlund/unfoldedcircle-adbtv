@@ -102,6 +102,8 @@ internal sealed partial class AdbWebSocketHandler
         }
     }
 
+    private readonly AdbConnectOptions _adbConnectOptions = new() { Logger = loggerFactory.CreateLogger("Theodicean.SharpAdb.Health") };
+
     private async Task<bool> CheckClientApprovedAsync(string wsId,
         string entityId,
         CancellationToken cancellationToken)
@@ -125,7 +127,7 @@ internal sealed partial class AdbWebSocketHandler
                         adbTvClientKey.Value.IpAddress,
                         adbTvClientKey.Value.Port,
                         [authKey],
-                        new AdbConnectOptions { Logger = _logger },
+                        _adbConnectOptions,
                         linkedCancellationTokenSource.Token);
                     await connection.ExecuteAsync("true", linkedCancellationTokenSource.Token);
                     return true;

@@ -10,7 +10,7 @@ using UnfoldedCircle.AdbTv.Logging;
 
 namespace UnfoldedCircle.AdbTv.AdbTv;
 
-public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
+public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFactory loggerFactory)
 {
     private readonly ILogger<AdbTvClientFactory> _logger = logger;
     private static readonly ConcurrentDictionary<AdbTvClientKey, AdbConnection> Clients = new();
@@ -21,7 +21,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger)
     private static readonly SemaphoreSlim AuthKeyLock = new(1, 1);
     private AdbAuthKey? _cachedAuthKey;
 
-    private readonly AdbConnectOptions _runtimeConnectOptions = new() { Logger = logger };
+    private readonly AdbConnectOptions _runtimeConnectOptions = new() { Logger = loggerFactory.CreateLogger("Theodicean.SharpAdb") };
 
     public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
     {
