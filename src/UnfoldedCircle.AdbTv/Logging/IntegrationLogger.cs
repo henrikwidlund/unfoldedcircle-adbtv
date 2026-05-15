@@ -153,12 +153,4 @@ internal static partial class IntegrationLogger
 
     [LoggerMessage(EventId = 34, EventName = nameof(CreatedNewKey), Level = LogLevel.Information, Message = "Created new key.")]
     public static partial void CreatedNewKey(this ILogger logger);
-
-    [LoggerMessage(EventId = 35, EventName = nameof(PubkeyFallbackTriggered), Level = LogLevel.Warning,
-        Message = "ADB device {ClientKey} rejected signature auth; public key was pushed as fallback.")]
-    public static partial void PubkeyFallbackTriggered(this ILogger logger, in AdbTvClientKey clientKey);
-
-    [LoggerMessage(EventId = 36, EventName = nameof(PublicKeyPush), Level = LogLevel.Warning,
-        Message = "Pushing public key with fingerprint {Fingerprint}.")]
-    public static partial void PublicKeyPush(this ILogger logger, string fingerprint);
 }

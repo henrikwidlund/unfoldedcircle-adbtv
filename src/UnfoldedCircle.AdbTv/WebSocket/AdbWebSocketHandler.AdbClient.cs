@@ -125,7 +125,7 @@ internal sealed partial class AdbWebSocketHandler
                         adbTvClientKey.Value.IpAddress,
                         adbTvClientKey.Value.Port,
                         [authKey],
-                        options: null,
+                        new AdbConnectOptions { Logger = _logger },
                         linkedCancellationTokenSource.Token);
                     await connection.ExecuteAsync("true", linkedCancellationTokenSource.Token);
                     return true;
