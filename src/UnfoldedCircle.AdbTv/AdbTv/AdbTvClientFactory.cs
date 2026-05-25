@@ -16,7 +16,11 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
     private static readonly ConcurrentDictionary<AdbTvClientKey, AdbConnection> Clients = new();
     private static readonly ConcurrentDictionary<AdbTvClientKey, SemaphoreSlim> ClientSemaphores = new();
 
-    private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(4.5);
+    private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan PerAttemptTimeout = TimeSpan.FromMilliseconds(800);
+    private static readonly TimeSpan BackoffBetweenAttempts = TimeSpan.FromMilliseconds(100);
+    private const byte MaxAttempts = 8;
+    private const byte SigOnlyAttemptsBeforePubkeyPush = 6;
     // We will only have one key for all clients
     private static readonly SemaphoreSlim AuthKeyLock = new(1, 1);
     private AdbAuthKey? _cachedAuthKey;
@@ -59,23 +63,30 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
         AdbTvClientKey adbTvClientKey,
         CancellationToken cancellationToken)
     {
-        const byte sigOnlyAttemptsBeforePubkeyPush = 2;
         try
         {
             var authKey = await GetOrCreateAuthKey(cancellationToken);
+
+            // When the user disabled re-auth, all attempts within the budget are signature-only;
+            // persistent failures means the user must re-run setup. When enabled, the last few attempts fall
+            // through to AUTH(RSAPUBLICKEY) to auto-recover (may trigger on-device dialog).
+            var sigOnlyAttempts = adbTvClientKey.AllowReauth
+                ? SigOnlyAttemptsBeforePubkeyPush
+                : MaxAttempts;
 
             var startTime = Stopwatch.GetTimestamp();
             AdbConnection? connection = null;
             Exception? lastException = null;
             byte attempt = 0;
-            while (Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations && !cancellationToken.IsCancellationRequested)
+            while (attempt < MaxAttempts
+                && Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations
+                && !cancellationToken.IsCancellationRequested)
             {
                 using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                // reasonably short timeout for individual connection attempts to allow for retries if the device is still coming online
-                attemptCts.CancelAfter(TimeSpan.FromSeconds(1.5));
+                attemptCts.CancelAfter(PerAttemptTimeout);
                 try
                 {
-                    var options = attempt < sigOnlyAttemptsBeforePubkeyPush
+                    var options = attempt < sigOnlyAttempts
                         ? SigOnlyConnectOptions
                         : PubkeyPushConnectOptions;
                     attempt++;
@@ -95,7 +106,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
                     lastException = e;
-                    await Task.Delay(100, cancellationToken);
+                    await Task.Delay(BackoffBetweenAttempts, cancellationToken);
                 }
             }
 

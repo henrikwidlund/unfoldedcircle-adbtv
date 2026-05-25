@@ -644,8 +644,10 @@ internal sealed partial class AdbWebSocketHandler(
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
             ? Manufacturer.Parse(manufacturerValue)
             : Manufacturer.Android;
+        var allowReauth = !payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.AllowReauthKey, out var allowReauthValue)
+            || !bool.TryParse(allowReauthValue, out var parsedAllowReauth) || parsedAllowReauth;
 
-        var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port, Manufacturer = manufacturer };
+        var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port, Manufacturer = manufacturer, AllowReauth = allowReauth };
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         var maxWaitTime = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey, out var maxWaitTimeValue)
             ? double.Parse(maxWaitTimeValue, NumberFormatInfo.InvariantInfo)
@@ -654,6 +656,14 @@ internal sealed partial class AdbWebSocketHandler(
         configuration.Entities.Remove(configurationItem);
         configuration.Entities.Add(newConfigurationItem);
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
+
+        var oldKey = new AdbTvClientKey(configurationItem.Host, configurationItem.MacAddress, configurationItem.Port, configurationItem.Manufacturer, configurationItem.AllowReauth);
+        var newKey = new AdbTvClientKey(newConfigurationItem.Host, newConfigurationItem.MacAddress, newConfigurationItem.Port, newConfigurationItem.Manufacturer, newConfigurationItem.AllowReauth);
+        if (!oldKey.Equals(newKey))
+        {
+            RemoteStates.TryRemove(oldKey, out _);
+            await _adbTvClientFactory.TryRemoveClientAsync(oldKey);
+        }
 
         if (!await CheckClientApprovedAsync(wsId, configurationItem.EntityId, cancellationToken))
         {
@@ -703,10 +713,13 @@ internal sealed partial class AdbWebSocketHandler(
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
             ? Manufacturer.Parse(manufacturerValue)
             : Manufacturer.Android;
+        var allowReauth = !payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.AllowReauthKey, out var allowReauthValue)
+            || !bool.TryParse(allowReauthValue, out var parsedAllowReauth) || parsedAllowReauth;
 
         configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
 
         var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
+        AdbTvClientKey? oldKey = null;
         if (entity is null)
         {
             _logger.AddingConfigurationForDevice(macAddress);
@@ -717,25 +730,38 @@ internal sealed partial class AdbWebSocketHandler(
                 Port = port,
                 EntityName = entityName,
                 EntityId = macAddress,
-                Manufacturer = manufacturer
+                Manufacturer = manufacturer,
+                AllowReauth = allowReauth
             };
         }
         else
         {
             _logger.UpdatingConfigurationForDevice(macAddress);
+            oldKey = new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth);
             configuration.Entities.Remove(entity);
             entity = entity with
             {
                 Host = ipAddress,
                 MacAddress = macAddress,
                 Port = port,
-                EntityName = entityName
+                EntityName = entityName,
+                AllowReauth = allowReauth
             };
         }
 
         configuration.Entities.Add(entity);
 
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
+
+        if (oldKey is { } oldKeyValue)
+        {
+            var newKey = new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth);
+            if (!oldKeyValue.Equals(newKey))
+            {
+                await _adbTvClientFactory.TryRemoveClientAsync(oldKeyValue);
+                RemoteStates.TryRemove(oldKeyValue, out _);
+            }
+        }
 
         if (!await CheckClientApprovedAsync(wsId, entity.EntityId, cancellationToken))
         {
@@ -881,6 +907,18 @@ internal sealed partial class AdbWebSocketHandler(
                         }
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the max wait time for a message to be processed (global setting)" }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.AllowReauthKey,
+                    Field = new SettingTypeCheckbox
+                    {
+                        Checkbox = new SettingTypeCheckboxInner
+                        {
+                            Value = configurationItem?.AllowReauth ?? false
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Check to allow auto-prompt on device if pairing is lost or repeatedly fails (disabled requires manual re-setup)" }
                 }
             ]
         };
