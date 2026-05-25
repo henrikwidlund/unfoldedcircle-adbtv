@@ -644,8 +644,10 @@ internal sealed partial class AdbWebSocketHandler(
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
             ? Manufacturer.Parse(manufacturerValue)
             : Manufacturer.Android;
+        var allowReauth = !payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.AllowReauthKey, out var allowReauthValue)
+            || !bool.TryParse(allowReauthValue, out var parsedAllowReauth) || parsedAllowReauth;
 
-        var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port, Manufacturer = manufacturer };
+        var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port, Manufacturer = manufacturer, AllowReauth = allowReauth };
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         var maxWaitTime = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey, out var maxWaitTimeValue)
             ? double.Parse(maxWaitTimeValue, NumberFormatInfo.InvariantInfo)
@@ -703,6 +705,8 @@ internal sealed partial class AdbWebSocketHandler(
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
             ? Manufacturer.Parse(manufacturerValue)
             : Manufacturer.Android;
+        var allowReauth = !payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.AllowReauthKey, out var allowReauthValue)
+            || !bool.TryParse(allowReauthValue, out var parsedAllowReauth) || parsedAllowReauth;
 
         configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
 
@@ -717,7 +721,8 @@ internal sealed partial class AdbWebSocketHandler(
                 Port = port,
                 EntityName = entityName,
                 EntityId = macAddress,
-                Manufacturer = manufacturer
+                Manufacturer = manufacturer,
+                AllowReauth = allowReauth
             };
         }
         else
@@ -729,7 +734,8 @@ internal sealed partial class AdbWebSocketHandler(
                 Host = ipAddress,
                 MacAddress = macAddress,
                 Port = port,
-                EntityName = entityName
+                EntityName = entityName,
+                AllowReauth = allowReauth
             };
         }
 
@@ -881,6 +887,18 @@ internal sealed partial class AdbWebSocketHandler(
                         }
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the max wait time for a message to be processed (global setting)" }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.AllowReauthKey,
+                    Field = new SettingTypeCheckbox
+                    {
+                        Checkbox = new SettingTypeCheckboxInner
+                        {
+                            Value = configurationItem?.AllowReauth ?? false
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Auto-prompt on device if pairing is lost or repeatedly fails (disable to require manual re-setup)" }
                 }
             ]
         };

@@ -29,7 +29,7 @@ internal sealed partial class AdbWebSocketHandler
             : null;
 
         if (entity is not null)
-            return new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer);
+            return new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth);
 
         _logger.NoConfigurationFoundForIdentifier(wsId, entityId);
         return null;
@@ -47,7 +47,7 @@ internal sealed partial class AdbWebSocketHandler
         }
 
         return configuration.Entities
-            .Select(static entity => new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer))
+            .Select(static entity => new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth))
             .ToArray();
     }
 
