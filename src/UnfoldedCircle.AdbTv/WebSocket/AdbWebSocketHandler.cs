@@ -657,6 +657,11 @@ internal sealed partial class AdbWebSocketHandler(
         configuration.Entities.Add(newConfigurationItem);
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
 
+        var oldKey = new AdbTvClientKey(configurationItem.Host, configurationItem.MacAddress, configurationItem.Port, configurationItem.Manufacturer, configurationItem.AllowReauth);
+        var newKey = new AdbTvClientKey(newConfigurationItem.Host, newConfigurationItem.MacAddress, newConfigurationItem.Port, newConfigurationItem.Manufacturer, newConfigurationItem.AllowReauth);
+        if (!oldKey.Equals(newKey))
+            await _adbTvClientFactory.TryRemoveClientAsync(oldKey);
+
         if (!await CheckClientApprovedAsync(wsId, configurationItem.EntityId, cancellationToken))
         {
             await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
@@ -711,6 +716,7 @@ internal sealed partial class AdbWebSocketHandler(
         configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
 
         var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
+        AdbTvClientKey? oldKey = null;
         if (entity is null)
         {
             _logger.AddingConfigurationForDevice(macAddress);
@@ -728,6 +734,7 @@ internal sealed partial class AdbWebSocketHandler(
         else
         {
             _logger.UpdatingConfigurationForDevice(macAddress);
+            oldKey = new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth);
             configuration.Entities.Remove(entity);
             entity = entity with
             {
@@ -742,6 +749,13 @@ internal sealed partial class AdbWebSocketHandler(
         configuration.Entities.Add(entity);
 
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
+
+        if (oldKey is { } oldKeyValue)
+        {
+            var newKey = new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth);
+            if (!oldKeyValue.Equals(newKey))
+                await _adbTvClientFactory.TryRemoveClientAsync(oldKeyValue);
+        }
 
         if (!await CheckClientApprovedAsync(wsId, entity.EntityId, cancellationToken))
         {

@@ -188,6 +188,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
 
     public async ValueTask TryRemoveClientAsync(AdbTvClientKey adbTvClientKey)
     {
+        ClientSemaphores.TryRemove(adbTvClientKey, out _);
         if (Clients.TryRemove(adbTvClientKey, out var connection))
         {
             try
@@ -217,6 +218,7 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
                 // Intentionally ignore
             }
         }
+        ClientSemaphores.Clear();
     }
 
     internal async ValueTask<AdbAuthKey> GetOrCreateAuthKey(CancellationToken cancellationToken)
