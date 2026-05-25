@@ -898,7 +898,7 @@ internal sealed partial class AdbWebSocketHandler(
                             Value = configurationItem?.AllowReauth ?? false
                         }
                     },
-                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Auto-prompt on device if pairing is lost or repeatedly fails (disable to require manual re-setup)" }
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Check to allow auto-prompt on device if pairing is lost or repeatedly fails (disabled requires manual re-setup)" }
                 }
             ]
         };
