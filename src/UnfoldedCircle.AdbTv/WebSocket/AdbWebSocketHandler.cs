@@ -660,7 +660,10 @@ internal sealed partial class AdbWebSocketHandler(
         var oldKey = new AdbTvClientKey(configurationItem.Host, configurationItem.MacAddress, configurationItem.Port, configurationItem.Manufacturer, configurationItem.AllowReauth);
         var newKey = new AdbTvClientKey(newConfigurationItem.Host, newConfigurationItem.MacAddress, newConfigurationItem.Port, newConfigurationItem.Manufacturer, newConfigurationItem.AllowReauth);
         if (!oldKey.Equals(newKey))
+        {
+            RemoteStates.TryRemove(oldKey, out _);
             await _adbTvClientFactory.TryRemoveClientAsync(oldKey);
+        }
 
         if (!await CheckClientApprovedAsync(wsId, configurationItem.EntityId, cancellationToken))
         {
@@ -754,7 +757,10 @@ internal sealed partial class AdbWebSocketHandler(
         {
             var newKey = new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth);
             if (!oldKeyValue.Equals(newKey))
+            {
                 await _adbTvClientFactory.TryRemoveClientAsync(oldKeyValue);
+                RemoteStates.TryRemove(oldKeyValue, out _);
+            }
         }
 
         if (!await CheckClientApprovedAsync(wsId, entity.EntityId, cancellationToken))
