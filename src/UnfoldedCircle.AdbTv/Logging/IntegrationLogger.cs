@@ -163,6 +163,6 @@ internal static partial class IntegrationLogger
     public static partial void RawCommandFailed(this ILogger logger, in AdbTvClientKey clientKey, string command);
 
     [LoggerMessage(EventId = 37, EventName = nameof(AppLaunchFailed), Level = LogLevel.Warning,
-        Message = "App launch for '{Command}' failed for client {ClientKey}.")]
+        Message = "App launch failed for client {ClientKey}: '{Command}'.")]
     public static partial void AppLaunchFailed(this ILogger logger, in AdbTvClientKey clientKey, string command);
 }
