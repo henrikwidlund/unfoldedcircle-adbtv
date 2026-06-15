@@ -506,14 +506,14 @@ internal sealed partial class AdbWebSocketHandler(
                 if (shellResult.IsSuccess)
                     return EntityCommandResult.Other;
 
-                _logger.RawCommandFailed(adbTvClientHolder.ClientKey, command);
+                _logger.RawCommandFailed(adbTvClientHolder.ClientKey, command, shellResult.Stderr);
                 return EntityCommandResult.Failure;
             case CommandType.App:
                 var adbAppLaunchResult = await adbTvClientHolder.Connection.StartAppAsync(command, cancellationToken);
                 if (adbAppLaunchResult.IsLaunched)
                     return EntityCommandResult.Other;
 
-                _logger.AppLaunchFailed(adbTvClientHolder.ClientKey, command);
+                _logger.AppLaunchFailed(adbTvClientHolder.ClientKey, command, adbAppLaunchResult.FailureReason);
                 return EntityCommandResult.Failure;
             case CommandType.NoOp:
                 var noOpIsPowerOn = command.Equals(AdbTvRemoteCommands.PowerStateOn, StringComparison.OrdinalIgnoreCase);
