@@ -109,8 +109,12 @@ internal sealed partial class AdbWebSocketHandler(
         if (adbTvClientHolder is null)
             return false;
 
-        await adbTvClientHolder.Connection.StartAppAsync(appIdentifier, cancellationToken);
-        return true;
+        var result = await adbTvClientHolder.Connection.StartAppAsync(appIdentifier, cancellationToken);
+        if (result.IsLaunched)
+            return true;
+
+        _logger.FailedToStartApp(wsId, entityId, appIdentifier);
+        return false;
     }
 
     protected override async ValueTask<SelectCommandResult> OnSelectFirstLastCommandAsync(System.Net.WebSockets.WebSocket socket,
@@ -497,11 +501,20 @@ internal sealed partial class AdbWebSocketHandler(
 
                 return result;
             case CommandType.Raw:
-                await adbTvClientHolder.Connection.ExecuteAsync(command, cancellationToken);
-                return EntityCommandResult.Other;
+
+                var shellResult = await adbTvClientHolder.Connection.ExecuteAsync(command, cancellationToken);
+                if (shellResult.IsSuccess)
+                    return EntityCommandResult.Other;
+
+                _logger.RawCommandFailed(adbTvClientHolder.ClientKey, command);
+                return EntityCommandResult.Failure;
             case CommandType.App:
-                await adbTvClientHolder.Connection.StartAppAsync(command, cancellationToken);
-                return EntityCommandResult.Other;
+                var adbAppLaunchResult = await adbTvClientHolder.Connection.StartAppAsync(command, cancellationToken);
+                if (adbAppLaunchResult.IsLaunched)
+                    return EntityCommandResult.Other;
+
+                _logger.AppLaunchFailed(adbTvClientHolder.ClientKey, command);
+                return EntityCommandResult.Failure;
             case CommandType.NoOp:
                 var noOpIsPowerOn = command.Equals(AdbTvRemoteCommands.PowerStateOn, StringComparison.OrdinalIgnoreCase);
                 RemoteStates[adbTvClientHolder.ClientKey] = noOpIsPowerOn ? RemoteState.On : RemoteState.Off;
