@@ -155,9 +155,8 @@ internal static partial class IntegrationLogger
     public static partial void CreatedNewKey(this ILogger logger);
 
     [LoggerMessage(EventId = 35, EventName = nameof(FailedToStartApp), Level = LogLevel.Warning,
-        Message = "[{WSId}] Failed to start app '{AppIdentifier}' for entity ID '{EntityId}'.")]
+        Message = "[{WSId}] Failed to start app for entity ID '{EntityId}': '{AppIdentifier}'.")]
     public static partial void FailedToStartApp(this ILogger logger, string wsId, string entityId, string appIdentifier);
-
     [LoggerMessage(EventId = 36, EventName = nameof(RawCommandFailed), Level = LogLevel.Warning,
         Message = "Raw shell command failed for client {ClientKey}: '{Command}'.")]
     public static partial void RawCommandFailed(this ILogger logger, in AdbTvClientKey clientKey, string command);
