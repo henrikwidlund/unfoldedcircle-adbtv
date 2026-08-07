@@ -485,7 +485,7 @@ internal sealed partial class AdbWebSocketHandler(
         {
             case CommandType.KeyEvent:
                 if (isPowerOn)
-                    await WakeOnLan.SendWakeOnLanAsync(adbTvClientHolder.ClientKey.MacAddress, IPAddress.Parse(adbTvClientHolder.ClientKey.IpAddress));
+                    await WakeOnLan.SendWakeOnLanAsync(adbTvClientHolder.ClientKey.MacAddress, IPAddress.Parse(adbTvClientHolder.ClientKey.IpAddress), _logger);
 
                 await adbTvClientHolder.Connection.SendKeyEventAsync(Enum.Parse<KeyCode>(command), cancellationToken);
 
@@ -652,10 +652,12 @@ internal sealed partial class AdbWebSocketHandler(
     {
         var ipAddress = payload.MsgData.InputValues![AdbTvServerConstants.IpAddressKey];
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
-            ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
+            && int.TryParse(portValue, NumberStyles.Integer, NumberFormatInfo.InvariantInfo, out var parsedPort)
+            ? parsedPort
             : 5555;
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
-            ? Manufacturer.Parse(manufacturerValue)
+            && Manufacturer.TryParse(manufacturerValue, out var parsedManufacturer)
+            ? parsedManufacturer
             : Manufacturer.Android;
         var allowReauth = !payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.AllowReauthKey, out var allowReauthValue)
             || !bool.TryParse(allowReauthValue, out var parsedAllowReauth) || parsedAllowReauth;
@@ -663,7 +665,8 @@ internal sealed partial class AdbWebSocketHandler(
         var newConfigurationItem = configurationItem with { Host = ipAddress, Port = port, Manufacturer = manufacturer, AllowReauth = allowReauth };
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
         var maxWaitTime = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey, out var maxWaitTimeValue)
-            ? double.Parse(maxWaitTimeValue, NumberFormatInfo.InvariantInfo)
+            && double.TryParse(maxWaitTimeValue, NumberStyles.Float, NumberFormatInfo.InvariantInfo, out var parsedMaxWaitTime)
+            ? parsedMaxWaitTime
             : 9.5;
         configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
         configuration.Entities.Remove(configurationItem);
@@ -718,13 +721,16 @@ internal sealed partial class AdbWebSocketHandler(
         var macAddress = payload.MsgData.InputValues[AdbTvServerConstants.MacAddressKey];
         var entityName = payload.MsgData.InputValues.GetStringValueOrDefault(AdbTvServerConstants.EntityName, $"{driverMetadata.Name["en"]} {ipAddress}");
         var port = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PortKey, out var portValue)
-            ? int.Parse(portValue, NumberFormatInfo.InvariantInfo)
+            && int.TryParse(portValue, NumberStyles.Integer, NumberFormatInfo.InvariantInfo, out var parsedPort)
+            ? parsedPort
             : 5555;
         var maxWaitTime = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.MaxMessageHandlingWaitTimeInSecondsKey, out var maxWaitTimeValue)
-            ? double.Parse(maxWaitTimeValue, NumberFormatInfo.InvariantInfo)
+            && double.TryParse(maxWaitTimeValue, NumberStyles.Float, NumberFormatInfo.InvariantInfo, out var parsedMaxWaitTime)
+            ? parsedMaxWaitTime
             : 9.5;
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
-            ? Manufacturer.Parse(manufacturerValue)
+            && Manufacturer.TryParse(manufacturerValue, out var parsedManufacturer)
+            ? parsedManufacturer
             : Manufacturer.Android;
         var allowReauth = !payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.AllowReauthKey, out var allowReauthValue)
             || !bool.TryParse(allowReauthValue, out var parsedAllowReauth) || parsedAllowReauth;

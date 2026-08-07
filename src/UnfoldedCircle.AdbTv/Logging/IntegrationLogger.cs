@@ -165,4 +165,12 @@ internal static partial class IntegrationLogger
     [LoggerMessage(EventId = 37, EventName = nameof(AppLaunchFailed), Level = LogLevel.Warning,
         Message = "App launch failed for client {ClientKey}: '{Command}'. Failure reason: {FailureReason}")]
     public static partial void AppLaunchFailed(this ILogger logger, in AdbTvClientKey clientKey, string command, string? failureReason);
+
+    private static readonly Action<ILogger, Exception> FailedToSendWakeOnLanAction = LoggerMessage.Define(
+        LogLevel.Warning,
+        new EventId(38, nameof(FailedToSendWakeOnLan)),
+        "Failed to send Wake-on-LAN packet.");
+
+    public static void FailedToSendWakeOnLan(this ILogger logger, Exception exception) =>
+        FailedToSendWakeOnLanAction(logger, exception);
 }

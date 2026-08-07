@@ -7,6 +7,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.302-noble AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY [".editorconfig", "."]
+COPY ["Directory.Build.props", "."]
 COPY ["src/UnfoldedCircle.AdbTv/UnfoldedCircle.AdbTv.csproj", "UnfoldedCircle.AdbTv/"]
 RUN dotnet restore "UnfoldedCircle.AdbTv/UnfoldedCircle.AdbTv.csproj" --locked-mode
 COPY ./src .
