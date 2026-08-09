@@ -17,6 +17,7 @@ Tested on Panasonic Z95B
 The downside is that this protocol is very slow, as such, you should use Bluetooth for as many commands as possible.
 - Reauthorization of the ADB connection is required when reinstalling/updating the integration when it is hosted
 on the remote. This is because the private key is removed when the integration is uninstalled. You can avoid having to reauthorize by restoring the config during the setup process.
+- Wireless-debugging pairing (Android 11+, see below) is implemented but **has not been validated against real hardware** — no Android 11+ device with wireless debugging was available during development. please help me verify it. Prefer the standard IP/Developer Settings flow below until this has been confirmed working; open an issue if you try it.
 
 ### Prerequisites
 - IP and MAC address of the device you want to control.
@@ -32,14 +33,24 @@ It's compiled for Linux ARM64 and is meant to be running on the remote.
 
 ### Network
 
-| Service     | Port    | Protocol   | Location              |
-|-------------|---------|------------|-----------------------|
-| Server      | Random* | HTTP (TCP) | Remote/other computer |
-| ADB         | 5555**  | TCP        | Device to control     |
-| Wake on Lan | 7 and 9 | UDP        | Device to control     |
+| Service                  | Port                 | Protocol    | Location                |
+|:-------------------------|:---------------------|:------------|:------------------------|
+| Server                   | Random*              | HTTP (TCP)  | Remote/other computer   |
+| ADB                      | 5555**               | TCP         | Device to control       |
+| ADB pairing              | Shown on-device***   | TCP         | Device to control       |
+| ADB (wireless debugging) | Dynamic/ephemeral*** | TCP         | Device to control       |
+| mDNS                     | 5353                 | UDP         | LAN (multicast)         |
+| Wake on Lan              | 7 and 9              | UDP         | Device to control       |
 
 \* Server port can be adjusted by specifying the desired port with the `UC_INTEGRATION_HTTP_PORT` environment variable.
-\** ADB port can be adjusted during configuration if your device uses a different port.
+\** ADB port can be adjusted during configuration, but only applies to the standard IP/Developer Settings flow.
+\*** If pairing via wireless debugging (see below): the pairing port is shown on the device's pairing screen and is only used once, during initial setup. The port entered during configuration is **not** used with wireless debugging — after pairing, the integration resolves the real, dynamic ADB port via mDNS before every connection, and that port changes across reboots/toggles of wireless debugging. If you have a firewall between the integration and the device, it must allow the device's full ephemeral port range, not a single fixed port. mDNS (5353/UDP) is only needed for this path — not used at all with the standard IP/Developer Settings flow.
+
+### Wireless debugging pairing (Android 11+, experimental)
+
+Instead of enabling USB/network debugging and approving the on-device prompt, you can pair via Developer Options → Wireless debugging → "Pair device with pairing code": enter the 6-digit code and the pairing port shown on that screen into the corresponding optional fields during setup. The ADB port field is ignored for this flow. On success, the integration remembers the device's pairing ID and, from then on, resolves its current ADB port automatically via mDNS before each connection — that port is dynamic (it changes across reboots and each time wireless debugging is toggled), so no port needs to be kept up to date manually, but any firewall between the integration and the device must allow its ephemeral port range rather than a single fixed port.
+
+As noted under Limitations, this path is implemented but untested against real hardware — the standard IP/Developer Settings flow remains the default and only currently-verified way to set up a device.
 
 ### Additional commands
 
