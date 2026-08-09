@@ -32,9 +32,12 @@
       },
       "Theodicean.SharpAdb": {
         "type": "Direct",
-        "requested": "[0.0.3, )",
-        "resolved": "0.0.3",
-        "contentHash": "XE9QAXucTvEC1y0W/V1g7T1GaPRziRYFhaD/GhQuNsU2CGZIMDkWtfJ9Bno2MUOjXGhkh3Ob21IEfZy54kytoA=="
+        "requested": "[0.0.4-pre01, )",
+        "resolved": "0.0.4-pre01",
+        "contentHash": "v9Emh+Tu3AYwixbDoUOhCyRN+cO1JNDvMoglAzX+h/niqWE4Rj47ZNBGm6RxNDrhl5/rNopPidSZtlZui4qUsQ==",
+        "dependencies": {
+          "BouncyCastle.Cryptography": "2.7.0"
+        }
       },
       "Theodicean.SourceGenerators": {
         "type": "Direct",
@@ -51,6 +54,11 @@
           "Theodicean.Makaretu.Dns.Multicast": "0.0.12",
           "Theodicean.UnfoldedCircle.Models": "0.0.14"
         }
+      },
+      "BouncyCastle.Cryptography": {
+        "type": "Transitive",
+        "resolved": "2.7.0",
+        "contentHash": "U+12df8UEWHgBi04YVf/Lgi2dy3SItlIYvHjjEVa/BngCQIzDCDRBk50DDByCfDvSbe5pRNFr3b7UrVK2kMcLw=="
       },
       "NetEscapades.EnumGenerators.Generators": {
         "type": "Transitive",

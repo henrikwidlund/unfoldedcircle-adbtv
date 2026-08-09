@@ -6,13 +6,15 @@ using Theodicean.SharpAdb.Auth;
 using Theodicean.SharpAdb.Services;
 
 using UnfoldedCircle.AdbTv.Cancellation;
+using UnfoldedCircle.AdbTv.Discovery;
 using UnfoldedCircle.AdbTv.Logging;
 
 namespace UnfoldedCircle.AdbTv.AdbTv;
 
-public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFactory loggerFactory)
+public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFactory loggerFactory, AdbMdnsDiscovery adbMdnsDiscovery)
 {
     private readonly ILogger<AdbTvClientFactory> _logger = logger;
+    private readonly AdbMdnsDiscovery _adbMdnsDiscovery = adbMdnsDiscovery;
     private static readonly ConcurrentDictionary<AdbTvClientKey, AdbConnection> Clients = new();
     private static readonly ConcurrentDictionary<AdbTvClientKey, SemaphoreSlim> ClientSemaphores = new();
 
@@ -67,6 +69,24 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
         {
             var authKey = await GetOrCreateAuthKey(cancellationToken);
 
+            // Wirelessly-paired devices' adb-tls-connect port changes across reboots/toggles of
+            // wireless debugging, so re-resolve it via mDNS right before (re)dialing rather than
+            // trusting the possibly-stale configured address. Only done here — not on every
+            // lookup — so reusing an already-healthy cached connection never pays this cost.
+            var (host, port) = (adbTvClientKey.IpAddress, adbTvClientKey.Port);
+            if (adbTvClientKey.PairedDeviceGuid is { } deviceGuid)
+            {
+                if (await _adbMdnsDiscovery.TryResolveAsync(deviceGuid, cancellationToken) is { } resolved)
+                {
+                    _logger.MdnsResolvedNewEndpoint(deviceGuid, resolved.Host, resolved.Port);
+                    (host, port) = resolved;
+                }
+                else
+                {
+                    _logger.MdnsResolveTimedOut(deviceGuid);
+                }
+            }
+
             // When the user disabled re-auth, all attempts within the budget are signature-only;
             // persistent failures means the user must re-run setup. When enabled, the last few attempts fall
             // through to AUTH(RSAPUBLICKEY) to auto-recover (may trigger on-device dialog).
@@ -91,8 +111,8 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
                         : PubkeyPushConnectOptions;
                     attempt++;
                     connection = await AdbConnection.ConnectTcpAsync(
-                        adbTvClientKey.IpAddress,
-                        adbTvClientKey.Port,
+                        host,
+                        port,
                         [authKey],
                         options,
                         attemptCts.Token);
