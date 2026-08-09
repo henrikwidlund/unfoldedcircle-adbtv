@@ -12,6 +12,18 @@ internal static class AdbTvServerConstants
     internal const string AllowReauthKey = "allow_reauth";
     internal const string AppListSelectSuffix = "applist";
 
+    /// <summary>
+    /// The 6-digit code shown on the device's Developer Options → Wireless debugging → "Pair
+    /// device with pairing code" screen. Left empty to use the existing manual-IP/on-device-
+    /// approval flow; when non-empty, triggers a wireless-pairing attempt instead.
+    /// </summary>
+    internal const string PairingCodeKey = "pairing_code";
+
+    /// <summary>The pairing service port shown on the same wireless-pairing screen (not the regular ADB port).</summary>
+    internal const string PairingPortKey = "pairing_port";
+
+    internal const string PairingCodeRegex = "^[0-9]{6}$";
+
     internal const string IpAddressRegex = @"^(?:(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|(([0-9a-fA-F]{1,4}:)" +
                                            "{7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}" +
                                            "(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4})" +

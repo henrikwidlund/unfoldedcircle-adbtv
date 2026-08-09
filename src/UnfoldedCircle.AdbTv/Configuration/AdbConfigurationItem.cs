@@ -16,4 +16,14 @@ public record AdbConfigurationItem : UnfoldedCircleConfigurationItem
     /// re-run setup to re-pair.
     /// </summary>
     public bool AllowReauth { get; init; } = true;
+
+    /// <summary>
+    /// The device GUID returned by Android's wireless-debugging pairing handshake
+    /// (<see cref="Theodicean.SharpAdb.Pairing.PeerInfoType.AdbDeviceGuid"/>), when this entity was set up via
+    /// wireless pairing rather than a manually-entered IP. When set, this is also the mDNS instance name the
+    /// device advertises for <c>_adb-tls-connect._tcp</c>, used to re-resolve the current (frequently-changing)
+    /// connect port before each connection attempt. <see cref="Host"/>/<see cref="Port"/> are still kept up to
+    /// date as a fallback for when mDNS resolution is unavailable (e.g. multicast blocked on the network).
+    /// </summary>
+    public string? PairedDeviceGuid { get; init; }
 }

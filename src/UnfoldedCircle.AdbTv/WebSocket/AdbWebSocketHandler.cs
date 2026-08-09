@@ -2,13 +2,16 @@ using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Globalization;
 using System.Net;
+using System.Text;
 
 using Microsoft.Extensions.Options;
 
+using Theodicean.SharpAdb.Pairing;
 using Theodicean.SharpAdb.Services;
 
 using UnfoldedCircle.AdbTv.AdbTv;
 using UnfoldedCircle.AdbTv.Configuration;
+using UnfoldedCircle.AdbTv.Discovery;
 using UnfoldedCircle.AdbTv.Json;
 using UnfoldedCircle.AdbTv.Logging;
 using UnfoldedCircle.AdbTv.Response;
@@ -27,11 +30,13 @@ namespace UnfoldedCircle.AdbTv.WebSocket;
 internal sealed partial class AdbWebSocketHandler(
     IConfigurationService<AdbConfigurationItem> configurationService,
     AdbTvClientFactory adbTvClientFactory,
+    AdbMdnsDiscovery adbMdnsDiscovery,
     IOptions<UnfoldedCircleOptions> options,
     ILogger<AdbWebSocketHandler> logger,
     ILoggerFactory loggerFactory) : UnfoldedCircleWebSocketHandler<AdbMediaPlayerCommandId, AdbConfigurationItem>(configurationService, options, logger)
 {
     private readonly AdbTvClientFactory _adbTvClientFactory = adbTvClientFactory;
+    private readonly AdbMdnsDiscovery _adbMdnsDiscovery = adbMdnsDiscovery;
 
     private readonly ConcurrentDictionary<string, List<string>> _entityIdAppsMap = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, string> _entityIdActiveAppMap = new(StringComparer.OrdinalIgnoreCase);
@@ -327,9 +332,11 @@ internal sealed partial class AdbWebSocketHandler(
 
     private static IGrouping<ReadOnlyMemory<char>, string>[] GroupIdentifiers(string[] entityIds)
     {
-        return entityIds
-            .GroupBy(static x => x.AsMemory().GetBaseIdentifier(), ReadOnlyMemoryCharComparer.Instance)
-            .ToArray();
+        return
+        [
+            .. entityIds
+                .GroupBy(static x => x.AsMemory().GetBaseIdentifier(), ReadOnlyMemoryCharComparer.Instance)
+        ];
     }
 
 
@@ -444,7 +451,7 @@ internal sealed partial class AdbWebSocketHandler(
         var attrs = new SelectStateChangedEventMessageDataAttributes
         {
             State = powerChanged ? MapSelect(power) : null,
-            Options = appsChanged && apps is { Count: > 0 } ? apps.ToArray() : null
+            Options = appsChanged && apps is { Count: > 0 } ? [.. apps] : null
         };
 
         return SendMessageAsync(socket,
@@ -546,7 +553,7 @@ internal sealed partial class AdbWebSocketHandler(
         => ValueTask.FromResult(DeviceState.Connected);
 
     protected override async ValueTask<IReadOnlyCollection<AvailableEntity>> OnGetAvailableEntitiesAsync(GetAvailableEntitiesMsg payload, string wsId, CancellationToken cancellationToken)
-        => GetAvailableEntities(await GetEntitiesAsync(wsId, cancellationToken)).ToArray();
+        => [.. GetAvailableEntities(await GetEntitiesAsync(wsId, cancellationToken))];
 
     protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, SubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
@@ -638,7 +645,7 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override async ValueTask<EntityStateChanged[]> OnGetEntityStatesAsync(GetEntityStatesMsg payload, string wsId, CancellationToken cancellationToken)
         => await GetEntitiesAsync(wsId, cancellationToken) is { } entities
-            ? AdbTvResponsePayloadHelpers.GetEntityStates(entities.Select(static x => x.EntityId)).ToArray()
+            ? [.. AdbTvResponsePayloadHelpers.GetEntityStates(entities.Select(static x => x.EntityId))]
             : [];
 
     protected override ValueTask<SetupDriverUserDataResult> OnSetupDriverUserDataConfirmAsync(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
@@ -673,8 +680,8 @@ internal sealed partial class AdbWebSocketHandler(
         configuration.Entities.Add(newConfigurationItem);
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
 
-        var oldKey = new AdbTvClientKey(configurationItem.Host, configurationItem.MacAddress, configurationItem.Port, configurationItem.Manufacturer, configurationItem.AllowReauth);
-        var newKey = new AdbTvClientKey(newConfigurationItem.Host, newConfigurationItem.MacAddress, newConfigurationItem.Port, newConfigurationItem.Manufacturer, newConfigurationItem.AllowReauth);
+        var oldKey = new AdbTvClientKey(configurationItem.Host, configurationItem.MacAddress, configurationItem.Port, configurationItem.Manufacturer, configurationItem.AllowReauth, configurationItem.PairedDeviceGuid);
+        var newKey = new AdbTvClientKey(newConfigurationItem.Host, newConfigurationItem.MacAddress, newConfigurationItem.Port, newConfigurationItem.Manufacturer, newConfigurationItem.AllowReauth, newConfigurationItem.PairedDeviceGuid);
         if (!oldKey.Equals(newKey))
         {
             RemoteStates.TryRemove(oldKey, out _);
@@ -735,6 +742,50 @@ internal sealed partial class AdbWebSocketHandler(
         var allowReauth = !payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.AllowReauthKey, out var allowReauthValue)
             || !bool.TryParse(allowReauthValue, out var parsedAllowReauth) || parsedAllowReauth;
 
+        // A non-empty pairing code means the user wants wireless-debugging pairing (Android 11+)
+        // instead of the manual on-device approval-dialog flow. Pairing itself is the approval —
+        // there's no separate dialog to wait for — so this path skips CheckClientApprovedAsync
+        // (which dials the static, likely-stale Port field directly) entirely and instead
+        // verifies connectivity through the factory further down, which re-resolves the actual
+        // current connect port via mDNS using the GUID pairing just returned.
+        string? pairedDeviceGuid = null;
+        if (payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PairingCodeKey, out var pairingCode)
+            && !string.IsNullOrWhiteSpace(pairingCode))
+        {
+            if (!payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PairingPortKey, out var pairingPortValue)
+                || !int.TryParse(pairingPortValue, NumberStyles.Integer, NumberFormatInfo.InvariantInfo, out var pairingPort))
+            {
+                await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
+                    wsId, cancellationToken);
+                return SetupDriverUserDataResult.Handled;
+            }
+
+            try
+            {
+                var authKey = await _adbTvClientFactory.GetOrCreateAuthKey(cancellationToken);
+                _logger.PairingCodeSubmitted(wsId, ipAddress, pairingPort);
+                var pairingResult = await AdbPairing.PairAsync(ipAddress, pairingPort, pairingCode, authKey, cancellationToken);
+
+                pairedDeviceGuid = pairingResult.PeerInfoType == PeerInfoType.AdbDeviceGuid
+                    ? Encoding.UTF8.GetString(pairingResult.PeerInfoData)
+                    : null;
+
+                // Start the mDNS listener right now, explicitly, rather than leaving it to
+                // whichever call happens to resolve this device first (the connectivity check
+                // just below would trigger it anyway, implicitly — this just makes the "we now
+                // know a paired device exists" moment the explicit trigger instead).
+                if (pairedDeviceGuid is not null)
+                    await _adbMdnsDiscovery.EnsureStartedAsync(cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.PairingFailed(e, wsId);
+                await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
+                    wsId, cancellationToken);
+                return SetupDriverUserDataResult.Handled;
+            }
+        }
+
         configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
 
         var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
@@ -750,13 +801,14 @@ internal sealed partial class AdbWebSocketHandler(
                 EntityName = entityName,
                 EntityId = macAddress,
                 Manufacturer = manufacturer,
-                AllowReauth = allowReauth
+                AllowReauth = allowReauth,
+                PairedDeviceGuid = pairedDeviceGuid
             };
         }
         else
         {
             _logger.UpdatingConfigurationForDevice(macAddress);
-            oldKey = new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth);
+            oldKey = new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth, entity.PairedDeviceGuid);
             configuration.Entities.Remove(entity);
             entity = entity with
             {
@@ -764,7 +816,8 @@ internal sealed partial class AdbWebSocketHandler(
                 MacAddress = macAddress,
                 Port = port,
                 EntityName = entityName,
-                AllowReauth = allowReauth
+                AllowReauth = allowReauth,
+                PairedDeviceGuid = pairedDeviceGuid ?? entity.PairedDeviceGuid
             };
         }
 
@@ -774,7 +827,7 @@ internal sealed partial class AdbWebSocketHandler(
 
         if (oldKey is { } oldKeyValue)
         {
-            var newKey = new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth);
+            var newKey = new AdbTvClientKey(entity.Host, entity.MacAddress, entity.Port, entity.Manufacturer, entity.AllowReauth, entity.PairedDeviceGuid);
             if (!oldKeyValue.Equals(newKey))
             {
                 await _adbTvClientFactory.TryRemoveClientAsync(oldKeyValue);
@@ -782,7 +835,7 @@ internal sealed partial class AdbWebSocketHandler(
             }
         }
 
-        if (!await CheckClientApprovedAsync(wsId, entity.EntityId, cancellationToken))
+        if (pairedDeviceGuid is null && !await CheckClientApprovedAsync(wsId, entity.EntityId, cancellationToken))
         {
             await SendMessageAsync(socket, AdbTvResponsePayloadHelpers.CreateDeviceSetupChangeUserInputResponsePayload(),
                 wsId, cancellationToken);
@@ -834,9 +887,12 @@ internal sealed partial class AdbWebSocketHandler(
         var settingsPage = CreateSettingsPage(adbConfigurationItem, configuration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5);
         return settingsPage with
         {
-            Settings = settingsPage.Settings.Where(static x =>
-                !x.Id.Equals(AdbTvServerConstants.MacAddressKey, StringComparison.OrdinalIgnoreCase) &&
-                !x.Id.Equals(AdbTvServerConstants.EntityName, StringComparison.OrdinalIgnoreCase)).ToArray()
+            Settings =
+            [
+                .. settingsPage.Settings.Where(static x =>
+                    !x.Id.Equals(AdbTvServerConstants.MacAddressKey, StringComparison.OrdinalIgnoreCase) &&
+                    !x.Id.Equals(AdbTvServerConstants.EntityName, StringComparison.OrdinalIgnoreCase))
+            ]
         };
     }
 
@@ -874,11 +930,13 @@ internal sealed partial class AdbWebSocketHandler(
                     {
                         Dropdown = new SettingTypeDropdownInner
                         {
-                            Items = Manufacturer.GetValues().Select(static x => new SettingTypeDropdownItem
-                            {
-                                Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = x.ToStringFast(true) },
-                                Value = x.ToStringFast()
-                            }).ToArray(),
+                            Items =
+                            [
+                                .. Manufacturer.GetValues().Select(static x => new SettingTypeDropdownItem
+                                {
+                                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = x.ToStringFast(true) }, Value = x.ToStringFast()
+                                })
+                            ],
                             Value = configurationItem?.Manufacturer.ToStringFast()
                         }
                     },
@@ -911,6 +969,40 @@ internal sealed partial class AdbWebSocketHandler(
                         }
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the ADB port of the TV (mandatory)" }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.PairingCodeKey,
+                    Field = new SettingTypeText
+                    {
+                        Text = new ValueRegex
+                        {
+                            RegEx = AdbTvServerConstants.PairingCodeRegex
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["en"] = "Optional: to use Wireless debugging pairing instead of a manual on-device approval, enter the 6-digit " +
+                                 "code from Developer Options → Wireless debugging → \"Pair device with pairing code\" (leave empty otherwise)"
+                    }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.PairingPortKey,
+                    Field = new SettingTypeNumber
+                    {
+                        Number = new SettingTypeNumberInner
+                        {
+                            Value = 0,
+                            Min = 1,
+                            Max = 65535,
+                            Decimals = 0
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["en"] = "Required only if a pairing code was entered above: the pairing port shown on the same wireless-pairing screen"
+                    }
                 },
                 new Setting
                 {

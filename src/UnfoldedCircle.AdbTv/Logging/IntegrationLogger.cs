@@ -173,4 +173,40 @@ internal static partial class IntegrationLogger
 
     public static void FailedToSendWakeOnLan(this ILogger logger, Exception exception) =>
         FailedToSendWakeOnLanAction(logger, exception);
+
+    private static readonly Action<ILogger, string, Exception> MdnsResolveFailedAction = LoggerMessage.Define<string>(
+        LogLevel.Warning,
+        new EventId(39, nameof(MdnsResolveFailed)),
+        "Failed to resolve current adb-tls-connect port via mDNS for device GUID '{DeviceGuid}'.");
+
+    public static void MdnsResolveFailed(this ILogger logger, Exception exception, string deviceGuid) =>
+        MdnsResolveFailedAction(logger, deviceGuid, exception);
+
+    [LoggerMessage(EventId = 40, EventName = nameof(MdnsResolvedNewEndpoint), Level = LogLevel.Information,
+        Message = "Resolved new adb-tls-connect endpoint for device GUID '{DeviceGuid}': {Host}:{Port}")]
+    public static partial void MdnsResolvedNewEndpoint(this ILogger logger, string deviceGuid, string host, in int port);
+
+    [LoggerMessage(EventId = 41, EventName = nameof(MdnsResolveTimedOut), Level = LogLevel.Debug,
+        Message = "mDNS resolution for device GUID '{DeviceGuid}' timed out or found nothing; falling back to last-known address.")]
+    public static partial void MdnsResolveTimedOut(this ILogger logger, string deviceGuid);
+
+    [LoggerMessage(EventId = 42, EventName = nameof(PairingCodeSubmitted), Level = LogLevel.Information,
+        Message = "[{WSId}] Wireless pairing code submitted for host '{Host}:{Port}'.")]
+    public static partial void PairingCodeSubmitted(this ILogger logger, string wsId, string host, in int port);
+
+    private static readonly Action<ILogger, string, Exception> PairingFailedAction = LoggerMessage.Define<string>(
+        LogLevel.Warning,
+        new EventId(43, nameof(PairingFailed)),
+        "[{WSId}] Wireless pairing failed.");
+
+    public static void PairingFailed(this ILogger logger, Exception exception, string wsId) =>
+        PairingFailedAction(logger, wsId, exception);
+
+    private static readonly Action<ILogger, Exception> MdnsListenerStartupQueryFailedAction = LoggerMessage.Define(
+        LogLevel.Warning,
+        new EventId(44, nameof(MdnsListenerStartupQueryFailed)),
+        "Initial adb-tls-connect mDNS discovery query failed on startup.");
+
+    public static void MdnsListenerStartupQueryFailed(this ILogger logger, Exception exception) =>
+        MdnsListenerStartupQueryFailedAction(logger, exception);
 }
