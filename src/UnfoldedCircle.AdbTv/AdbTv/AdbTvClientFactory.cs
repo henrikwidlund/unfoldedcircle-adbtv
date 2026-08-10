@@ -69,24 +69,6 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
         {
             var authKey = await GetOrCreateAuthKey(cancellationToken);
 
-            // Wirelessly-paired devices' adb-tls-connect port changes across reboots/toggles of
-            // wireless debugging, so re-resolve it via mDNS right before (re)dialing rather than
-            // trusting the possibly-stale configured address. Only done here — not on every
-            // lookup — so reusing an already-healthy cached connection never pays this cost.
-            var (host, port) = (adbTvClientKey.IpAddress, adbTvClientKey.Port);
-            if (adbTvClientKey.PairedDeviceGuid is { } deviceGuid)
-            {
-                if (await _adbMdnsDiscovery.TryResolveAsync(deviceGuid, cancellationToken) is { } resolved)
-                {
-                    _logger.MdnsResolvedNewEndpoint(deviceGuid, resolved.Host, resolved.Port);
-                    (host, port) = resolved;
-                }
-                else
-                {
-                    _logger.MdnsResolveTimedOut(deviceGuid);
-                }
-            }
-
             // When the user disabled re-auth, all attempts within the budget are signature-only;
             // persistent failures means the user must re-run setup. When enabled, the last few attempts fall
             // through to AUTH(RSAPUBLICKEY) to auto-recover (may trigger on-device dialog).
@@ -102,6 +84,41 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
                 && Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations
                 && !cancellationToken.IsCancellationRequested)
             {
+                // Wirelessly-paired devices' adb-tls-connect port changes across reboots/toggles
+                // of wireless debugging, so re-resolve it via mDNS on every attempt rather than
+                // trusting a single resolution (or worse, the user-entered ADB port field, which
+                // is meaningless for this flow) for the whole retry budget. This matters most
+                // right after a fresh pairing: mDNS discovery only just started, so the very
+                // first attempt is the most likely one to not have observed an advertisement yet
+                // — falling back to a static, unrelated port here previously produced a doomed
+                // connection attempt (timeout, or a "half connected" state) instead of a clean retry.
+                string host;
+                int port;
+                if (adbTvClientKey.PairedDeviceGuid is { } deviceGuid)
+                {
+                    if (await _adbMdnsDiscovery.TryResolveAsync(deviceGuid, cancellationToken) is { } resolved)
+                    {
+                        _logger.MdnsResolvedNewEndpoint(deviceGuid, resolved.Host, resolved.Port);
+                        (host, port) = resolved;
+                    }
+                    else
+                    {
+                        // Deliberately NOT incrementing `attempt` here: that counter governs the
+                        // sig-only → pubkey-push auth escalation and is meant to track genuine
+                        // connection attempts, not mDNS misses. The outer elapsed-time bound above
+                        // already prevents this from looping forever.
+                        _logger.MdnsResolveTimedOut(deviceGuid);
+                        lastException ??= new TimeoutException(
+                            $"Could not resolve the current adb-tls-connect endpoint via mDNS for device GUID '{deviceGuid}'");
+                        await Task.Delay(BackoffBetweenAttempts, cancellationToken);
+                        continue;
+                    }
+                }
+                else
+                {
+                    (host, port) = (adbTvClientKey.IpAddress, adbTvClientKey.Port);
+                }
+
                 using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 attemptCts.CancelAfter(PerAttemptTimeout);
                 try
