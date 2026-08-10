@@ -255,15 +255,34 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
             var privateKeyPath = GetAdbKeyPath();
             Directory.CreateDirectory(Path.GetDirectoryName(privateKeyPath)!);
 
-            AdbAuthKey key;
+            AdbAuthKey? key = null;
             if (File.Exists(privateKeyPath))
             {
-                key = AdbAuthKey.LoadFromPem(await File.ReadAllTextAsync(privateKeyPath, cancellationToken));
+                try
+                {
+                    key = AdbAuthKey.LoadFromPem(await File.ReadAllTextAsync(privateKeyPath, cancellationToken));
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    // A key file that exists but fails to parse (truncated/corrupted, e.g. from a
+                    // container killed mid-write) would otherwise fail every single connection
+                    // attempt forever with no recovery path. Treat it the same as a missing file.
+                    // Cancellation itself (shutdown, client disconnect) must NOT be treated as
+                    // corruption — that would regenerate/overwrite a perfectly good key file.
+                    _logger.CorruptAuthKeyFileRegenerating(e, privateKeyPath);
+                }
             }
-            else
+
+            if (key is null)
             {
                 _logger.CreatingNewKey();
                 key = AdbAuthKey.Generate();
+
+                // Delete first rather than relying on FileMode.Create to overwrite in place: on
+                // Unix, UnixCreateMode below only applies when a NEW file is created — overwriting
+                // an existing (e.g. corrupt) inode in place would silently keep whatever
+                // permissions that file already had instead of the UserRead|UserWrite we ask for.
+                File.Delete(privateKeyPath);
 
                 var fileStreamOptions = new FileStreamOptions
                 {

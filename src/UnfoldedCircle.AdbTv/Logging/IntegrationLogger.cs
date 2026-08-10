@@ -209,4 +209,12 @@ internal static partial class IntegrationLogger
 
     public static void MdnsListenerStartupQueryFailed(this ILogger logger, Exception exception) =>
         MdnsListenerStartupQueryFailedAction(logger, exception);
+
+    private static readonly Action<ILogger, string, Exception> CorruptAuthKeyFileRegeneratingAction = LoggerMessage.Define<string>(
+        LogLevel.Warning,
+        new EventId(45, nameof(CorruptAuthKeyFileRegenerating)),
+        "ADB auth key file at '{PrivateKeyPath}' exists but failed to parse; regenerating a new key.");
+
+    public static void CorruptAuthKeyFileRegenerating(this ILogger logger, Exception exception, string privateKeyPath) =>
+        CorruptAuthKeyFileRegeneratingAction(logger, privateKeyPath, exception);
 }
