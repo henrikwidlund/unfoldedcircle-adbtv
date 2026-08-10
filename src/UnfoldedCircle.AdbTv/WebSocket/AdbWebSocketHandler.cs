@@ -38,6 +38,11 @@ internal sealed partial class AdbWebSocketHandler(
     private readonly AdbTvClientFactory _adbTvClientFactory = adbTvClientFactory;
     private readonly AdbMdnsDiscovery _adbMdnsDiscovery = adbMdnsDiscovery;
 
+    // Real pairing (TCP connect + TLS 1.3 handshake + two SPAKE2 round trips) completes in a
+    // couple of seconds on a healthy LAN; this is a generous ceiling for a slow/lossy connection,
+    // chosen to fail well before the remote's own client-side setup timeout gives up on us.
+    private static readonly TimeSpan PairingTimeout = TimeSpan.FromSeconds(20);
+
     private readonly ConcurrentDictionary<string, List<string>> _entityIdAppsMap = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, string> _entityIdActiveAppMap = new(StringComparer.OrdinalIgnoreCase);
 
@@ -764,7 +769,16 @@ internal sealed partial class AdbWebSocketHandler(
             {
                 var authKey = await _adbTvClientFactory.GetOrCreateAuthKey(cancellationToken);
                 _logger.PairingCodeSubmitted(wsId, ipAddress, pairingPort);
-                var pairingResult = await AdbPairing.PairAsync(ipAddress, pairingPort, pairingCode, authKey, cancellationToken);
+
+                // AdbPairing.PairAsync has no internal timeout of its own — it relies entirely on
+                // this token. Setup-step messages get an otherwise-unbounded token (canceled only
+                // by client disconnect or app shutdown), so an unreachable/stuck device would hang
+                // here until the remote's own client gives up and drops the WS connection first,
+                // leaving the device in a "half paired" state with no error ever sent back. Bound
+                // it ourselves so a stuck pairing fails fast with a real error instead.
+                using var pairingTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                pairingTimeoutCts.CancelAfter(PairingTimeout);
+                var pairingResult = await AdbPairing.PairAsync(ipAddress, pairingPort, pairingCode, authKey, pairingTimeoutCts.Token);
 
                 pairedDeviceGuid = pairingResult.PeerInfoType == PeerInfoType.AdbDeviceGuid
                     ? Encoding.UTF8.GetString(pairingResult.PeerInfoData)
