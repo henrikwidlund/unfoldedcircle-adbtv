@@ -972,17 +972,15 @@ internal sealed partial class AdbWebSocketHandler(
                 new Setting
                 {
                     Id = AdbTvServerConstants.PortKey,
-                    Field = new SettingTypeNumber
+                    Field = new SettingTypeText
                     {
-                        Number = new SettingTypeNumberInner
+                        Text = new ValueRegex
                         {
-                            Value = configurationItem?.Port ?? 5555,
-                            Min = 1,
-                            Max = 65535,
-                            Decimals = 0
+                            RegEx =  AdbTvServerConstants.PortRegex,
+                            Value = configurationItem?.Port.ToString(CultureInfo.InvariantCulture) ?? "5555"
                         }
                     },
-                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the ADB port of the TV (mandatory)" }
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["en"] = "Enter the ADB port of the TV (mandatory unless using Wireless Debugging)" }
                 },
                 new Setting
                 {
@@ -996,21 +994,48 @@ internal sealed partial class AdbWebSocketHandler(
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                     {
-                        ["en"] = "Optional: to use Wireless debugging pairing instead of a manual on-device approval, enter the 6-digit " +
+                        ["en"] = "Pairing Code"
+                    }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.PairingCodeKey + "Label",
+                    Field = new SettingTypeLabel
+                    {
+                        Label = new SettingTypeLabelItem
+                        {
+                            Value = []
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["en"] = "To use Wireless debugging pairing instead of a manual on-device approval, enter the 6-digit " +
                                  "code from Developer Options → Wireless debugging → \"Pair device with pairing code\" (leave empty otherwise)"
                     }
                 },
                 new Setting
                 {
                     Id = AdbTvServerConstants.PairingPortKey,
-                    Field = new SettingTypeNumber
+                    Field = new SettingTypeText
                     {
-                        Number = new SettingTypeNumberInner
+                        Text = new ValueRegex
                         {
-                            Value = 0,
-                            Min = 1,
-                            Max = 65535,
-                            Decimals = 0
+                            RegEx = AdbTvServerConstants.PortRegex
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["en"] = "Pairing Port"
+                    }
+                },
+                new Setting
+                {
+                    Id = AdbTvServerConstants.PairingPortKey + "Label",
+                    Field = new SettingTypeLabel
+                    {
+                        Label = new SettingTypeLabelItem
+                        {
+                            Value = []
                         }
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
