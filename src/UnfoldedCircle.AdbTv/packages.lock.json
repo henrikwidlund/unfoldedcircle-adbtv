@@ -47,12 +47,12 @@
       },
       "Theodicean.UnfoldedCircle.Server": {
         "type": "Direct",
-        "requested": "[0.0.16, )",
-        "resolved": "0.0.16",
-        "contentHash": "BpGF7/IvMuBa7d6rLVzgCt79o4SRrQJ1+1ox42Lqqwfpk1XhQ1HXmLUV9q50W0zzLrEUEI+cCTs9dg0+iM3J8A==",
+        "requested": "[0.0.17-pre02, )",
+        "resolved": "0.0.17-pre02",
+        "contentHash": "l59PKEE+d1zB9GhnR/hokczeAB0bPNaTOPiLhtcLfC7AlohYo7/g2O2KDibI3JxV1fmWjKYIRLKkN5Pak7xcig==",
         "dependencies": {
           "Theodicean.Makaretu.Dns.Multicast": "0.0.13",
-          "Theodicean.UnfoldedCircle.Models": "0.0.16"
+          "Theodicean.UnfoldedCircle.Models": "0.0.17-pre02"
         }
       },
       "BouncyCastle.Cryptography": {
@@ -85,8 +85,8 @@
       },
       "Theodicean.UnfoldedCircle.Models": {
         "type": "Transitive",
-        "resolved": "0.0.16",
-        "contentHash": "ZHxzef69EAxY7pQHliHey38RdrNrCO6muwe6WaaSPjRgj0TKoayXQ2XeRYToZJzATZ9/1ka3o3N9xFg8f//sGQ=="
+        "resolved": "0.0.17-pre02",
+        "contentHash": "f6LyRH4UOV2x+x5JsbA40mvSILw/jeILC/k9qhRpcwRdKACmvc13ZZwPDsl+kdvXGSC38U98nuwegiBaYxdhnQ=="
       }
     },
     "net10.0/linux-arm64": {

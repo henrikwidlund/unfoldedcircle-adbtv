@@ -44,7 +44,7 @@ namespace UnfoldedCircle.AdbTv.Discovery;
 /// external locking (the one-time start is the only thing a lock guards below).
 /// </para>
 /// </remarks>
-public sealed class AdbMdnsDiscovery(ILogger<AdbMdnsDiscovery> logger, IConfigurationService<AdbConfigurationItem> configurationService)
+public sealed class AdbMdnsDiscovery(ILogger<AdbMdnsDiscovery> logger, IConfigurationService<AdbGlobalConfiguration, AdbConfigurationItem> configurationService)
     : IHostedService, IAsyncDisposable
 {
     private static readonly DomainName AdbTlsConnectServiceName = new("_adb-tls-connect._tcp");

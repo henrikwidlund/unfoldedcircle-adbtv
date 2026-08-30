@@ -6,8 +6,8 @@ using UnfoldedCircle.Server.Configuration;
 namespace UnfoldedCircle.AdbTv.Configuration;
 
 internal sealed class AdbConfigurationService(IConfiguration configuration)
-    : ConfigurationService<AdbConfigurationItem>(configuration)
+    : ConfigurationService<AdbGlobalConfiguration, AdbConfigurationItem>(configuration)
 {
-    protected override JsonTypeInfo<UnfoldedCircleConfiguration<AdbConfigurationItem>> GetSerializer()
-        => AdbJsonSerializerContext.Default.UnfoldedCircleConfigurationAdbConfigurationItem;
+    protected override JsonTypeInfo<UnfoldedCircleConfiguration<AdbGlobalConfiguration, AdbConfigurationItem>> GetSerializer()
+        => AdbJsonSerializerContext.Default.UnfoldedCircleConfigurationAdbGlobalConfigurationAdbConfigurationItem;
 }

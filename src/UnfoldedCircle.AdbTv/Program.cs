@@ -5,13 +5,13 @@ using UnfoldedCircle.AdbTv.WebSocket;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
-builder.AddUnfoldedCircleServer<AdbWebSocketHandler, AdbMediaPlayerCommandId, AdbConfigurationService, AdbConfigurationItem>();
+builder.AddUnfoldedCircleServer<AdbWebSocketHandler, AdbMediaPlayerCommandId, AdbConfigurationService, AdbGlobalConfiguration, AdbConfigurationItem>();
 builder.Services.AddSingleton<AdbTvClientFactory>();
 builder.Services.AddSingleton<AdbMdnsDiscovery>();
 builder.Services.AddHostedService(static sp => sp.GetRequiredService<AdbMdnsDiscovery>());
 
 var app = builder.Build();
 
-app.UseUnfoldedCircleServer<AdbWebSocketHandler, AdbMediaPlayerCommandId, AdbConfigurationItem>();
+app.UseUnfoldedCircleServer<AdbWebSocketHandler, AdbMediaPlayerCommandId, AdbGlobalConfiguration, AdbConfigurationItem>();
 
 await app.RunAsync();
