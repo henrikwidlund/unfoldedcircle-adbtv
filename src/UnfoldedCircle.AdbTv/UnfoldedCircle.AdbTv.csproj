@@ -40,6 +40,7 @@
         <Content Update="appsettings.Development.json">
           <DependentUpon>appsettings.json</DependentUpon>
         </Content>
+        <EmbeddedResource Include="../../tools/appnames/appnames.dex" LogicalName="UnfoldedCircle.AdbTv.AppNames.dex" />
     </ItemGroup>
 
     <ItemGroup>

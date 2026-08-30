@@ -6,8 +6,32 @@ on:
   workflow_dispatch:
 
 jobs:
+  generate_appnames_dex:
+    name: Generate Android app names DEX
+    runs-on: ubuntu-latest
+    outputs:
+      dex_base64: ${{ steps.export.outputs.dex_base64 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Generate DEX
+        shell: bash
+        run: bash ./tools/appnames/generate-appnames-dex.sh
+
+      - name: Export generated DEX
+        id: export
+        shell: bash
+        run: |
+          dex_base64=$(base64 -w 0 tools/appnames/appnames.dex)
+          echo "dex_base64=$dex_base64" >> "$GITHUB_OUTPUT"
+
   release:
     name: Release native binaries
+    needs: generate_appnames_dex
     permissions:
       id-token: write
       attestations: write
@@ -42,6 +66,13 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Use generated Android app names DEX
+        shell: bash
+        env:
+          APP_NAMES_DEX_BASE64: ${{ needs.generate_appnames_dex.outputs.dex_base64 }}
+        run: |
+          node -e "require('fs').writeFileSync('tools/appnames/appnames.dex', Buffer.from(process.env.APP_NAMES_DEX_BASE64, 'base64'))"
 
       - name: Setup dotnet
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0

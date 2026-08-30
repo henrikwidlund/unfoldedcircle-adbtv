@@ -18,6 +18,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Generate Android app names DEX
+        shell: bash
+        run: bash ./tools/appnames/generate-appnames-dex.sh
+
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:

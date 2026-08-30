@@ -44,7 +44,10 @@ internal sealed partial class AdbWebSocketHandler(
     private static readonly TimeSpan PairingTimeout = TimeSpan.FromSeconds(20);
 
     private readonly ConcurrentDictionary<string, List<string>> _entityIdAppsMap = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Dictionary<string, AppReference>> _entityIdAppAliasesMap = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, string> _entityIdActiveAppMap = new(StringComparer.OrdinalIgnoreCase);
+
+    private sealed record AppReference(string Label, string PackageName, string DisplayName);
 
     protected override async ValueTask<EntityCommandResult> OnRemoteCommandAsync(
         System.Net.WebSockets.WebSocket socket,
@@ -65,11 +68,33 @@ internal sealed partial class AdbWebSocketHandler(
             return EntityCommandResult.Failure;
         }
 
+        // App commands accept a raw package, a dynamically discovered application label,
+        // or the legacy "Label (package)" form. Unknown remote commands are also offered to
+        // the app resolver so a bare label can be used without an APP: prefix.
+        if (commandType is CommandType.App or CommandType.Unknown)
+        {
+            var appIdentifier = commandType == CommandType.App ? commandToSend : command;
+            var resolvedApp = await ResolveAppIdentifierAsync(wsId, payload.MsgData.EntityId, appIdentifier, commandCancellationToken);
+            if (resolvedApp is not null)
+            {
+                commandToSend = resolvedApp.PackageName;
+                commandType = CommandType.App;
+            }
+            else if (commandType == CommandType.App)
+            {
+                return EntityCommandResult.Failure;
+            }
+        }
+
         bool isPowerOn = command.Equals(RemoteButtonConstants.On, StringComparison.OrdinalIgnoreCase);
         bool isPowerOff = command.Equals(RemoteButtonConstants.Off, StringComparison.OrdinalIgnoreCase);
         bool isToggle = command.Equals(RemoteButtonConstants.Toggle, StringComparison.OrdinalIgnoreCase);
 
-        return await ExecuteCommandAsync(adbTvClientHolder, commandToSend, commandType, isPowerOn, isPowerOff, isToggle, commandCancellationToken);
+        var result = await ExecuteCommandAsync(adbTvClientHolder, commandToSend, commandType, isPowerOn, isPowerOff, isToggle, commandCancellationToken);
+        if (result == EntityCommandResult.PowerOn)
+            _ = PopulateAppsAfterPowerOnAsync(wsId, payload.MsgData.EntityId, cancellationTokenWrapper.RequestAborted);
+
+        return result;
     }
 
     protected override ValueTask<EntityCommandResult> OnClimateHvacModeCommandAsync(System.Net.WebSockets.WebSocket socket,
@@ -103,29 +128,97 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
     {
-        if (await StartApp(wsId, payload.MsgData.EntityId, option, cancellationTokenWrapper.RequestAborted))
+        var app = await ResolveAppIdentifierAsync(wsId, payload.MsgData.EntityId, option, commandCancellationToken);
+        if (app is not null && await StartApp(wsId, payload.MsgData.EntityId, app.PackageName, cancellationTokenWrapper.RequestAborted))
         {
             var alternateLookup = _entityIdActiveAppMap.GetAlternateLookup<ReadOnlySpan<char>>();
-            alternateLookup[payload.MsgData.EntityId.AsSpan().GetBaseIdentifier()] = option;
-            return new SelectCommandResult(EntityCommandResult.Other, option);
+            alternateLookup[payload.MsgData.EntityId.AsSpan().GetBaseIdentifier()] = app.DisplayName;
+            return new SelectCommandResult(EntityCommandResult.Other, app.DisplayName);
         }
 
         return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
     }
 
-    private async ValueTask<bool> StartApp(string wsId, string entityId, string appIdentifier, CancellationToken cancellationToken)
+    private async ValueTask<bool> StartApp(string wsId, string entityId, string packageName, CancellationToken cancellationToken)
     {
         var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
         if (adbTvClientHolder is null)
             return false;
 
-        var result = await adbTvClientHolder.Connection.StartAppAsync(appIdentifier, cancellationToken);
+        var result = await adbTvClientHolder.Connection.StartAppAsync(packageName, cancellationToken);
         if (result.IsLaunched)
             return true;
 
-        _logger.FailedToStartApp(wsId, entityId, appIdentifier);
+        _logger.FailedToStartApp(wsId, entityId, packageName);
         return false;
     }
+
+    private async ValueTask<AppReference?> ResolveAppIdentifierAsync(
+        string wsId,
+        string entityId,
+        string appIdentifier,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(appIdentifier))
+            return null;
+
+        var value = appIdentifier.Trim();
+        var baseIdentifier = entityId.AsMemory().GetBaseIdentifier();
+        var aliasesLookup = _entityIdAppAliasesMap.GetAlternateLookup<ReadOnlySpan<char>>();
+
+        if (aliasesLookup.TryGetValue(baseIdentifier.Span, out var aliases)
+            && aliases.TryGetValue(value, out var knownApp))
+            return knownApp;
+
+        // The canonical UI format is "Application name (package.name)". Accept it even if
+        // the app cache has not been populated yet.
+        var packageFromDisplayName = TryExtractPackageName(value);
+        if (packageFromDisplayName is not null)
+        {
+            if (aliases is not null && aliases.TryGetValue(packageFromDisplayName, out knownApp))
+                return knownApp;
+
+            var label = value[..value.LastIndexOf(" (", StringComparison.Ordinal)].Trim();
+            return new AppReference(label, packageFromDisplayName, value);
+        }
+
+        // Preserve backwards compatibility with callers that send a raw package identifier.
+        if (LooksLikePackageName(value))
+        {
+            if (aliases is not null && aliases.TryGetValue(value, out knownApp))
+                return knownApp;
+
+            return new AppReference(value, value, value);
+        }
+
+        // A bare application name needs the dynamically discovered label cache. Bare labels are
+        // registered only when unique; raw packages remain available for unambiguous commands.
+        if (!await PopulateApps(wsId, entityId, cancellationToken))
+            return null;
+
+        if (aliasesLookup.TryGetValue(baseIdentifier.Span, out aliases)
+            && aliases.TryGetValue(value, out knownApp))
+            return knownApp;
+
+        return null;
+    }
+
+    private static string? TryExtractPackageName(string value)
+    {
+        if (!value.EndsWith(')'))
+            return null;
+
+        var separatorIndex = value.LastIndexOf(" (", StringComparison.Ordinal);
+        if (separatorIndex <= 0)
+            return null;
+
+        var packageName = value[(separatorIndex + 2)..^1].Trim();
+        return LooksLikePackageName(packageName) ? packageName : null;
+    }
+
+    private static bool LooksLikePackageName(string value)
+        => value.Contains('.', StringComparison.Ordinal)
+           && value.All(static c => char.IsLetterOrDigit(c) || c is '.' or '_');
 
     protected override async ValueTask<SelectCommandResult> OnSelectFirstLastCommandAsync(System.Net.WebSockets.WebSocket socket,
         SelectEntityCommandMsgData payload,
@@ -150,17 +243,19 @@ internal sealed partial class AdbWebSocketHandler(
             ? apps[0]
             : apps[^1];
 
-        if (await StartApp(wsId, payload.MsgData.EntityId, app, commandCancellationToken))
+        var resolvedApp = await ResolveAppIdentifierAsync(wsId, payload.MsgData.EntityId, app, commandCancellationToken);
+        if (resolvedApp is not null && await StartApp(wsId, payload.MsgData.EntityId, resolvedApp.PackageName, commandCancellationToken))
         {
             var activeEntityAppAlternativeLookup = _entityIdActiveAppMap.GetAlternateLookup<ReadOnlySpan<char>>();
-            activeEntityAppAlternativeLookup[baseIdentifier.Span] = app;
-            return new SelectCommandResult(EntityCommandResult.Other, app);
+            activeEntityAppAlternativeLookup[baseIdentifier.Span] = resolvedApp.DisplayName;
+            return new SelectCommandResult(EntityCommandResult.Other, resolvedApp.DisplayName);
         }
 
         return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
     }
 
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _appFetchSemaphores = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Task> _appLabelResolutionTasks = new(StringComparer.OrdinalIgnoreCase);
     private readonly Lock _appFetchLock = new();
 
     private async ValueTask<bool> PopulateApps(string wsId, string entityId, CancellationToken cancellationToken)
@@ -195,11 +290,26 @@ internal sealed partial class AdbWebSocketHandler(
                     return false;
                 }
 
-                var apps = new List<string>();
+                // Publish package identifiers first so the source/options list is available as soon as
+                // pm returns. Friendly labels are resolved in the background and replace this list later.
+                var packageNames = new List<string>();
                 await foreach (string appIdentifier in adbClientHolder.Connection.ExecuteLinesAsync("pm list packages -3", cancellationToken))
-                    apps.Add(appIdentifier.Replace("package:", string.Empty, StringComparison.OrdinalIgnoreCase).Trim());
+                {
+                    var packageName = appIdentifier.Replace("package:", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
+                    if (LooksLikePackageName(packageName))
+                        packageNames.Add(packageName);
+                }
 
-                alternateLookup[baseIdentifier.Span] = apps;
+                var baseEntityId = baseIdentifier.ToString();
+                SetAppsCache(baseEntityId,
+                    packageNames.Select(static packageName => new AppReference(packageName, packageName, packageName)).ToList());
+
+                if (packageNames.Count > 0)
+                {
+                    _ = _appLabelResolutionTasks.GetOrAdd(baseEntityId,
+                        _ => ResolveAppLabelsAsync(wsId, entityId, packageNames, cancellationToken));
+                }
+
                 return true;
             }
             finally
@@ -210,6 +320,88 @@ internal sealed partial class AdbWebSocketHandler(
 
         _logger.FailedToAcquireSemaphoreForPopulateApps(wsId, entityId);
         return false;
+    }
+
+    private async Task ResolveAppLabelsAsync(
+        string wsId,
+        string entityId,
+        List<string> packageNames,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var adbClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
+            if (adbClientHolder is null)
+                return;
+
+            var helperCheck = await adbClientHolder.Connection.ExecuteAsync($"test -s {AppNamesHelper.RemotePath}", cancellationToken);
+            var helperAvailable = helperCheck.IsSuccess;
+            if (!helperAvailable)
+            {
+                var uploadCommand = $"printf '%s' '{AppNamesHelper.DexBase64}' | base64 -d > {AppNamesHelper.RemotePath} && chmod 644 {AppNamesHelper.RemotePath}";
+                var uploadResult = await adbClientHolder.Connection.ExecuteAsync(uploadCommand, cancellationToken);
+                helperAvailable = uploadResult.IsSuccess;
+            }
+
+            if (!helperAvailable)
+                return;
+
+            var labelsByPackage = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var packageArguments = string.Join(' ', packageNames);
+            var helperCommand = $"app_process -cp {AppNamesHelper.RemotePath} /system/bin uc.adbtv.AppNames {packageArguments}";
+            await foreach (string appLine in adbClientHolder.Connection.ExecuteLinesAsync(helperCommand, cancellationToken))
+            {
+                var separatorIndex = appLine.IndexOf('\t');
+                if (separatorIndex <= 0)
+                    continue;
+
+                var packageName = appLine[..separatorIndex].Trim();
+                var label = appLine[(separatorIndex + 1)..].Trim();
+                if (LooksLikePackageName(packageName))
+                    labelsByPackage[packageName] = string.IsNullOrEmpty(label) ? packageName : label;
+            }
+
+            var appReferences = new List<AppReference>(packageNames.Count);
+            foreach (var packageName in packageNames)
+            {
+                var label = labelsByPackage.TryGetValue(packageName, out var resolvedLabel) ? resolvedLabel : packageName;
+                var displayName = label.Equals(packageName, StringComparison.OrdinalIgnoreCase) ? packageName : label;
+                appReferences.Add(new AppReference(label, packageName, displayName));
+            }
+
+            SetAppsCache(entityId.AsMemory().GetBaseIdentifier().ToString(), appReferences);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // expected on disconnect / shutdown
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Failed to resolve Android application labels for {EntityId}", entityId);
+        }
+    }
+
+    private void SetAppsCache(string baseEntityId, List<AppReference> appReferences)
+    {
+        appReferences.Sort(static (left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.DisplayName, right.DisplayName));
+        var apps = appReferences.Select(static app => app.DisplayName).ToList();
+        var aliases = new Dictionary<string, AppReference>(StringComparer.OrdinalIgnoreCase);
+        var labelCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var app in appReferences)
+        {
+            aliases[app.PackageName] = app;
+            labelCounts[app.Label] = labelCounts.TryGetValue(app.Label, out var count) ? count + 1 : 1;
+        }
+
+        foreach (var app in appReferences)
+        {
+            if (labelCounts[app.Label] == 1)
+                aliases[app.Label] = app;
+        }
+
+        _entityIdAppsMap[baseEntityId] = apps;
+        _entityIdAppAliasesMap[baseEntityId] = aliases;
     }
 
     protected override async ValueTask<SelectCommandResult> OnSelectNextPreviousCommandAsync(System.Net.WebSockets.WebSocket socket,
@@ -256,10 +448,11 @@ internal sealed partial class AdbWebSocketHandler(
         }
 
         var app = apps[nextIndex];
-        if (await StartApp(wsId, payload.MsgData.EntityId, app, commandCancellationToken))
+        var resolvedApp = await ResolveAppIdentifierAsync(wsId, payload.MsgData.EntityId, app, commandCancellationToken);
+        if (resolvedApp is not null && await StartApp(wsId, payload.MsgData.EntityId, resolvedApp.PackageName, commandCancellationToken))
         {
-            entityIdActiveAppMapAlternate[baseIdentifier.Span] = app;
-            return new SelectCommandResult(EntityCommandResult.Other, app);
+            entityIdActiveAppMapAlternate[baseIdentifier.Span] = resolvedApp.DisplayName;
+            return new SelectCommandResult(EntityCommandResult.Other, resolvedApp.DisplayName);
         }
         return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
     }
@@ -278,12 +471,52 @@ internal sealed partial class AdbWebSocketHandler(
             return EntityCommandResult.Failure;
 
         (string command, CommandType commandType) = GetMappedCommand(payload.MsgData.CommandId, adbTvClientHolder.ClientKey.Manufacturer, payload.MsgData.Params?.Source);
+        if (commandType == CommandType.App)
+        {
+            var resolvedApp = await ResolveAppIdentifierAsync(wsId, payload.MsgData.EntityId, command, commandCancellationToken);
+            if (resolvedApp is null)
+                return EntityCommandResult.Failure;
+
+            command = resolvedApp.PackageName;
+        }
 
         bool isPowerOn = payload.MsgData.CommandId == AdbMediaPlayerCommandId.On;
         bool isPowerOff = payload.MsgData.CommandId == AdbMediaPlayerCommandId.Off;
         bool isToggle = payload.MsgData.CommandId == AdbMediaPlayerCommandId.Toggle;
 
-        return await ExecuteCommandAsync(adbTvClientHolder, command, commandType, isPowerOn, isPowerOff, isToggle, commandCancellationToken);
+        var result = await ExecuteCommandAsync(adbTvClientHolder, command, commandType, isPowerOn, isPowerOff, isToggle, commandCancellationToken);
+        if (result == EntityCommandResult.PowerOn)
+            _ = PopulateAppsAfterPowerOnAsync(wsId, payload.MsgData.EntityId, cancellationTokenWrapper.RequestAborted);
+
+        return result;
+    }
+
+    private async Task PopulateAppsAfterPowerOnAsync(string wsId, string entityId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // WOL/key-event acknowledgement precedes Android becoming fully Awake. Retry briefly
+            // so package enumeration starts as soon as PackageManager is usable.
+            for (var attempt = 0; attempt < 20 && !cancellationToken.IsCancellationRequested; attempt++)
+            {
+                var holder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
+                if (holder is not null && await GetPowerState(holder, cancellationToken) == PowerState.On)
+                {
+                    await PopulateApps(wsId, entityId, cancellationToken);
+                    return;
+                }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // expected on disconnect / shutdown
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Failed to populate Android applications after power-on for {EntityId}", entityId);
+        }
     }
 
     protected override async ValueTask OnConnectAsync(ConnectEvent payload, string wsId, CancellationToken cancellationToken)
@@ -404,6 +637,65 @@ internal sealed partial class AdbWebSocketHandler(
                     await EmitSelectDeltaAsync(socket, wsId, sub.EntityId, power, apps, powerChanged, appsChanged, cancellationToken);
                     break;
             }
+        }
+
+        // If package identifiers were just emitted, push the friendly-name replacement as soon as
+        // PackageManager resolution completes. Do not wait for the next polling interval.
+        if (appsChanged
+            && apps is { Count: > 0 }
+            && _appLabelResolutionTasks.TryGetValue(baseEntityId, out var labelResolutionTask))
+        {
+            _ = EmitResolvedAppsWhenReadyAsync(
+                socket,
+                wsId,
+                baseEntityId,
+                [.. subscribedEntities],
+                apps,
+                labelResolutionTask,
+                cancellationToken);
+        }
+    }
+
+    private async Task EmitResolvedAppsWhenReadyAsync(
+        System.Net.WebSockets.WebSocket socket,
+        string wsId,
+        string baseEntityId,
+        SubscribedEntity[] subscribedEntities,
+        List<string> initialApps,
+        Task labelResolutionTask,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await labelResolutionTask.WaitAsync(cancellationToken);
+
+            var lookup = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
+            if (!lookup.TryGetValue(baseEntityId.AsSpan(), out var resolvedApps)
+                || resolvedApps.Count == 0
+                || ReferenceEquals(initialApps, resolvedApps))
+                return;
+
+            _reportedApps[baseEntityId] = resolvedApps;
+            foreach (var sub in subscribedEntities)
+            {
+                switch (sub.EntityType)
+                {
+                    case EntityType.MediaPlayer:
+                        await EmitMediaPlayerDeltaAsync(socket, wsId, sub.EntityId, PowerState.On, resolvedApps, false, true, cancellationToken);
+                        break;
+                    case EntityType.Select:
+                        await EmitSelectDeltaAsync(socket, wsId, sub.EntityId, PowerState.On, resolvedApps, false, true, cancellationToken);
+                        break;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // expected on disconnect / shutdown
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Failed to emit resolved Android application labels for {EntityId}", baseEntityId);
         }
     }
 
