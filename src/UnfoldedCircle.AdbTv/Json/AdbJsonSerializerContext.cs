@@ -4,7 +4,7 @@ using UnfoldedCircle.Server.Configuration;
 
 namespace UnfoldedCircle.AdbTv.Json;
 
-[JsonSerializable(typeof(UnfoldedCircleConfiguration<AdbConfigurationItem>))]
+[JsonSerializable(typeof(UnfoldedCircleConfiguration<AdbGlobalConfiguration, AdbConfigurationItem>))]
 [JsonSerializable(typeof(BackupData))]
 [JsonSerializable(typeof(MediaPlayerEntityCommandMsgData<AdbMediaPlayerCommandId>))]
 internal sealed partial class AdbJsonSerializerContext : JsonSerializerContext

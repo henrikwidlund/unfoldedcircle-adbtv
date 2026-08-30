@@ -68,8 +68,8 @@ internal sealed partial class AdbWebSocketHandler
     }
 
     private async ValueTask<TimeSpan> GetMaxMessageHandlingWaitTimeSpanAsync(CancellationToken cancellationToken) =>
-        await _configurationService.GetConfigurationAsync(cancellationToken) is { MaxMessageHandlingWaitTimeInSeconds: > 0 } configuration
-            ? TimeSpan.FromSeconds(configuration.MaxMessageHandlingWaitTimeInSeconds.Value)
+        await _configurationService.GetConfigurationAsync(cancellationToken) is { GlobalConfiguration.MaxMessageHandlingWaitTimeInSeconds: > 0 } configuration
+            ? TimeSpan.FromSeconds(configuration.GlobalConfiguration.MaxMessageHandlingWaitTimeInSeconds.Value)
             : TimeSpan.FromSeconds(9.5);
 
     private async Task<AdbTvClientHolder?> TryGetAdbTvClientHolderAsync(

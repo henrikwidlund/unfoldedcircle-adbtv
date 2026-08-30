@@ -28,12 +28,12 @@ using UnfoldedCircle.Server.WebSocket;
 namespace UnfoldedCircle.AdbTv.WebSocket;
 
 internal sealed partial class AdbWebSocketHandler(
-    IConfigurationService<AdbConfigurationItem> configurationService,
+    IConfigurationService<AdbGlobalConfiguration, AdbConfigurationItem> configurationService,
     AdbTvClientFactory adbTvClientFactory,
     AdbMdnsDiscovery adbMdnsDiscovery,
     IOptions<UnfoldedCircleOptions> options,
     ILogger<AdbWebSocketHandler> logger,
-    ILoggerFactory loggerFactory) : UnfoldedCircleWebSocketHandler<AdbMediaPlayerCommandId, AdbConfigurationItem>(configurationService, options, logger)
+    ILoggerFactory loggerFactory) : UnfoldedCircleWebSocketHandler<AdbMediaPlayerCommandId, AdbGlobalConfiguration, AdbConfigurationItem>(configurationService, options, logger)
 {
     private readonly AdbTvClientFactory _adbTvClientFactory = adbTvClientFactory;
     private readonly AdbMdnsDiscovery _adbMdnsDiscovery = adbMdnsDiscovery;
@@ -680,7 +680,7 @@ internal sealed partial class AdbWebSocketHandler(
             && double.TryParse(maxWaitTimeValue, NumberStyles.Float, NumberFormatInfo.InvariantInfo, out var parsedMaxWaitTime)
             ? parsedMaxWaitTime
             : 9.5;
-        configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
+        configuration = configuration with { GlobalConfiguration = configuration.GlobalConfiguration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime } };
         configuration.Entities.Remove(configurationItem);
         configuration.Entities.Add(newConfigurationItem);
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
@@ -800,7 +800,7 @@ internal sealed partial class AdbWebSocketHandler(
             }
         }
 
-        configuration = configuration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime };
+        configuration = configuration with { GlobalConfiguration = configuration.GlobalConfiguration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime } };
 
         var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
         AdbTvClientKey? oldKey = null;
@@ -892,13 +892,13 @@ internal sealed partial class AdbWebSocketHandler(
     protected override async ValueTask<SettingsPage> CreateNewEntitySettingsPageAsync(CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
-        return CreateSettingsPage(null, configuration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5);
+        return CreateSettingsPage(null, configuration.GlobalConfiguration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5);
     }
 
     protected override async ValueTask<SettingsPage> CreateReconfigureEntitySettingsPageAsync(AdbConfigurationItem adbConfigurationItem, CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
-        var settingsPage = CreateSettingsPage(adbConfigurationItem, configuration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5);
+        var settingsPage = CreateSettingsPage(adbConfigurationItem, configuration.GlobalConfiguration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5);
         return settingsPage with
         {
             Settings =
