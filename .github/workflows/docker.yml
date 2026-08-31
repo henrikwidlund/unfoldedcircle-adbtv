@@ -38,6 +38,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Generate Android app names DEX
+        shell: bash
+        run: bash ./tools/appnames/generate-appnames-dex.sh
+
       - name: Prepare driver.json
         if: github.event_name != 'pull_request'
         shell: bash
