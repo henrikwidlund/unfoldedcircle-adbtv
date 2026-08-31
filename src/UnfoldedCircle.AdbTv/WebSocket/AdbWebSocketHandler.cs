@@ -336,11 +336,10 @@ internal sealed partial class AdbWebSocketHandler(
                         _logger.FailureDuringEvent(e, wsId, group.Key);
                     }
                 });
-            var pollingIntervalSeconds = _pollingIntervalSeconds;
-            if (pollingIntervalSeconds != timerPollingIntervalSeconds)
+            if (timerPollingIntervalSeconds != _pollingIntervalSeconds)
             {
-                periodicTimer.Period = TimeSpan.FromSeconds(pollingIntervalSeconds);
-                timerPollingIntervalSeconds = pollingIntervalSeconds;
+                timerPollingIntervalSeconds = _pollingIntervalSeconds;
+                periodicTimer.Period = TimeSpan.FromSeconds(timerPollingIntervalSeconds);
             }
         } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
     }
@@ -691,7 +690,7 @@ internal sealed partial class AdbWebSocketHandler(
             ? parsedMaxWaitTime
             : 9.5;
         var pollingIntervalSeconds = GetPollingIntervalSeconds(
-            payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PollingIntervalSecondsKey, out var pollingIntervalValue) ? pollingIntervalValue : null,
+            payload.MsgData.InputValues.GetValueOrDefault(AdbTvServerConstants.PollingIntervalSecondsKey),
             configuration.GlobalConfiguration.PollingIntervalSeconds);
         configuration = configuration with
         {
@@ -763,7 +762,7 @@ internal sealed partial class AdbWebSocketHandler(
             ? parsedMaxWaitTime
             : 9.5;
         var pollingIntervalSeconds = GetPollingIntervalSeconds(
-            payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.PollingIntervalSecondsKey, out var pollingIntervalValue) ? pollingIntervalValue : null,
+            payload.MsgData.InputValues.GetValueOrDefault(AdbTvServerConstants.PollingIntervalSecondsKey),
             configuration.GlobalConfiguration.PollingIntervalSeconds);
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
             && Manufacturer.TryParse(manufacturerValue, out var parsedManufacturer)
