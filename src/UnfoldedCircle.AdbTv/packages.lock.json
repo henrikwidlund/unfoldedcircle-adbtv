@@ -32,9 +32,9 @@
       },
       "Theodicean.SharpAdb": {
         "type": "Direct",
-        "requested": "[0.0.4, )",
-        "resolved": "0.0.4",
-        "contentHash": "dn0rUpDoes5ESOyZEI/G+zBPTl+zOoyQh74M1+ibTlOV3BFYGHNGrLkD5kSGSyHlhUpz1dpNinj3H6dRF8r0qQ==",
+        "requested": "[0.0.5, )",
+        "resolved": "0.0.5",
+        "contentHash": "qOoBnYldRXD8Zreh3P6OLZ1HwU5tUz4VCukyC0cKXyK/MZr1w9FD7av7wp4fUSjQH9vZcvJewGOfEMpztKeoSg==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.7.0"
         }
@@ -47,12 +47,12 @@
       },
       "Theodicean.UnfoldedCircle.Server": {
         "type": "Direct",
-        "requested": "[0.0.17-pre02, )",
-        "resolved": "0.0.17-pre02",
-        "contentHash": "l59PKEE+d1zB9GhnR/hokczeAB0bPNaTOPiLhtcLfC7AlohYo7/g2O2KDibI3JxV1fmWjKYIRLKkN5Pak7xcig==",
+        "requested": "[0.0.17-pre03, )",
+        "resolved": "0.0.17-pre03",
+        "contentHash": "cAMX7J1vt/tNA7yKnW3lyV/y+PVNMTyYLh2/5IDhbo7/omw0wtq7Povmtzs+EDsXveYyCZiO8liMY5JFpw88/Q==",
         "dependencies": {
           "Theodicean.Makaretu.Dns.Multicast": "0.0.13",
-          "Theodicean.UnfoldedCircle.Models": "0.0.17-pre02"
+          "Theodicean.UnfoldedCircle.Models": "0.0.17-pre03"
         }
       },
       "BouncyCastle.Cryptography": {
@@ -85,8 +85,8 @@
       },
       "Theodicean.UnfoldedCircle.Models": {
         "type": "Transitive",
-        "resolved": "0.0.17-pre02",
-        "contentHash": "f6LyRH4UOV2x+x5JsbA40mvSILw/jeILC/k9qhRpcwRdKACmvc13ZZwPDsl+kdvXGSC38U98nuwegiBaYxdhnQ=="
+        "resolved": "0.0.17-pre03",
+        "contentHash": "E3G9ocGxHAmC9BLZ0cou0ay8zu0hYTRt4bX70bwRhM+Ve9SbTb9XY7F167ru0/g6D35f3gA8isaNJTANfy4FnQ=="
       }
     },
     "net10.0/linux-arm64": {

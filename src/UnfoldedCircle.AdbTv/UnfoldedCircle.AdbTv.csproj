@@ -52,11 +52,11 @@
         </PackageReference>
         <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="10.0.11" />
         <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta21" />
-        <PackageReference Include="Theodicean.SharpAdb" Version="0.0.4" />
+        <PackageReference Include="Theodicean.SharpAdb" Version="0.0.5" />
         <PackageReference Include="Theodicean.SourceGenerators" Version="0.0.11" PrivateAssets="all" ExcludeAssets="runtime">
             <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.17-pre02" />
+        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.17-pre03" />
     </ItemGroup>
 
 </Project>
