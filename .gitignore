@@ -364,3 +364,6 @@ driver
 unfolded-circle-adbtv*.tar.gz
 .run
 configured_entities.json
+
+# Generated Android helper
+tools/appnames/appnames.dex

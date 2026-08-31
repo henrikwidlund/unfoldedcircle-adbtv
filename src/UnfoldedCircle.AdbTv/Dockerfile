@@ -9,6 +9,7 @@ WORKDIR /src
 COPY [".editorconfig", "."]
 COPY ["Directory.Build.props", "."]
 COPY ["src/UnfoldedCircle.AdbTv/UnfoldedCircle.AdbTv.csproj", "UnfoldedCircle.AdbTv/"]
+COPY ["tools/appnames/appnames.dex", "/tools/appnames/appnames.dex"]
 RUN dotnet restore "UnfoldedCircle.AdbTv/UnfoldedCircle.AdbTv.csproj" --locked-mode
 COPY ./src .
 

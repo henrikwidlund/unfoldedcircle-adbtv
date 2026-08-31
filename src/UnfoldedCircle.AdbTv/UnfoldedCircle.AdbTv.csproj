@@ -40,6 +40,9 @@
         <Content Update="appsettings.Development.json">
           <DependentUpon>appsettings.json</DependentUpon>
         </Content>
+        <EmbeddedResource Include="../../tools/appnames/appnames.dex"
+                          LogicalName="UnfoldedCircle.AdbTv.AppNames.dex"
+                          Condition="Exists('$(MSBuildThisFileDirectory)../../tools/appnames/appnames.dex')" />
     </ItemGroup>
 
     <ItemGroup>

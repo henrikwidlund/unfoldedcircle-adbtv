@@ -13,7 +13,32 @@ env:
   IMAGE_NAME: henrikwidlund/unfoldedcircle-adbtv
 
 jobs:
+  generate_appnames_dex:
+    name: Generate Android app names DEX
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Generate Android app names DEX
+        shell: bash
+        run: bash ./tools/appnames/generate-appnames-dex.sh
+
+      - name: Upload generated DEX
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: appnames-dex
+          path: tools/appnames/appnames.dex
+          if-no-files-found: error
+          retention-days: 1
+
   build:
+    needs: generate_appnames_dex
     strategy:
       fail-fast: false
       matrix:
@@ -37,6 +62,12 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Download generated DEX
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: appnames-dex
+          path: tools/appnames
 
       - name: Prepare driver.json
         if: github.event_name != 'pull_request'
