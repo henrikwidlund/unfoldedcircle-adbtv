@@ -377,24 +377,26 @@ internal sealed partial class AdbWebSocketHandler(
         }
         catch (Exception e)
         {
-            _logger.LogWarning(e, "Failed to resolve Android application labels for {EntityId}", entityId);
+            _logger.FailedToResolveAndroidApplicationLabels(e, entityId);
         }
     }
 
     private void SetAppsCache(string baseEntityId, List<AppReference> appReferences)
     {
-        appReferences.Sort(static (left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.DisplayName, right.DisplayName));
-        var apps = appReferences.Select(static app => app.DisplayName).ToList();
+        var sortedAppReferences = appReferences
+            .OrderBy(static app => app.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var apps = sortedAppReferences.Select(static app => app.DisplayName).ToList();
         var aliases = new Dictionary<string, AppReference>(StringComparer.OrdinalIgnoreCase);
         var labelCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var app in appReferences)
+        foreach (var app in sortedAppReferences)
         {
             aliases[app.PackageName] = app;
             labelCounts[app.Label] = labelCounts.TryGetValue(app.Label, out var count) ? count + 1 : 1;
         }
 
-        foreach (var app in appReferences)
+        foreach (var app in sortedAppReferences)
         {
             if (labelCounts[app.Label] == 1)
                 aliases[app.Label] = app;
@@ -515,7 +517,7 @@ internal sealed partial class AdbWebSocketHandler(
         }
         catch (Exception e)
         {
-            _logger.LogWarning(e, "Failed to populate Android applications after power-on for {EntityId}", entityId);
+            _logger.FailedToPopulateAndroidApplicationsAfterPowerOn(e, entityId);
         }
     }
 
@@ -695,7 +697,7 @@ internal sealed partial class AdbWebSocketHandler(
         }
         catch (Exception e)
         {
-            _logger.LogWarning(e, "Failed to emit resolved Android application labels for {EntityId}", baseEntityId);
+            _logger.FailedToEmitResolvedAndroidApplicationLabels(e, baseEntityId);
         }
     }
 
@@ -841,7 +843,7 @@ internal sealed partial class AdbWebSocketHandler(
                 };
             }
 
-            RemoteStates[adbTvClientKey] = RemoteState.On;
+            RemoteStates[adbTvClientHolder.ClientKey] = RemoteState.On;
             return EntityCommandResult.PowerOn;
         }
     }
@@ -1268,7 +1270,7 @@ internal sealed partial class AdbWebSocketHandler(
                     {
                         Text = new ValueRegex
                         {
-                            RegEx =  AdbTvServerConstants.PortRegex,
+                            RegEx = AdbTvServerConstants.PortRegex,
                             Value = configurationItem?.Port.ToString(CultureInfo.InvariantCulture) ?? "5555"
                         }
                     },
