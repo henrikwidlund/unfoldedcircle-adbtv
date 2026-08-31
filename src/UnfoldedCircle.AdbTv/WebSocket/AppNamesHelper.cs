@@ -5,6 +5,9 @@ namespace UnfoldedCircle.AdbTv.WebSocket;
 internal static class AppNamesHelper
 {
     private const string ResourceName = "UnfoldedCircle.AdbTv.AppNames.dex";
+
+    // The helper is only a few KiB and may need to be uploaded to multiple devices. Keep the
+    // Base64 representation cached; the temporary byte[] used while loading is not retained.
     private static readonly Lazy<HelperData> Data = new(LoadHelperData);
 
     internal static string RemotePath => Data.Value.RemotePath;
