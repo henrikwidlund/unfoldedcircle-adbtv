@@ -843,7 +843,7 @@ internal sealed partial class AdbWebSocketHandler(
                 };
             }
 
-            RemoteStates[adbTvClientHolder.ClientKey] = RemoteState.On;
+            RemoteStates[adbTvClientKey] = RemoteState.On;
             return EntityCommandResult.PowerOn;
         }
     }
