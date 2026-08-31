@@ -1070,6 +1070,7 @@ internal sealed partial class AdbWebSocketHandler(
                 return RestoreResult.Failure;
             }
 
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract // source generated deserialize doesn't care about default values
             var restoredConfiguration = backupData.Configuration.GlobalConfiguration is null
                 ? backupData.Configuration with { GlobalConfiguration = new AdbGlobalConfiguration() }
                 : backupData.Configuration;
@@ -1469,15 +1470,15 @@ internal sealed partial class AdbWebSocketHandler(
         };
     }
 
-    private static ushort GetPollingIntervalSeconds(string? pollingIntervalValue, ushort fallback)
+    private static ushort GetPollingIntervalSeconds(string? pollingIntervalValue, ushort? fallback)
         => pollingIntervalValue is not null
             && ushort.TryParse(pollingIntervalValue, NumberFormatInfo.InvariantInfo, out var parsedPollingInterval)
                 ? GetPollingIntervalSeconds(parsedPollingInterval)
                 : GetPollingIntervalSeconds(fallback);
 
-    private static ushort GetPollingIntervalSeconds(ushort pollingIntervalSeconds)
+    private static ushort GetPollingIntervalSeconds(ushort? pollingIntervalSeconds)
         => Math.Clamp(
-            pollingIntervalSeconds,
+            pollingIntervalSeconds ?? 5,
             AdbTvServerConstants.MinPollingIntervalSeconds,
             AdbTvServerConstants.MaxPollingIntervalSeconds);
 
