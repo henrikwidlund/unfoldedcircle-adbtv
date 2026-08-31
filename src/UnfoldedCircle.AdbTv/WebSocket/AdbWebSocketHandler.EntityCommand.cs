@@ -6,7 +6,7 @@ namespace UnfoldedCircle.AdbTv.WebSocket;
 
 internal sealed partial class AdbWebSocketHandler
 {
-    private static (string Command, CommandType CommandType) GetMappedCommand(string? command, in Manufacturer? manufacturer)
+    private static (string Command, CommandType CommandType) GetMappedCommand(string? command, Manufacturer? manufacturer)
     {
         if (string.IsNullOrEmpty(command))
             return (string.Empty, CommandType.Unknown);
@@ -67,7 +67,7 @@ internal sealed partial class AdbWebSocketHandler
                     $"am start -a android.intent.action.VIEW -d content://android.media.tv/passthrough/com.tcl.tvinput%2F.TvPassThroughService%2FHW{command[8..]} -f 0x10000000",
                     CommandType.Raw),
                 _ when AppNames.AppNamesMap.TryGetValue(command, out var appName) => (appName, CommandType.App),
-                _ when TryExtractPackageName(command) is not null => (command, CommandType.App),
+                _ when TryExtractPackageName(command, out _) is { IsEmpty: false } => (command, CommandType.App),
                 _ when LooksLikePackageName(command) => (command, CommandType.App),
                 _ => (command, CommandType.Unknown)
             };
@@ -116,7 +116,7 @@ internal sealed partial class AdbWebSocketHandler
             _ => (string.Empty, CommandType.Unknown)
         };
 
-        static (string Command, CommandType CommandType) GetAppOrHdmiCommand(string? source, in Manufacturer manufacturer)
+        static (string Command, CommandType CommandType) GetAppOrHdmiCommand(string? source, Manufacturer manufacturer)
         {
             if (string.IsNullOrEmpty(source))
                 return (string.Empty, CommandType.Unknown);
@@ -132,7 +132,7 @@ internal sealed partial class AdbWebSocketHandler
         }
     }
 
-    private static (string Command, CommandType CommandType) GetHdmiCommand(in HdmiPort hdmiPort, in Manufacturer manufacturer)
+    private static (string Command, CommandType CommandType) GetHdmiCommand(HdmiPort hdmiPort, Manufacturer manufacturer)
     {
         var portNumber = hdmiPort switch
         {

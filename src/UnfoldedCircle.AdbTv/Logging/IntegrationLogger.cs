@@ -184,7 +184,7 @@ internal static partial class IntegrationLogger
 
     [LoggerMessage(EventId = 40, EventName = nameof(MdnsResolvedNewEndpoint), Level = LogLevel.Information,
         Message = "Resolved new adb-tls-connect endpoint for device GUID '{DeviceGuid}': {Host}:{Port}")]
-    public static partial void MdnsResolvedNewEndpoint(this ILogger logger, string deviceGuid, string host, in int port);
+    public static partial void MdnsResolvedNewEndpoint(this ILogger logger, string deviceGuid, string host, int port);
 
     [LoggerMessage(EventId = 41, EventName = nameof(MdnsResolveTimedOut), Level = LogLevel.Debug,
         Message = "mDNS resolution for device GUID '{DeviceGuid}' timed out or found nothing; falling back to last-known address.")]
@@ -192,7 +192,7 @@ internal static partial class IntegrationLogger
 
     [LoggerMessage(EventId = 42, EventName = nameof(PairingCodeSubmitted), Level = LogLevel.Information,
         Message = "[{WSId}] Wireless pairing code submitted for host '{Host}:{Port}'.")]
-    public static partial void PairingCodeSubmitted(this ILogger logger, string wsId, string host, in int port);
+    public static partial void PairingCodeSubmitted(this ILogger logger, string wsId, string host, int port);
 
     private static readonly Action<ILogger, string, Exception> PairingFailedAction = LoggerMessage.Define<string>(
         LogLevel.Warning,

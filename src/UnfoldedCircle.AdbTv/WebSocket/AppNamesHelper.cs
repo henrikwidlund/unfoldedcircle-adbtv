@@ -10,8 +10,8 @@ internal static class AppNamesHelper
     // Base64 representation cached; the temporary byte[] used while loading is not retained.
     private static readonly Lazy<HelperData> Data = new(LoadHelperData);
 
-    internal static string RemotePath => Data.Value.RemotePath;
-    internal static string DexBase64 => Data.Value.DexBase64;
+    internal static string RemotePath => Data.Value.HelperRemotePath;
+    internal static string DexBase64 => Data.Value.HelperDexBase64;
 
     private static HelperData LoadHelperData()
     {
@@ -27,5 +27,5 @@ internal static class AppNamesHelper
             Convert.ToBase64String(dex));
     }
 
-    private sealed record HelperData(string RemotePath, string DexBase64);
+    private sealed record HelperData(string HelperRemotePath, string HelperDexBase64);
 }

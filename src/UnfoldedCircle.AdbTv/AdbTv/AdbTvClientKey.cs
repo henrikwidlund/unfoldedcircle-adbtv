@@ -9,4 +9,4 @@ namespace UnfoldedCircle.AdbTv.AdbTv;
 /// (re)connect and only falls back to these values if that resolution fails.
 /// </summary>
 public readonly record struct AdbTvClientKey(
-    string IpAddress, string MacAddress, in int Port, in Manufacturer Manufacturer, in bool AllowReauth, string? PairedDeviceGuid = null);
+    string IpAddress, string MacAddress, int Port, Manufacturer Manufacturer, bool AllowReauth, string? PairedDeviceGuid = null);

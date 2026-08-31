@@ -163,33 +163,48 @@ internal sealed partial class AdbWebSocketHandler(
         if (string.IsNullOrWhiteSpace(appIdentifier))
             return null;
 
-        var value = appIdentifier.Trim();
+        var value = appIdentifier.AsMemory().Trim();
         var baseIdentifier = entityId.AsMemory().GetBaseIdentifier();
         var aliasesLookup = _entityIdAppAliasesMap.GetAlternateLookup<ReadOnlySpan<char>>();
 
-        if (aliasesLookup.TryGetValue(baseIdentifier.Span, out var aliases)
-            && aliases.TryGetValue(value, out var knownApp))
-            return knownApp;
-
-        // The canonical UI format is "Application name (package.name)". Accept it even if
-        // the app cache has not been populated yet.
-        var packageFromDisplayName = TryExtractPackageName(value);
-        if (packageFromDisplayName is not null)
+        if (aliasesLookup.TryGetValue(baseIdentifier.Span, out var aliases))
         {
-            if (aliases is not null && aliases.TryGetValue(packageFromDisplayName, out knownApp))
+            var aliasesAlt = aliases.GetAlternateLookup<ReadOnlySpan<char>>();
+            if (aliasesAlt.TryGetValue(value.Span, out var knownApp))
                 return knownApp;
 
-            var label = value[..value.LastIndexOf(" (", StringComparison.Ordinal)].Trim();
-            return new AppReference(label, packageFromDisplayName, value);
+            // The canonical UI format is "Application name (package.name)". Accept it even if
+            // the app cache has not been populated yet.
+            var packageFromDisplayName = TryExtractPackageName(value.Span, out var separatorIndex);
+            if (!packageFromDisplayName.IsEmpty)
+            {
+                if (aliasesAlt.TryGetValue(packageFromDisplayName, out knownApp))
+                    return knownApp;
+
+                var label = value.Span[..separatorIndex].Trim();
+                return new AppReference(label.ToString(), packageFromDisplayName.ToString(), value.ToString());
+            }
+
+            // Preserve backwards compatibility with callers that send a raw package identifier.
+            if (LooksLikePackageName(value.Span))
+            {
+                if (aliasesAlt.TryGetValue(value.Span, out knownApp))
+                    return knownApp;
+
+                return new AppReference(value.ToString(), value.ToString(), value.ToString());
+            }
         }
-
-        // Preserve backwards compatibility with callers that send a raw package identifier.
-        if (LooksLikePackageName(value))
+        else
         {
-            if (aliases is not null && aliases.TryGetValue(value, out knownApp))
-                return knownApp;
+            var packageFromDisplayName = TryExtractPackageName(value.Span, out var separatorIndex);
+            if (!packageFromDisplayName.IsEmpty)
+            {
+                var label = value.Span[..separatorIndex].Trim();
+                return new AppReference(label.ToString(), packageFromDisplayName.ToString(), value.ToString());
+            }
 
-            return new AppReference(value, value, value);
+            if (LooksLikePackageName(value.Span))
+                return new AppReference(value.ToString(), value.ToString(), value.ToString());
         }
 
         // A bare application name needs the dynamically discovered label cache. Bare labels are
@@ -197,15 +212,21 @@ internal sealed partial class AdbWebSocketHandler(
         if (!await PopulateApps(wsId, entityId, cancellationToken))
             return null;
 
+        // Labels resolve in the background after PopulateApps returns (see ResolveAppLabelsAsync).
+        // Wait for that pass so a bare label sent right after power-on doesn't fail spuriously.
+        if (_appLabelResolutionTasks.GetAlternateLookup<ReadOnlySpan<char>>().TryGetValue(baseIdentifier.Span, out var labelResolutionTask))
+            await labelResolutionTask.WaitAsync(cancellationToken);
+
         if (aliasesLookup.TryGetValue(baseIdentifier.Span, out aliases)
-            && aliases.TryGetValue(value, out knownApp))
-            return knownApp;
+            && aliases.GetAlternateLookup<ReadOnlySpan<char>>().TryGetValue(value.Span, out var resolvedApp))
+            return resolvedApp;
 
         return null;
     }
 
-    private static string? TryExtractPackageName(string value)
+    private static ReadOnlySpan<char> TryExtractPackageName(in ReadOnlySpan<char> value, out int labelEndIndex)
     {
+        labelEndIndex = -1;
         if (!value.EndsWith(')'))
             return null;
 
@@ -214,12 +235,27 @@ internal sealed partial class AdbWebSocketHandler(
             return null;
 
         var packageName = value[(separatorIndex + 2)..^1].Trim();
-        return LooksLikePackageName(packageName) ? packageName : null;
+        if (!LooksLikePackageName(packageName))
+            return null;
+
+        labelEndIndex = separatorIndex;
+        return packageName;
     }
 
-    private static bool LooksLikePackageName(string value)
-        => value.Contains('.', StringComparison.Ordinal)
-           && value.All(static c => char.IsLetterOrDigit(c) || c is '.' or '_');
+    private static bool LooksLikePackageName(in ReadOnlySpan<char> value)
+    {
+        return value.Contains('.') && OnlyValidChars(value);
+
+        static bool OnlyValidChars(in ReadOnlySpan<char> value)
+        {
+            foreach (var c in value)
+            {
+                if (!char.IsLetterOrDigit(c) && c is not '.' and not '_')
+                    return false;
+            }
+            return true;
+        }
+    }
 
     protected override async ValueTask<SelectCommandResult> OnSelectFirstLastCommandAsync(System.Net.WebSockets.WebSocket socket,
         SelectEntityCommandMsgData payload,
@@ -365,7 +401,7 @@ internal sealed partial class AdbWebSocketHandler(
             var appReferences = new List<AppReference>(packageNames.Count);
             foreach (var packageName in packageNames)
             {
-                var label = labelsByPackage.TryGetValue(packageName, out var resolvedLabel) ? resolvedLabel : packageName;
+                var label = labelsByPackage.GetValueOrDefault(packageName, packageName);
                 var displayName = label.Equals(packageName, StringComparison.OrdinalIgnoreCase) ? packageName : label;
                 appReferences.Add(new AppReference(label, packageName, displayName));
             }
@@ -399,8 +435,14 @@ internal sealed partial class AdbWebSocketHandler(
 
         foreach (var app in sortedAppReferences)
         {
-            if (labelCounts[app.Label] == 1)
-                aliases[app.Label] = app;
+            if (labelCounts[app.Label] != 1)
+                continue;
+
+            // Edge case where one app's package name alias matches another one's identifier
+            if (aliases.TryGetValue(app.Label, out var existing) && !ReferenceEquals(existing, app))
+                continue;
+
+            aliases[app.Label] = app;
         }
 
         _entityIdAppsMap[baseEntityId] = apps;
@@ -767,21 +809,21 @@ internal sealed partial class AdbWebSocketHandler(
             wsId, cancellationToken);
     }
 
-    private static State MapMediaPlayer(in PowerState power) => power switch
+    private static State MapMediaPlayer(PowerState power) => power switch
     {
         PowerState.On => State.On,
         PowerState.Off => State.Off,
         _ => State.Unknown
     };
 
-    private static RemoteState MapRemote(in PowerState power) => power switch
+    private static RemoteState MapRemote(PowerState power) => power switch
     {
         PowerState.On => RemoteState.On,
         PowerState.Off => RemoteState.Off,
         _ => RemoteState.Unknown
     };
 
-    private static SelectState MapSelect(in PowerState power) => power switch
+    private static SelectState MapSelect(PowerState power) => power switch
     {
         PowerState.On or PowerState.Off => SelectState.On,
         _ => SelectState.Unknown
