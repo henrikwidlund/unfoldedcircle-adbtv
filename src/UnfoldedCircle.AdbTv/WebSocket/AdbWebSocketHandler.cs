@@ -46,6 +46,7 @@ internal sealed partial class AdbWebSocketHandler(
     private readonly ConcurrentDictionary<string, List<string>> _entityIdAppsMap = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, Dictionary<string, AppReference>> _entityIdAppAliasesMap = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, string> _entityIdActiveAppMap = new(StringComparer.OrdinalIgnoreCase);
+    private volatile ushort _pollingIntervalSeconds = AdbTvServerConstants.DefaultPollingIntervalSeconds;
 
     private sealed record AppReference(string Label, string PackageName, string DisplayName);
 
@@ -548,7 +549,10 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, SubscribedEntitiesHolder subscribedEntitiesHolder, CancellationToken cancellationToken)
     {
-        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
+        _pollingIntervalSeconds = GetPollingIntervalSeconds(configuration.GlobalConfiguration.PollingIntervalSeconds);
+        var timerPollingIntervalSeconds = _pollingIntervalSeconds;
+        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(timerPollingIntervalSeconds));
         do
         {
             await Parallel.ForEachAsync(subscribedEntitiesHolder.SubscribedEntities, cancellationToken,
@@ -567,6 +571,11 @@ internal sealed partial class AdbWebSocketHandler(
                         _logger.FailureDuringEvent(e, wsId, group.Key);
                     }
                 });
+            if (timerPollingIntervalSeconds != _pollingIntervalSeconds)
+            {
+                timerPollingIntervalSeconds = _pollingIntervalSeconds;
+                periodicTimer.Period = TimeSpan.FromSeconds(timerPollingIntervalSeconds);
+            }
         } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
     }
 
@@ -974,10 +983,21 @@ internal sealed partial class AdbWebSocketHandler(
             && double.TryParse(maxWaitTimeValue, NumberStyles.Float, NumberFormatInfo.InvariantInfo, out var parsedMaxWaitTime)
             ? parsedMaxWaitTime
             : 9.5;
-        configuration = configuration with { GlobalConfiguration = configuration.GlobalConfiguration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime } };
+        var pollingIntervalSeconds = GetPollingIntervalSeconds(
+            payload.MsgData.InputValues.GetValueOrDefault(AdbTvServerConstants.PollingIntervalSecondsKey),
+            configuration.GlobalConfiguration.PollingIntervalSeconds);
+        configuration = configuration with
+        {
+            GlobalConfiguration = configuration.GlobalConfiguration with
+            {
+                MaxMessageHandlingWaitTimeInSeconds = maxWaitTime,
+                PollingIntervalSeconds = pollingIntervalSeconds
+            }
+        };
         configuration.Entities.Remove(configurationItem);
         configuration.Entities.Add(newConfigurationItem);
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
+        _pollingIntervalSeconds = pollingIntervalSeconds;
 
         var oldKey = new AdbTvClientKey(configurationItem.Host, configurationItem.MacAddress, configurationItem.Port, configurationItem.Manufacturer, configurationItem.AllowReauth, configurationItem.PairedDeviceGuid);
         var newKey = new AdbTvClientKey(newConfigurationItem.Host, newConfigurationItem.MacAddress, newConfigurationItem.Port, newConfigurationItem.Manufacturer, newConfigurationItem.AllowReauth, newConfigurationItem.PairedDeviceGuid);
@@ -1009,6 +1029,7 @@ internal sealed partial class AdbWebSocketHandler(
             }
 
             await _configurationService.UpdateConfigurationAsync(backupData.Configuration, cancellationToken);
+            _pollingIntervalSeconds = GetPollingIntervalSeconds(backupData.Configuration.GlobalConfiguration.PollingIntervalSeconds);
             await _adbTvClientFactory.ReplacePrivateKeyAsync(Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
             return RestoreResult.Success;
         }
@@ -1034,6 +1055,9 @@ internal sealed partial class AdbWebSocketHandler(
             && double.TryParse(maxWaitTimeValue, NumberStyles.Float, NumberFormatInfo.InvariantInfo, out var parsedMaxWaitTime)
             ? parsedMaxWaitTime
             : 9.5;
+        var pollingIntervalSeconds = GetPollingIntervalSeconds(
+            payload.MsgData.InputValues.GetValueOrDefault(AdbTvServerConstants.PollingIntervalSecondsKey),
+            configuration.GlobalConfiguration.PollingIntervalSeconds);
         var manufacturer = payload.MsgData.InputValues.TryGetValue(AdbTvServerConstants.Manufacturer, out var manufacturerValue)
             && Manufacturer.TryParse(manufacturerValue, out var parsedManufacturer)
             ? parsedManufacturer
@@ -1094,7 +1118,14 @@ internal sealed partial class AdbWebSocketHandler(
             }
         }
 
-        configuration = configuration with { GlobalConfiguration = configuration.GlobalConfiguration with { MaxMessageHandlingWaitTimeInSeconds = maxWaitTime } };
+        configuration = configuration with
+        {
+            GlobalConfiguration = configuration.GlobalConfiguration with
+            {
+                MaxMessageHandlingWaitTimeInSeconds = maxWaitTime,
+                PollingIntervalSeconds = pollingIntervalSeconds
+            }
+        };
 
         var entity = configuration.Entities.FirstOrDefault(x => x.EntityId.Equals(macAddress, StringComparison.OrdinalIgnoreCase));
         AdbTvClientKey? oldKey = null;
@@ -1132,6 +1163,7 @@ internal sealed partial class AdbWebSocketHandler(
         configuration.Entities.Add(entity);
 
         await _configurationService.UpdateConfigurationAsync(configuration, cancellationToken);
+        _pollingIntervalSeconds = pollingIntervalSeconds;
 
         if (oldKey is { } oldKeyValue)
         {
@@ -1186,13 +1218,19 @@ internal sealed partial class AdbWebSocketHandler(
     protected override async ValueTask<SettingsPage> CreateNewEntitySettingsPageAsync(CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
-        return CreateSettingsPage(null, configuration.GlobalConfiguration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5);
+        return CreateSettingsPage(
+            null,
+            configuration.GlobalConfiguration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5,
+            GetPollingIntervalSeconds(configuration.GlobalConfiguration.PollingIntervalSeconds));
     }
 
     protected override async ValueTask<SettingsPage> CreateReconfigureEntitySettingsPageAsync(AdbConfigurationItem adbConfigurationItem, CancellationToken cancellationToken)
     {
         var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
-        var settingsPage = CreateSettingsPage(adbConfigurationItem, configuration.GlobalConfiguration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5);
+        var settingsPage = CreateSettingsPage(
+            adbConfigurationItem,
+            configuration.GlobalConfiguration.MaxMessageHandlingWaitTimeInSeconds ?? 9.5,
+            GetPollingIntervalSeconds(configuration.GlobalConfiguration.PollingIntervalSeconds));
         return settingsPage with
         {
             Settings =
@@ -1204,7 +1242,7 @@ internal sealed partial class AdbWebSocketHandler(
         };
     }
 
-    private static SettingsPage CreateSettingsPage(AdbConfigurationItem? configurationItem, double maxMessageHandlingWaitTimeInSeconds)
+    private static SettingsPage CreateSettingsPage(AdbConfigurationItem? configurationItem, double maxMessageHandlingWaitTimeInSeconds, ushort pollingIntervalSeconds)
     {
         return new SettingsPage
         {
@@ -1354,6 +1392,24 @@ internal sealed partial class AdbWebSocketHandler(
                 },
                 new Setting
                 {
+                    Id = AdbTvServerConstants.PollingIntervalSecondsKey,
+                    Field = new SettingTypeNumber
+                    {
+                        Number = new SettingTypeNumberInner
+                        {
+                            Value = pollingIntervalSeconds,
+                            Min = AdbTvServerConstants.MinPollingIntervalSeconds,
+                            Max = AdbTvServerConstants.MaxPollingIntervalSeconds,
+                            Decimals = 0
+                        }
+                    },
+                    Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["en"] = "ADB state polling interval in seconds (global setting)"
+                    }
+                },
+                new Setting
+                {
                     Id = AdbTvServerConstants.AllowReauthKey,
                     Field = new SettingTypeCheckbox
                     {
@@ -1367,6 +1423,18 @@ internal sealed partial class AdbWebSocketHandler(
             ]
         };
     }
+
+    private static ushort GetPollingIntervalSeconds(string? pollingIntervalValue, ushort fallback)
+        => pollingIntervalValue is not null
+            && ushort.TryParse(pollingIntervalValue, NumberFormatInfo.InvariantInfo, out var parsedPollingInterval)
+                ? GetPollingIntervalSeconds(parsedPollingInterval)
+                : GetPollingIntervalSeconds(fallback);
+
+    private static ushort GetPollingIntervalSeconds(ushort pollingIntervalSeconds)
+        => Math.Clamp(
+            pollingIntervalSeconds,
+            AdbTvServerConstants.MinPollingIntervalSeconds,
+            AdbTvServerConstants.MaxPollingIntervalSeconds);
 
     protected override FrozenSet<EntityType> SupportedEntityTypes { get; } = [EntityType.MediaPlayer, EntityType.Remote, EntityType.Select];
 }
