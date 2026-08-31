@@ -1070,8 +1070,11 @@ internal sealed partial class AdbWebSocketHandler(
                 return RestoreResult.Failure;
             }
 
-            await _configurationService.UpdateConfigurationAsync(backupData.Configuration, cancellationToken);
-            _pollingIntervalSeconds = GetPollingIntervalSeconds(backupData.Configuration.GlobalConfiguration.PollingIntervalSeconds);
+            var restoredConfiguration = backupData.Configuration.GlobalConfiguration is null
+                ? backupData.Configuration with { GlobalConfiguration = new AdbGlobalConfiguration() }
+                : backupData.Configuration;
+            await _configurationService.UpdateConfigurationAsync(restoredConfiguration, cancellationToken);
+            _pollingIntervalSeconds = GetPollingIntervalSeconds(restoredConfiguration.GlobalConfiguration.PollingIntervalSeconds);
             await _adbTvClientFactory.ReplacePrivateKeyAsync(Convert.FromBase64String(backupData.PrivateKey), cancellationToken);
             return RestoreResult.Success;
         }
