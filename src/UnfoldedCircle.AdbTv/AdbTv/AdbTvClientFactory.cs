@@ -11,7 +11,7 @@ using UnfoldedCircle.AdbTv.Logging;
 
 namespace UnfoldedCircle.AdbTv.AdbTv;
 
-public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFactory loggerFactory, AdbMdnsDiscovery adbMdnsDiscovery)
+public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFactory loggerFactory, AdbMdnsDiscovery adbMdnsDiscovery) : IDisposable, IAsyncDisposable
 {
     private readonly ILogger<AdbTvClientFactory> _logger = logger;
     private readonly AdbMdnsDiscovery _adbMdnsDiscovery = adbMdnsDiscovery;
@@ -394,5 +394,61 @@ public class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILoggerFacto
         var fileName = Path.GetFileName(path);
         return !string.Equals(fileName, "adbkey", StringComparison.Ordinal) &&
                string.IsNullOrEmpty(Path.GetExtension(fileName));
+    }
+
+    public void Dispose()
+    {
+        AuthKeyLock.Dispose();
+
+        foreach (var keyValuePair in Clients)
+        {
+            try
+            {
+                keyValuePair.Value.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // don't throw in dispose
+            }
+        }
+        foreach (var keyValuePair in ClientSemaphores)
+        {
+            try
+            {
+                keyValuePair.Value.Dispose();
+            }
+            catch
+            {
+                // don't throw in dispose
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        AuthKeyLock.Dispose();
+        foreach (var keyValuePair in Clients)
+        {
+            try
+            {
+                await keyValuePair.Value.DisposeAsync();
+            }
+            catch
+            {
+                // don't throw in dispose
+            }
+        }
+
+        foreach (var keyValuePair in ClientSemaphores)
+        {
+            try
+            {
+                keyValuePair.Value.Dispose();
+            }
+            catch
+            {
+                // don't throw in dispose
+            }
+        }
     }
 }

@@ -32,9 +32,9 @@
       },
       "Theodicean.SharpAdb": {
         "type": "Direct",
-        "requested": "[0.0.5, )",
-        "resolved": "0.0.5",
-        "contentHash": "qOoBnYldRXD8Zreh3P6OLZ1HwU5tUz4VCukyC0cKXyK/MZr1w9FD7av7wp4fUSjQH9vZcvJewGOfEMpztKeoSg==",
+        "requested": "[0.0.6, )",
+        "resolved": "0.0.6",
+        "contentHash": "TpnKzrnrQNHtzPvIeuK7Zr0fxQ/ex8da5rgbW9HbDIQgGp8l8WqeVr+mBfeCIClHEl1p4sAek1uYEjQXH9w3rg==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.7.0"
         }
