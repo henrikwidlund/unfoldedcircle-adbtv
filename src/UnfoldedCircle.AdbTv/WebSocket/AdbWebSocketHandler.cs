@@ -640,9 +640,28 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationToken cancellationToken)
     {
         var holder = await TryGetAdbTvClientHolderAsync(wsId, baseEntityId, cancellationToken);
-        var power = holder is null
-            ? PowerState.Unknown
-            : await GetPowerState(holder, cancellationToken);
+        PowerState power;
+        if (holder is null)
+        {
+            power = PowerState.Unknown;
+        }
+        else
+        {
+            try
+            {
+                power = await GetPowerState(holder, cancellationToken);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                // Connection can fault mid-command - evict and retry once now instead of waiting for next poll tick.
+                _logger.PowerStateQueryFailedReconnecting(e, wsId, baseEntityId);
+                await _adbTvClientFactory.TryRemoveClientAsync(holder.ClientKey);
+                holder = await TryGetAdbTvClientHolderAsync(wsId, baseEntityId, cancellationToken);
+                power = holder is null
+                    ? PowerState.Unknown
+                    : await GetPowerState(holder, cancellationToken);
+            }
+        }
 
         var powerChanged = forceEmit
             || !_reportedPowerStates.TryGetValue(baseEntityId, out var previousPower)

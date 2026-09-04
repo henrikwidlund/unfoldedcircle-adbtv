@@ -229,4 +229,8 @@ internal static partial class IntegrationLogger
     [LoggerMessage(EventId = 48, EventName = nameof(FailedToEmitResolvedAndroidApplicationLabels), Level = LogLevel.Warning,
         Message = "Failed to emit resolved Android application labels for {EntityId}")]
     public static partial void FailedToEmitResolvedAndroidApplicationLabels(this ILogger logger, Exception exception, string entityId);
+
+    [LoggerMessage(EventId = 49, EventName = nameof(PowerStateQueryFailedReconnecting), Level = LogLevel.Warning,
+        Message = "[{WSId}] Power state query failed for '{EntityId}'; reconnecting and retrying once.")]
+    public static partial void PowerStateQueryFailedReconnecting(this ILogger logger, Exception exception, string wsId, string entityId);
 }
