@@ -4,233 +4,137 @@ namespace UnfoldedCircle.AdbTv.Logging;
 
 internal static partial class IntegrationLogger
 {
-    [LoggerMessage(EventId = 1, EventName = nameof(DeviceNotOnline), Level = LogLevel.Warning,
-        Message = "Device {ClientKey} is not online. Last connection error was '{ConnectionError}'.")]
+    [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Device {ClientKey} is not online. Last connection error was '{ConnectionError}'.")]
     public static partial void DeviceNotOnline(this ILogger logger, in AdbTvClientKey clientKey, string? connectionError);
 
-    private static readonly Action<ILogger, AdbTvClientKey, Exception> FailedToCreateClientAction = LoggerMessage.Define<AdbTvClientKey>(
-        LogLevel.Error,
-        new EventId(2, nameof(FailedToCreateClient)),
-        "Failed to create client {ClientKey}.");
+    [LoggerMessage(EventId = 2, Level = LogLevel.Error, Message = "Failed to create client {ClientKey}.")]
+    public static partial void FailedToCreateClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey);
 
-    public static void FailedToCreateClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey) =>
-        FailedToCreateClientAction(logger, clientKey, exception);
+    [LoggerMessage(EventId = 3, Level = LogLevel.Error, Message = "Failed to remove client {ClientKey}")]
+    public static partial void FailedToRemoveClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey);
 
-    private static readonly Action<ILogger, AdbTvClientKey, Exception> FailedToRemoveClientAction = LoggerMessage.Define<AdbTvClientKey>(
-        LogLevel.Error,
-        new EventId(3, nameof(FailedToRemoveClient)),
-        "Failed to remove client {ClientKey}");
-
-    public static void FailedToRemoveClient(this ILogger logger, Exception exception, in AdbTvClientKey clientKey) =>
-        FailedToRemoveClientAction(logger, clientKey, exception);
-
-    [LoggerMessage(EventId = 4, EventName = nameof(NoConfigurationsFound), Level = LogLevel.Information,
-        Message = "[{WSId}] WS: No configurations found")]
+    [LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "[{WSId}] WS: No configurations found")]
     public static partial void NoConfigurationsFound(this ILogger logger, string wsId);
 
-    [LoggerMessage(EventId = 5, EventName = nameof(NoConfigurationFoundForIdentifier), Level = LogLevel.Information,
-        Message = "[{WSId}] WS: No configuration found for identifier '{Identifier}'")]
+    [LoggerMessage(EventId = 5, Level = LogLevel.Information, Message = "[{WSId}] WS: No configuration found for identifier '{Identifier}'")]
     public static partial void NoConfigurationFoundForIdentifier(this ILogger logger, string wsId, string? identifier);
 
-    private static readonly Action<ILogger, string, string?, Exception> FailedToGetAdbTvClientAction = LoggerMessage.Define<string, string?>(
-        LogLevel.Error,
-        new EventId(8, nameof(FailedToGetAdbTvClient)),
-        "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}'");
+    [LoggerMessage(EventId = 8, Level = LogLevel.Error, Message = "[{WSId}] WS: Failed to get ADB TV client for identifier '{Identifier}'")]
+    public static partial void FailedToGetAdbTvClient(this ILogger logger, Exception exception, string wsId, string? identifier);
 
-    public static void FailedToGetAdbTvClient(this ILogger logger, Exception exception, string wsId, string? identifier) =>
-        FailedToGetAdbTvClientAction(logger, wsId, identifier, exception);
+    [LoggerMessage(EventId = 9, Level = LogLevel.Error, Message = "[{WSId}] WS: Failed to check if client is approved for entity ID '{EntityId}'")]
+    public static partial void FailedToCheckClientApproved(this ILogger logger, Exception exception, string wsId, string entityId);
 
-    private static readonly Action<ILogger, string, string, Exception> FailedToCheckClientApprovedAction = LoggerMessage.Define<string, string>(
-        LogLevel.Error,
-        new EventId(9, nameof(FailedToCheckClientApproved)),
-        "[{WSId}] WS: Failed to check if client is approved for entity ID '{EntityId}'");
-
-    public static void FailedToCheckClientApproved(this ILogger logger, Exception exception, string wsId, string entityId) =>
-        FailedToCheckClientApprovedAction(logger, wsId, entityId, exception);
-
-    [LoggerMessage(EventId = 10, EventName = nameof(CouldNotFindAdbClient), Level = LogLevel.Warning,
-        Message = "[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'")]
+    [LoggerMessage(EventId = 10, Level = LogLevel.Warning, Message = "[{WSId}] WS: Could not find ADB client for entity ID '{EntityId}'")]
     public static partial void CouldNotFindAdbClient(this ILogger logger, string wsId, in ReadOnlyMemory<char> entityId);
 
-    [LoggerMessage(EventId = 12, EventName = nameof(UnknownCommand), Level = LogLevel.Warning,
-        Message = "Unknown command '{Command}'")]
+    [LoggerMessage(EventId = 12, Level = LogLevel.Warning, Message = "Unknown command '{Command}'")]
     public static partial void UnknownCommand(this ILogger logger, string command);
 
-    [LoggerMessage(EventId = 13, EventName = nameof(AddingConfigurationForDevice), Level = LogLevel.Information,
-        Message = "Adding configuration for device ID '{EntityId}'")]
+    [LoggerMessage(EventId = 13, Level = LogLevel.Information, Message = "Adding configuration for device ID '{EntityId}'")]
     public static partial void AddingConfigurationForDevice(this ILogger logger, string entityId);
 
-    [LoggerMessage(EventId = 14, EventName = nameof(UpdatingConfigurationForDevice), Level = LogLevel.Information,
-        Message = "Updating configuration for device ID '{EntityId}'")]
+    [LoggerMessage(EventId = 14, Level = LogLevel.Information, Message = "Updating configuration for device ID '{EntityId}'")]
     public static partial void UpdatingConfigurationForDevice(this ILogger logger, string entityId);
 
-    private static readonly Action<ILogger, Exception> ActionFailedWillRetryAction = LoggerMessage.Define(
-        LogLevel.Warning,
-        new EventId(15, nameof(ActionFailedWillRetry)),
-        "Action failed, will retry once.");
+    [LoggerMessage(EventId = 15, Level = LogLevel.Warning, Message = "Action failed, will retry once.")]
+    public static partial void ActionFailedWillRetry(this ILogger logger, Exception exception);
 
-    public static void ActionFailedWillRetry(this ILogger logger, Exception exception) =>
-        ActionFailedWillRetryAction(logger, exception);
+    [LoggerMessage(EventId = 16, Level = LogLevel.Error, Message = "[{WSId}] Failure during event for {Key}.")]
+    public static partial void FailureDuringEvent(this ILogger logger, Exception exception, string wsId, string key);
 
-    private static readonly Action<ILogger, string, string, Exception> FailureDuringEventAction = LoggerMessage.Define<string, string>(
-        LogLevel.Error,
-        new EventId(16, nameof(FailureDuringEvent)),
-        "[{WSId}] Failure during event for {Key}.");
-
-    public static void FailureDuringEvent(this ILogger logger, Exception exception, string wsId, string key) =>
-        FailureDuringEventAction(logger, wsId, key, exception);
-
-    [LoggerMessage(EventId = 17, EventName = nameof(TimeoutWaitingForSemaphore), Level = LogLevel.Warning,
-        Message = "Failed to acquire semaphore for client {ClientKey} within timeout.")]
+    [LoggerMessage(EventId = 17, Level = LogLevel.Warning, Message = "Failed to acquire semaphore for client {ClientKey} within timeout.")]
     public static partial void TimeoutWaitingForSemaphore(this ILogger logger, in AdbTvClientKey clientKey);
 
-    private static readonly Action<ILogger, Exception> ActionFailedWillNotRetryAction = LoggerMessage.Define(
-        LogLevel.Warning,
-        new EventId(18, nameof(ActionFailedWillNotRetry)),
-        "Action failed, will not retry.");
+    [LoggerMessage(EventId = 18, Level = LogLevel.Warning, Message = "Action failed, will not retry.")]
+    public static partial void ActionFailedWillNotRetry(this ILogger logger, Exception exception);
 
-    public static void ActionFailedWillNotRetry(this ILogger logger, Exception exception) =>
-        ActionFailedWillNotRetryAction(logger, exception);
-
-    [LoggerMessage(EventId = 19, EventName = nameof(AdbPrivateKeyNotFoundForBackup), Level = LogLevel.Warning,
-        Message = "ADB private key not found for backup at path '{PrivateKeyPath}'.")]
+    [LoggerMessage(EventId = 19, Level = LogLevel.Warning, Message = "ADB private key not found for backup at path '{PrivateKeyPath}'.")]
     public static partial void AdbPrivateKeyNotFoundForBackup(this ILogger logger, string privateKeyPath);
 
-    [LoggerMessage(EventId = 21, EventName = nameof(BackupDataNullDuringRestore), Level = LogLevel.Error,
-        Message = "[{WSId}] BackupData null during restore.")]
+    [LoggerMessage(EventId = 21, Level = LogLevel.Error, Message = "[{WSId}] BackupData null during restore.")]
     public static partial void BackupDataNullDuringRestore(this ILogger logger, string wsId);
 
-    private static readonly Action<ILogger, string, Exception> ExceptionDuringRestoreAction = LoggerMessage.Define<string>(
-        LogLevel.Error,
-        new EventId(22, nameof(ExceptionDuringRestore)),
-        "[{WSId}] Exception during restore.");
+    [LoggerMessage(EventId = 22, Level = LogLevel.Error, Message = "[{WSId}] Exception during restore.")]
+    public static partial void ExceptionDuringRestore(this ILogger logger, Exception exception, string wsId);
 
-    public static void ExceptionDuringRestore(this ILogger logger, Exception exception, string wsId) =>
-        ExceptionDuringRestoreAction(logger, wsId, exception);
-
-    [LoggerMessage(EventId = 23, EventName = nameof(AdbTvClientKeyNotFound), Level = LogLevel.Warning,
-        Message = "[{WSId}] Could not find AdbTvClientKey for entity ID '{EntityId}'")]
+    [LoggerMessage(EventId = 23, Level = LogLevel.Warning, Message = "[{WSId}] Could not find AdbTvClientKey for entity ID '{EntityId}'")]
     public static partial void AdbTvClientKeyNotFound(this ILogger logger, string wsId, string entityId);
 
-    [LoggerMessage(EventId = 25, EventName = nameof(AdbTvClientHolderNotFound), Level = LogLevel.Warning,
-        Message = "[{WSId}] Could not find AdbTvClientHolder for entity ID '{EntityId}'")]
+    [LoggerMessage(EventId = 25, Level = LogLevel.Warning, Message = "[{WSId}] Could not find AdbTvClientHolder for entity ID '{EntityId}'")]
     public static partial void AdbTvClientHolderNotFound(this ILogger logger, string wsId, string entityId);
 
-    [LoggerMessage(EventId = 26, EventName = nameof(SelectFirstLastNoAppsFound), Level = LogLevel.Warning,
-        Message = "[{WSId}] Select first/last app for entity ID '{EntityId}' failed because no apps were found.")]
+    [LoggerMessage(EventId = 26, Level = LogLevel.Warning, Message = "[{WSId}] Select first/last app for entity ID '{EntityId}' failed because no apps were found.")]
     public static partial void SelectFirstLastNoAppsFound(this ILogger logger, string wsId, string entityId);
 
-    [LoggerMessage(EventId = 27, EventName = nameof(PopulateAppsYieldedNoApps), Level = LogLevel.Warning,
-        Message = "[{WSId}] Populate apps for entity ID '{EntityId}' yielded no apps.")]
+    [LoggerMessage(EventId = 27, Level = LogLevel.Warning, Message = "[{WSId}] Populate apps for entity ID '{EntityId}' yielded no apps.")]
     public static partial void PopulateAppsYieldedNoApps(this ILogger logger, string wsId, string entityId);
 
-    [LoggerMessage(EventId = 28, EventName = nameof(SelectNextPreviousNoAppsFound), Level = LogLevel.Warning,
-        Message = "[{WSId}] Select next/previous app for entity ID '{EntityId}' failed because no apps were found.")]
+    [LoggerMessage(EventId = 28, Level = LogLevel.Warning, Message = "[{WSId}] Select next/previous app for entity ID '{EntityId}' failed because no apps were found.")]
     public static partial void SelectNextPreviousNoAppsFound(this ILogger logger, string wsId, string entityId);
 
-    [LoggerMessage(EventId = 29, EventName = nameof(SelectNextPreviousNoAppsOutOfBounds), Level = LogLevel.Warning,
+    [LoggerMessage(EventId = 29, Level = LogLevel.Warning,
         Message = "[{WSId}] Select next/previous app for entity ID '{EntityId}' failed because the next index {NextIndex} is out of bounds for apps count {AppsCount}.")]
     public static partial void SelectNextPreviousNoAppsOutOfBounds(this ILogger logger, string wsId, string entityId, int nextIndex, int appsCount);
 
-    [LoggerMessage(EventId = 30, EventName = nameof(DeviceNotOnlineDuringSetupResult), Level = LogLevel.Warning,
-        Message = "[{WSId}] Device for entity ID '{EntityId}' is not online.")]
+    [LoggerMessage(EventId = 30, Level = LogLevel.Warning, Message = "[{WSId}] Device for entity ID '{EntityId}' is not online.")]
     public static partial void DeviceNotOnlineDuringSetupResult(this ILogger logger, string wsId, string entityId);
 
-    [LoggerMessage(EventId = 31, EventName = nameof(FailedToAcquireSemaphoreForPopulateApps), Level = LogLevel.Warning,
-        Message = "[{WSId}] Failed to acquire semaphore for populating apps for entity ID '{EntityId}' within timeout.")]
+    [LoggerMessage(EventId = 31, Level = LogLevel.Warning, Message = "[{WSId}] Failed to acquire semaphore for populating apps for entity ID '{EntityId}' within timeout.")]
     public static partial void FailedToAcquireSemaphoreForPopulateApps(this ILogger logger, string wsId, string entityId);
 
-    private static readonly Action<ILogger, string, string, Exception> FailureDuringSubscribeEventsAction = LoggerMessage.Define<string, string>(
-        LogLevel.Warning,
-        new EventId(32, nameof(FailureDuringSubscribeEvents)),
-        "[{WSId}] Failure during subscribe events for entity ID '{EntityId}'.");
+    [LoggerMessage(EventId = 32, Level = LogLevel.Warning, Message = "[{WSId}] Failure during subscribe events for entity ID '{EntityId}'.")]
+    public static partial void FailureDuringSubscribeEvents(this ILogger logger, Exception exception, string wsId, string entityId);
 
-    public static void FailureDuringSubscribeEvents(this ILogger logger, Exception exception, string wsId, string entityId) =>
-        FailureDuringSubscribeEventsAction(logger, wsId, entityId, exception);
-
-    [LoggerMessage(EventId = 33, EventName = nameof(CreatingNewKey), Level = LogLevel.Information, Message = "Creating new key.")]
+    [LoggerMessage(EventId = 33, Level = LogLevel.Information, Message = "Creating new key.")]
     public static partial void CreatingNewKey(this ILogger logger);
 
-    [LoggerMessage(EventId = 34, EventName = nameof(CreatedNewKey), Level = LogLevel.Information, Message = "Created new key.")]
+    [LoggerMessage(EventId = 34, Level = LogLevel.Information, Message = "Created new key.")]
     public static partial void CreatedNewKey(this ILogger logger);
 
-    [LoggerMessage(EventId = 35, EventName = nameof(FailedToStartApp), Level = LogLevel.Warning,
-        Message = "[{WSId}] Failed to start app for entity ID '{EntityId}': '{AppIdentifier}'.")]
+    [LoggerMessage(EventId = 35, Level = LogLevel.Warning, Message = "[{WSId}] Failed to start app for entity ID '{EntityId}': '{AppIdentifier}'.")]
     public static partial void FailedToStartApp(this ILogger logger, string wsId, string entityId, string appIdentifier);
 
-    [LoggerMessage(EventId = 36, EventName = nameof(RawCommandFailed), Level = LogLevel.Warning,
+    [LoggerMessage(EventId = 36, Level = LogLevel.Warning,
         Message = "Raw shell command failed for client {ClientKey}: '{Command}'. Error was: {Error}")]
     public static partial void RawCommandFailed(this ILogger logger, in AdbTvClientKey clientKey, string command, string error);
 
-    [LoggerMessage(EventId = 37, EventName = nameof(AppLaunchFailed), Level = LogLevel.Warning,
-        Message = "App launch failed for client {ClientKey}: '{Command}'. Failure reason: {FailureReason}")]
+    [LoggerMessage(EventId = 37, Level = LogLevel.Warning, Message = "App launch failed for client {ClientKey}: '{Command}'. Failure reason: {FailureReason}")]
     public static partial void AppLaunchFailed(this ILogger logger, in AdbTvClientKey clientKey, string command, string? failureReason);
 
-    private static readonly Action<ILogger, Exception> FailedToSendWakeOnLanAction = LoggerMessage.Define(
-        LogLevel.Warning,
-        new EventId(38, nameof(FailedToSendWakeOnLan)),
-        "Failed to send Wake-on-LAN packet.");
+    [LoggerMessage(EventId = 38, Level = LogLevel.Warning, Message = "Failed to send Wake-on-LAN packet.")]
+    public static partial void FailedToSendWakeOnLan(this ILogger logger, Exception exception);
 
-    public static void FailedToSendWakeOnLan(this ILogger logger, Exception exception) =>
-        FailedToSendWakeOnLanAction(logger, exception);
+    [LoggerMessage(EventId = 39, Level = LogLevel.Warning, Message = "Failed to resolve current adb-tls-connect port via mDNS for device GUID '{DeviceGuid}'.")]
+    public static partial void MdnsResolveFailed(this ILogger logger, Exception exception, string deviceGuid);
 
-    private static readonly Action<ILogger, string, Exception> MdnsResolveFailedAction = LoggerMessage.Define<string>(
-        LogLevel.Warning,
-        new EventId(39, nameof(MdnsResolveFailed)),
-        "Failed to resolve current adb-tls-connect port via mDNS for device GUID '{DeviceGuid}'.");
-
-    public static void MdnsResolveFailed(this ILogger logger, Exception exception, string deviceGuid) =>
-        MdnsResolveFailedAction(logger, deviceGuid, exception);
-
-    [LoggerMessage(EventId = 40, EventName = nameof(MdnsResolvedNewEndpoint), Level = LogLevel.Information,
-        Message = "Resolved new adb-tls-connect endpoint for device GUID '{DeviceGuid}': {Host}:{Port}")]
+    [LoggerMessage(EventId = 40, Level = LogLevel.Information, Message = "Resolved new adb-tls-connect endpoint for device GUID '{DeviceGuid}': {Host}:{Port}")]
     public static partial void MdnsResolvedNewEndpoint(this ILogger logger, string deviceGuid, string host, int port);
 
-    [LoggerMessage(EventId = 41, EventName = nameof(MdnsResolveTimedOut), Level = LogLevel.Debug,
-        Message = "mDNS resolution for device GUID '{DeviceGuid}' timed out or found nothing; falling back to last-known address.")]
+    [LoggerMessage(EventId = 41, Level = LogLevel.Debug, Message = "mDNS resolution for device GUID '{DeviceGuid}' timed out or found nothing; falling back to last-known address.")]
     public static partial void MdnsResolveTimedOut(this ILogger logger, string deviceGuid);
 
-    [LoggerMessage(EventId = 42, EventName = nameof(PairingCodeSubmitted), Level = LogLevel.Information,
-        Message = "[{WSId}] Wireless pairing code submitted for host '{Host}:{Port}'.")]
+    [LoggerMessage(EventId = 42, Level = LogLevel.Information, Message = "[{WSId}] Wireless pairing code submitted for host '{Host}:{Port}'.")]
     public static partial void PairingCodeSubmitted(this ILogger logger, string wsId, string host, int port);
 
-    private static readonly Action<ILogger, string, Exception> PairingFailedAction = LoggerMessage.Define<string>(
-        LogLevel.Warning,
-        new EventId(43, nameof(PairingFailed)),
-        "[{WSId}] Wireless pairing failed.");
+    [LoggerMessage(EventId = 43, Level = LogLevel.Warning, Message = "[{WSId}] Wireless pairing failed.")]
+    public static partial void PairingFailed(this ILogger logger, Exception exception, string wsId);
 
-    public static void PairingFailed(this ILogger logger, Exception exception, string wsId) =>
-        PairingFailedAction(logger, wsId, exception);
+    [LoggerMessage(EventId = 44, Level = LogLevel.Warning, Message = "Initial adb-tls-connect mDNS discovery query failed on startup.")]
+    public static partial void MdnsListenerStartupQueryFailed(this ILogger logger, Exception exception);
 
-    private static readonly Action<ILogger, Exception> MdnsListenerStartupQueryFailedAction = LoggerMessage.Define(
-        LogLevel.Warning,
-        new EventId(44, nameof(MdnsListenerStartupQueryFailed)),
-        "Initial adb-tls-connect mDNS discovery query failed on startup.");
+    [LoggerMessage(EventId = 45, Level = LogLevel.Warning, Message = "ADB auth key file at '{PrivateKeyPath}' exists but failed to parse; regenerating a new key.")]
+    public static partial void CorruptAuthKeyFileRegenerating(this ILogger logger, Exception exception, string privateKeyPath);
 
-    public static void MdnsListenerStartupQueryFailed(this ILogger logger, Exception exception) =>
-        MdnsListenerStartupQueryFailedAction(logger, exception);
-
-    private static readonly Action<ILogger, string, Exception> CorruptAuthKeyFileRegeneratingAction = LoggerMessage.Define<string>(
-        LogLevel.Warning,
-        new EventId(45, nameof(CorruptAuthKeyFileRegenerating)),
-        "ADB auth key file at '{PrivateKeyPath}' exists but failed to parse; regenerating a new key.");
-
-    public static void CorruptAuthKeyFileRegenerating(this ILogger logger, Exception exception, string privateKeyPath) =>
-        CorruptAuthKeyFileRegeneratingAction(logger, privateKeyPath, exception);
-
-    [LoggerMessage(EventId = 46, EventName = nameof(FailedToResolveAndroidApplicationLabels), Level = LogLevel.Warning,
-        Message = "Failed to resolve Android application labels for {EntityId}")]
+    [LoggerMessage(EventId = 46, Level = LogLevel.Warning, Message = "Failed to resolve Android application labels for {EntityId}")]
     public static partial void FailedToResolveAndroidApplicationLabels(this ILogger logger, Exception exception, string entityId);
 
-    [LoggerMessage(EventId = 47, EventName = nameof(FailedToPopulateAndroidApplicationsAfterPowerOn), Level = LogLevel.Warning,
-        Message = "Failed to populate Android applications after power-on for {EntityId}")]
+    [LoggerMessage(EventId = 47, Level = LogLevel.Warning, Message = "Failed to populate Android applications after power-on for {EntityId}")]
     public static partial void FailedToPopulateAndroidApplicationsAfterPowerOn(this ILogger logger, Exception exception, string entityId);
 
-    [LoggerMessage(EventId = 48, EventName = nameof(FailedToEmitResolvedAndroidApplicationLabels), Level = LogLevel.Warning,
-        Message = "Failed to emit resolved Android application labels for {EntityId}")]
+    [LoggerMessage(EventId = 48, Level = LogLevel.Warning, Message = "Failed to emit resolved Android application labels for {EntityId}")]
     public static partial void FailedToEmitResolvedAndroidApplicationLabels(this ILogger logger, Exception exception, string entityId);
 
-    [LoggerMessage(EventId = 49, EventName = nameof(PowerStateQueryFailedReconnecting), Level = LogLevel.Warning,
-        Message = "[{WSId}] Power state query failed for '{EntityId}'; reconnecting and retrying once.")]
+    [LoggerMessage(EventId = 49, Level = LogLevel.Warning, Message = "[{WSId}] Power state query failed for '{EntityId}'; reconnecting and retrying once.")]
     public static partial void PowerStateQueryFailedReconnecting(this ILogger logger, Exception exception, string wsId, string entityId);
 }
