@@ -6,8 +6,8 @@
 [![Qodana](https://img.shields.io/github/actions/workflow/status/henrikwidlund/unfoldedcircle-adbtv/qodana_code_quality.yml?branch=main&label=Qodana&logo=github)](https://github.com/henrikwidlund/unfoldedcircle-adbtv/actions/workflows/qodana_code_quality.yml)
 [![Docker](https://img.shields.io/github/actions/workflow/status/henrikwidlund/unfoldedcircle-adbtv/docker.yml?label=Docker&logo=docker)](https://github.com/henrikwidlund/unfoldedcircle-adbtv/actions/workflows/docker.yml)
 
-This repository contains the server code for hosting an integration driver that uses ADB for communication for the Unfolded Circle Remotes.
-It exposes a Remote Entity that can be used to control TVs or any other device based on Android with support for ADB.
+This repository contains the server code for hosting an integration driver that uses ADB for communication for the Unfolded Circle Remotes, Linux, macOS, Windows and Docker Images.
+It exposes a Media Player Entity, Remote Entity as well as a Select Entity for quickly launching apps. The integration is compatible with any device that allows ADB over a network.
 
 Tested on Panasonic Z95B
 
@@ -15,8 +15,8 @@ Tested on Panasonic Z95B
 
 - The integration relies on ADB (Android Debug Bridge) to communicate with the device. This is useful for devices that don't expose other APIs.
 The downside is that this protocol is very slow, as such, you should use Bluetooth for as many commands as possible.
-- Reauthorization of the ADB connection is required when reinstalling/updating the integration when it is hosted
-on the remote. This is because the private key is removed when the integration is uninstalled. You can avoid having to reauthorize by restoring the config during the setup process.
+- Reauthorization of the ADB connection is required when reinstalling the integration when it is hosted
+on the remote. This is because the private key is removed when the integration is uninstalled. You can avoid having to reauthorize by restoring the config during the setup process, or ticking the `Update installed integration` option.
 - Wireless-debugging pairing (Android 11+, see below) has been **validated against Android Emulator** — pairing, connecting, and controlling a "real" device have all succeeded in testing. **On macOS specifically, pairing works but the subsequent connection does not**: the wireless-debug connect service requires TLS 1.3, and .NET's `SslStream` client cannot negotiate TLS 1.3 on macOS for a mutual-TLS/client-certificate connection regardless of configuration (an OS-level limitation, not something this driver can work around — see the [SharpAdb README](https://github.com/henrikwidlund/theodicean.sharpadb#status) for the full explanation). Use Linux or Windows for the actual connection; macOS can still be used to perform the pairing step itself. This limitation does not apply to the standard IP/Developer Settings flow on any platform.
 
 ### Prerequisites
@@ -26,27 +26,26 @@ Please search for device specific instructions on how to enable Developer Settin
 
 ### Running
 
-- The published binary is self-contained and doesn't require any additional software.
-It's compiled for Linux ARM64 and is meant to be running on the remote.
-- Use the [Docker Image](https://hub.docker.com/r/henrikwidlund/unfoldedcircle-adbtv) in the [Core Simulator](https://github.com/unfoldedcircle/core-simulator)
+- The published binaries are self-contained and doesn't require any additional software.
+- Use the [Docker Image](https://hub.docker.com/r/henrikwidlund/unfoldedcircle-adbtv).
 - Other Operating Systems - Linux, macOS, Windows - are supported. Exception: connecting to a wirelessly-paired device (Android 11+ pairing flow below) does not work on macOS — see Limitations.
 
 ### Network
 
 | Service                  | Port                 | Protocol    | Location                |
 |:-------------------------|:---------------------|:------------|:------------------------|
-| Server                   | Random*              | HTTP (TCP)  | Remote/other computer   |
+| Server                   | 9001  *              | HTTP (TCP)  | Remote/other computer   |
 | ADB                      | 5555**               | TCP         | Device to control       |
 | ADB pairing              | Shown on-device***   | TCP         | Device to control       |
 | ADB (wireless debugging) | Dynamic/ephemeral*** | TCP         | Device to control       |
 | mDNS                     | 5353                 | UDP         | LAN (multicast)         |
 | Wake on Lan              | 7 and 9              | UDP         | Device to control       |
 
-\* Server port can be adjusted by specifying the desired port with the `UC_INTEGRATION_HTTP_PORT` environment variable.
+\* Server port can be adjusted by specifying the desired port with the `UC_INTEGRATION_HTTP_PORT` environment variable. Port can't be controlled when running on the remote.
 \** ADB port can be adjusted during configuration, but only applies to the standard IP/Developer Settings flow.
 \*** If pairing via wireless debugging (see below): the pairing port is shown on the device's pairing screen and is only used once, during initial setup. The port entered during configuration is **not** used with wireless debugging — after pairing, the integration resolves the real, dynamic ADB port via mDNS before every connection, and that port changes across reboots/toggles of wireless debugging. If you have a firewall between the integration and the device, it must allow the device's full ephemeral port range, not a single fixed port. mDNS (5353/UDP) is only needed for this path — not used at all with the standard IP/Developer Settings flow.
 
-### Wireless debugging pairing (Android 11+, experimental)
+### Wireless debugging pairing (Android 11+)
 
 Instead of enabling USB/network debugging and approving the on-device prompt, you can pair via Developer Options → Wireless debugging → "Pair device with pairing code": enter the 6-digit code and the pairing port shown on that screen into the corresponding optional fields during setup. The ADB port field is ignored for this flow. On success, the integration remembers the device's pairing ID and, from then on, resolves its current ADB port automatically via mDNS before each connection — that port is dynamic (it changes across reboots and each time wireless debugging is toggled), so no port needs to be kept up to date manually, but any firewall between the integration and the device must allow its ephemeral port range rather than a single fixed port.
 
