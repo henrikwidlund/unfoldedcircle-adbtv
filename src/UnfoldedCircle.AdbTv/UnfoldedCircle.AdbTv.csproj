@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
+        <Features>runtime-async=on</Features>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <InvariantGlobalization>true</InvariantGlobalization>
@@ -14,6 +15,12 @@
         <IsTrimmable>true</IsTrimmable>
         <IsAotCompatible>true</IsAotCompatible>
         <RuntimeIdentifiers>linux-x64;linux-arm64;osx-arm64;osx-x64;win-x64;win-arm64</RuntimeIdentifiers>
+    </PropertyGroup>
+
+    <!-- .NET 11 links with Apple's classic linker (-ld_classic) on Xcode 15 and 16, which fails for osx-x64 on an
+         unaligned pointer in .NET's own System.Net.Security.Native. The default linker handles it fine. -->
+    <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64'">
+        <UseLdClassicXCodeLinker>false</UseLdClassicXCodeLinker>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(PublishAot)' != 'true'">
@@ -46,17 +53,17 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.231">
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.294">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="10.0.12" />
+        <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="11.0.0-rc.1.26425.128" />
         <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta21" />
-        <PackageReference Include="Theodicean.SharpAdb" Version="0.0.7" />
-        <PackageReference Include="Theodicean.SourceGenerators" Version="0.0.15" PrivateAssets="all" ExcludeAssets="runtime">
+        <PackageReference Include="Theodicean.SharpAdb" Version="0.0.8" />
+        <PackageReference Include="Theodicean.SourceGenerators" Version="0.0.17" PrivateAssets="all" ExcludeAssets="runtime">
             <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.19" />
+        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.20-pre001" />
     </ItemGroup>
 
 </Project>

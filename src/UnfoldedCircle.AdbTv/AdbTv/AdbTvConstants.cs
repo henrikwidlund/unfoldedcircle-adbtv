@@ -99,7 +99,7 @@ public static class AppNames
 
     public static readonly FrozenSet<string> SupportedApps =
     [
-        AppleTv,
+        with(StringComparer.OrdinalIgnoreCase), AppleTv,
         Ard,
         DisneyPlus,
         Kodi,

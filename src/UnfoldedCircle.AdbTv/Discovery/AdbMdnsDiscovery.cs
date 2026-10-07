@@ -197,7 +197,7 @@ public sealed class AdbMdnsDiscovery(ILogger<AdbMdnsDiscovery> logger, IConfigur
             return false;
 
         var addressRecord = message.Answers.Concat(message.AdditionalRecords)
-            .OfType<AddressRecord>()
+            .OfType<IPAddressRecord>()
             .FirstOrDefault(record => srvRecord.Target.Equals(record.Name));
         if (addressRecord?.Address is null)
             return false;

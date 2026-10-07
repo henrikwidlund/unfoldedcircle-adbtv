@@ -9,7 +9,7 @@ namespace UnfoldedCircle.AdbTv.Configuration;
 
 [EnumJsonConverter<AdbMediaPlayerCommandId>(CaseSensitive = false, PropertyName = "cmd_id")]
 [JsonConverter(typeof(AdbMediaPlayerCommandIdJsonConverter))]
-public enum AdbMediaPlayerCommandId : sbyte
+public enum AdbMediaPlayerCommandId : byte
 {
     /// <summary>
     /// Switch on media player.

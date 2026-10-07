@@ -69,7 +69,7 @@ Also make sure that you do not have any spaces between the prefix and the comman
 
 ### Development
 
-- [dotnet 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+- [dotnet 11 SDK](https://dotnet.microsoft.com/download/dotnet/11.0).
 - or [Docker](https://www.docker.com/get-started).
 
 ## Installing on the remote

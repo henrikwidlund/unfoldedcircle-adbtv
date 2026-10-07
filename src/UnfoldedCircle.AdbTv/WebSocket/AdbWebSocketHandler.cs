@@ -122,6 +122,8 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationToken commandCancellationToken)
         => ValueTask.FromResult(EntityCommandResult.Other);
 
+    private static readonly SelectFailed SelectFailedResult = new();
+
     protected override async ValueTask<SelectCommandResult> OnSelectOptionCommandAsync(System.Net.WebSockets.WebSocket socket,
         SelectEntityCommandMsgData payload,
         string option,
@@ -134,10 +136,10 @@ internal sealed partial class AdbWebSocketHandler(
         {
             var alternateLookup = _entityIdActiveAppMap.GetAlternateLookup<ReadOnlySpan<char>>();
             alternateLookup[payload.MsgData.EntityId.AsSpan().GetBaseIdentifier()] = app.DisplayName;
-            return new SelectCommandResult(EntityCommandResult.Other, app.DisplayName);
+            return new SelectSucceeded(app.DisplayName);
         }
 
-        return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
+        return SelectFailedResult;
     }
 
     private async ValueTask<bool> StartApp(string wsId, string entityId, string packageName, CancellationToken cancellationToken)
@@ -224,7 +226,7 @@ internal sealed partial class AdbWebSocketHandler(
         return null;
     }
 
-    private static ReadOnlySpan<char> TryExtractPackageName(in ReadOnlySpan<char> value, out int labelEndIndex)
+    private static ReadOnlySpan<char> TryExtractPackageName(ReadOnlySpan<char> value, out int labelEndIndex)
     {
         labelEndIndex = -1;
         if (!value.EndsWith(')'))
@@ -242,11 +244,11 @@ internal sealed partial class AdbWebSocketHandler(
         return packageName;
     }
 
-    private static bool LooksLikePackageName(in ReadOnlySpan<char> value)
+    private static bool LooksLikePackageName(ReadOnlySpan<char> value)
     {
         return value.Contains('.') && OnlyValidChars(value);
 
-        static bool OnlyValidChars(in ReadOnlySpan<char> value)
+        static bool OnlyValidChars(ReadOnlySpan<char> value)
         {
             foreach (var c in value)
             {
@@ -265,7 +267,7 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationToken commandCancellationToken)
     {
         if (!await PopulateApps(wsId, payload.MsgData.EntityId, commandCancellationToken))
-            return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
+            return SelectFailedResult;
 
         var alternateLookup = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
         var baseIdentifier = payload.MsgData.EntityId.AsMemory().GetBaseIdentifier();
@@ -273,7 +275,7 @@ internal sealed partial class AdbWebSocketHandler(
         if (apps.Count == 0)
         {
             _logger.SelectFirstLastNoAppsFound(wsId, payload.MsgData.EntityId);
-            return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
+            return SelectFailedResult;
         }
 
         var app = first
@@ -285,10 +287,10 @@ internal sealed partial class AdbWebSocketHandler(
         {
             var activeEntityAppAlternativeLookup = _entityIdActiveAppMap.GetAlternateLookup<ReadOnlySpan<char>>();
             activeEntityAppAlternativeLookup[baseIdentifier.Span] = resolvedApp.DisplayName;
-            return new SelectCommandResult(EntityCommandResult.Other, resolvedApp.DisplayName);
+            return new SelectSucceeded(resolvedApp.DisplayName);
         }
 
-        return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
+        return SelectFailedResult;
     }
 
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _appFetchSemaphores = new(StringComparer.OrdinalIgnoreCase);
@@ -458,7 +460,7 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationToken commandCancellationToken)
     {
         if (!await PopulateApps(wsId, payload.MsgData.EntityId, commandCancellationToken))
-            return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
+            return SelectFailedResult;
 
         var baseIdentifier = payload.MsgData.EntityId.AsMemory().GetBaseIdentifier();
         var entityIdAppsMapAlternate = _entityIdAppsMap.GetAlternateLookup<ReadOnlySpan<char>>();
@@ -467,7 +469,7 @@ internal sealed partial class AdbWebSocketHandler(
         if (apps.Count == 0)
         {
             _logger.SelectNextPreviousNoAppsFound(wsId, payload.MsgData.EntityId);
-            return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
+            return SelectFailedResult;
         }
 
         if (!entityIdActiveAppMapAlternate.TryGetValue(baseIdentifier.Span, out var activeApp) ||
@@ -488,7 +490,7 @@ internal sealed partial class AdbWebSocketHandler(
             if (nextIndex >= apps.Count || nextIndex < 0)
             {
                 _logger.SelectNextPreviousNoAppsOutOfBounds(wsId, payload.MsgData.EntityId, nextIndex, apps.Count);
-                return new SelectCommandResult(EntityCommandResult.Failure, activeApp);
+                return SelectFailedResult;
             }
         }
 
@@ -497,9 +499,9 @@ internal sealed partial class AdbWebSocketHandler(
         if (resolvedApp is not null && await StartApp(wsId, payload.MsgData.EntityId, resolvedApp.PackageName, commandCancellationToken))
         {
             entityIdActiveAppMapAlternate[baseIdentifier.Span] = resolvedApp.DisplayName;
-            return new SelectCommandResult(EntityCommandResult.Other, resolvedApp.DisplayName);
+            return new SelectSucceeded(resolvedApp.DisplayName);
         }
-        return new SelectCommandResult(EntityCommandResult.Failure, string.Empty);
+        return SelectFailedResult;
     }
 
     protected override async ValueTask<bool> IsEntityReachableAsync(string wsId, string entityId, CancellationToken cancellationToken)
@@ -1401,7 +1403,7 @@ internal sealed partial class AdbWebSocketHandler(
                     {
                         Label = new SettingTypeLabelItem
                         {
-                            Value = []
+                            Value = [with(StringComparer.Ordinal)]
                         }
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -1432,7 +1434,7 @@ internal sealed partial class AdbWebSocketHandler(
                     {
                         Label = new SettingTypeLabelItem
                         {
-                            Value = []
+                            Value = [with(StringComparer.Ordinal)]
                         }
                     },
                     Label = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
