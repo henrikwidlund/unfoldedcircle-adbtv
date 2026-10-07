@@ -9,7 +9,7 @@ namespace UnfoldedCircle.AdbTv.Configuration;
 [EnumExtensions(IsInterceptable = true, MetadataSource = MetadataSource.DisplayAttribute)]
 [EnumJsonConverter<Manufacturer>(CaseSensitive = false, PropertyName = "manufacturer")]
 [JsonConverter(typeof(ManufacturerJsonConverter))]
-public enum Manufacturer : sbyte
+public enum Manufacturer : byte
 {
     [Display(Name = "Generic Android")]
     Android = 1,

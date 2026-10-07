@@ -173,7 +173,7 @@ internal sealed partial class AdbWebSocketHandler
         };
     }
 
-    private enum HdmiPort : sbyte
+    private enum HdmiPort : byte
     {
         Hdmi1,
         Hdmi2,
@@ -181,7 +181,7 @@ internal sealed partial class AdbWebSocketHandler
         Hdmi4
     }
 
-    private enum CommandType : sbyte
+    private enum CommandType : byte
     {
         KeyEvent,
         Raw,
