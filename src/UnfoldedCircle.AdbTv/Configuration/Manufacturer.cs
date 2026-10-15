@@ -2,33 +2,41 @@ using System.ComponentModel.DataAnnotations;
 
 using NetEscapades.EnumGenerators;
 
-using Theodicean.SourceGenerators;
+using UnfoldedCircle.Models;
 
 namespace UnfoldedCircle.AdbTv.Configuration;
 
 [EnumExtensions(IsInterceptable = true, MetadataSource = MetadataSource.DisplayAttribute)]
-[EnumJsonConverter<Manufacturer>(CaseSensitive = false, PropertyName = "manufacturer")]
-[JsonConverter(typeof(ManufacturerJsonConverter))]
+[JsonConverter(typeof(StrictEnumConverter<Manufacturer>))]
 public enum Manufacturer : byte
 {
-    [Display(Name = "Generic Android")]
+    [Display(Name = Constants.GenericAndroid)]
+    [JsonStringEnumMemberName(Constants.GenericAndroid)]
     Android = 1,
 
-    [Display(Name = "Fire TV")]
+    [Display(Name = Constants.FireTv)]
+    [JsonStringEnumMemberName(Constants.FireTv)]
     FireTv,
 
     Hisense,
     Panasonic,
     Philips,
 
-    [Display(Name = "Philips (Alternate)")]
+    [Display(Name = Constants.PhilipsAlternate)]
+    [JsonStringEnumMemberName(Constants.PhilipsAlternate)]
     PhilipsAlternate,
 
     Sony,
 
-    [Display(Name = "TCL")]
+    [Display(Name = Constants.Tcl)]
+    [JsonStringEnumMemberName(Constants.Tcl)]
     Tcl
 }
 
-// ReSharper disable once RedundantExtendsListEntry For some reason code won't compile without adding this explicit inheritance on this specific converter - all other work
-public partial class ManufacturerJsonConverter : JsonConverter<Manufacturer>;
+file static class Constants
+{
+    public const string GenericAndroid = "Generic Android";
+    public const string FireTv = "Fire TV";
+    public const string PhilipsAlternate = "Philips (Alternate)";
+    public const string Tcl = "TCL";
+}
