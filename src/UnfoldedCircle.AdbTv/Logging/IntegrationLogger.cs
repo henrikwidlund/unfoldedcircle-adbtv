@@ -137,4 +137,7 @@ internal static partial class IntegrationLogger
 
     [LoggerMessage(EventId = 49, Level = LogLevel.Warning, Message = "[{WSId}] Power state query failed for '{EntityId}'; reconnecting and retrying once.")]
     public static partial void PowerStateQueryFailedReconnecting(this ILogger logger, Exception exception, string wsId, string entityId);
+
+    [LoggerMessage(EventId = 50, Level = LogLevel.Debug, Message = "Skipping connect to {ClientKey} during back-off.")]
+    public static partial void SkippingConnectDuringBackoff(this ILogger logger, in AdbTvClientKey clientKey);
 }

@@ -17,12 +17,15 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
     private readonly AdbMdnsDiscovery _adbMdnsDiscovery = adbMdnsDiscovery;
     private static readonly ConcurrentDictionary<AdbTvClientKey, AdbConnection> Clients = new();
     private static readonly ConcurrentDictionary<AdbTvClientKey, SemaphoreSlim> ClientSemaphores = new();
+    private static readonly ConcurrentDictionary<AdbTvClientKey, ConnectBackoff> ConnectBackoffs = new();
 
     private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan PerAttemptTimeout = TimeSpan.FromMilliseconds(800);
     private static readonly TimeSpan BackoffBetweenAttempts = TimeSpan.FromMilliseconds(100);
     private const byte MaxAttempts = 8;
     private const byte SigOnlyAttemptsBeforePubkeyPush = 6;
+    private static readonly TimeSpan MinConnectBackoff = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan MaxConnectBackoff = TimeSpan.FromMinutes(2);
     // We will only have one key for all clients
     private static readonly SemaphoreSlim AuthKeyLock = new(1, 1);
     private AdbAuthKey? _cachedAuthKey;
@@ -39,7 +42,13 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
         SendPublicKeyOnAuthFailure = true,
     };
 
-    public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, CancellationToken cancellationToken)
+    /// <param name="adbTvClientKey"></param>
+    /// <param name="isBackground">
+    /// True for polling: one connect attempt, skipped while the device is in back-off.
+    /// False for user actions: full retry budget, ignores back-off.
+    /// </param>
+    /// <param name="cancellationToken"></param>
+    public async ValueTask<AdbConnection?> TryGetOrCreateAdbConnectionAsync(AdbTvClientKey adbTvClientKey, bool isBackground, CancellationToken cancellationToken)
     {
         var clientSemaphore = ClientSemaphores.GetOrAdd(adbTvClientKey, static _ => new SemaphoreSlim(1, 1));
         if (!await clientSemaphore.WaitAsync(MaxWaitGetClientOperations, cancellationToken))
@@ -51,9 +60,9 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
         try
         {
             if (Clients.TryGetValue(adbTvClientKey, out var connection))
-                return await GetHealthyConnectionAsync(adbTvClientKey, connection, cancellationToken);
+                return await GetHealthyConnectionAsync(adbTvClientKey, connection, isBackground, cancellationToken);
 
-            return await CreateConnectionAsync(adbTvClientKey, cancellationToken);
+            return await CreateConnectionWithBackoffAsync(adbTvClientKey, isBackground, cancellationToken);
         }
         finally
         {
@@ -61,8 +70,39 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
         }
     }
 
+    // Caller must hold the client semaphore for the key.
+    private async ValueTask<AdbConnection?> CreateConnectionWithBackoffAsync(
+        AdbTvClientKey adbTvClientKey,
+        bool isBackground,
+        CancellationToken cancellationToken)
+    {
+        var hasBackoff = ConnectBackoffs.TryGetValue(adbTvClientKey, out var backoff);
+        if (isBackground && hasBackoff && Stopwatch.GetElapsedTime(backoff.FailedTimestamp) < backoff.Delay)
+        {
+            _logger.SkippingConnectDuringBackoff(adbTvClientKey);
+            return null;
+        }
+
+        var connection = await CreateConnectionAsync(adbTvClientKey, isBackground ? (byte)1 : MaxAttempts, cancellationToken);
+        if (connection is not null)
+        {
+            ConnectBackoffs.TryRemove(adbTvClientKey, out _);
+            return connection;
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+            return null;
+
+        var delay = hasBackoff
+            ? TimeSpan.FromTicks(Math.Min(backoff.Delay.Ticks * 2, MaxConnectBackoff.Ticks))
+            : MinConnectBackoff;
+        ConnectBackoffs[adbTvClientKey] = new ConnectBackoff(Stopwatch.GetTimestamp(), delay);
+        return null;
+    }
+
     private async ValueTask<AdbConnection?> CreateConnectionAsync(
         AdbTvClientKey adbTvClientKey,
+        byte maxAttempts,
         CancellationToken cancellationToken)
     {
         try
@@ -74,13 +114,13 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
             // through to AUTH(RSAPUBLICKEY) to auto-recover (may trigger on-device dialog).
             var sigOnlyAttempts = adbTvClientKey.AllowReauth
                 ? SigOnlyAttemptsBeforePubkeyPush
-                : MaxAttempts;
+                : maxAttempts;
 
             var startTime = Stopwatch.GetTimestamp();
             AdbConnection? connection = null;
             Exception? lastException = null;
             byte attempt = 0;
-            while (attempt < MaxAttempts
+            while (attempt < maxAttempts
                 && Stopwatch.GetElapsedTime(startTime) < MaxWaitGetClientOperations
                 && !cancellationToken.IsCancellationRequested)
             {
@@ -110,6 +150,9 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
                         _logger.MdnsResolveTimedOut(deviceGuid);
                         lastException ??= new TimeoutException(
                             $"Could not resolve the current adb-tls-connect endpoint via mDNS for device GUID '{deviceGuid}'");
+                        // Single-attempt mode gives up after one mDNS miss.
+                        if (maxAttempts == 1)
+                            break;
                         await Task.Delay(BackoffBetweenAttempts, cancellationToken);
                         continue;
                     }
@@ -138,12 +181,14 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
                     lastException ??= new TimeoutException("Connect attempt exceeded per-attempt timeout");
-                    // fall through to retry within budget
+                    if (attempt < maxAttempts)
+                        await Task.Delay(BackoffBetweenAttempts, cancellationToken);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
                     lastException = e;
-                    await Task.Delay(BackoffBetweenAttempts, cancellationToken);
+                    if (attempt < maxAttempts)
+                        await Task.Delay(BackoffBetweenAttempts, cancellationToken);
                 }
             }
 
@@ -175,6 +220,7 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
     private async ValueTask<AdbConnection?> GetHealthyConnectionAsync(
         AdbTvClientKey adbTvClientKey,
         AdbConnection connection,
+        bool isBackground,
         CancellationToken cancellationToken)
     {
         if (connection.FaultException is null &&
@@ -196,7 +242,7 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
             // Best effort
         }
 
-        return await CreateConnectionAsync(adbTvClientKey, cancellationToken);
+        return await CreateConnectionWithBackoffAsync(adbTvClientKey, isBackground, cancellationToken);
     }
 
     private static async ValueTask<bool> RunWithRetryAsync(Func<Task> func,
@@ -451,4 +497,7 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
             }
         }
     }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Auto)]
+    private readonly record struct ConnectBackoff(long FailedTimestamp, TimeSpan Delay);
 }
