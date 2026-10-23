@@ -75,6 +75,7 @@ internal sealed partial class AdbWebSocketHandler
     private async Task<AdbTvClientHolder?> TryGetAdbTvClientHolderAsync(
         string wsId,
         string entityId,
+        bool isBackground,
         CancellationToken cancellationToken)
     {
         try
@@ -88,7 +89,7 @@ internal sealed partial class AdbWebSocketHandler
                 return null;
             }
 
-            var connection = await _adbTvClientFactory.TryGetOrCreateAdbConnectionAsync(adbTvClientKey.Value, linkedCancellationTokenSource.Token);
+            var connection = await _adbTvClientFactory.TryGetOrCreateAdbConnectionAsync(adbTvClientKey.Value, isBackground, linkedCancellationTokenSource.Token);
             if (connection is null)
             {
                 _logger.AdbTvClientHolderNotFound(wsId, entityId);

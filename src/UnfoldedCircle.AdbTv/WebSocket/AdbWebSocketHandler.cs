@@ -47,6 +47,7 @@ internal sealed partial class AdbWebSocketHandler(
     private readonly ConcurrentDictionary<string, Dictionary<string, AppReference>> _entityIdAppAliasesMap = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, string> _entityIdActiveAppMap = new(StringComparer.OrdinalIgnoreCase);
     private volatile ushort _pollingIntervalSeconds = AdbTvServerConstants.DefaultPollingIntervalSeconds;
+    private volatile bool _isInStandby;
 
     private sealed record AppReference(string Label, string PackageName, string DisplayName);
 
@@ -62,7 +63,7 @@ internal sealed partial class AdbWebSocketHandler(
         var manufacturer = (await GetEntitiesAsync(wsId, commandCancellationToken))
             ?.FirstOrDefault(x => x.EntityId.Equals(baseIdentifier.Span, StringComparison.OrdinalIgnoreCase))?.Manufacturer ?? Manufacturer.Android;
         (string commandToSend, CommandType commandType) = GetMappedCommand(command, manufacturer);
-        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, commandCancellationToken);
+        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, false, commandCancellationToken);
         if (adbTvClientHolder is null)
         {
             _logger.CouldNotFindAdbClient(wsId, baseIdentifier);
@@ -144,7 +145,7 @@ internal sealed partial class AdbWebSocketHandler(
 
     private async ValueTask<bool> StartApp(string wsId, string entityId, string packageName, CancellationToken cancellationToken)
     {
-        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
+        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, false, cancellationToken);
         if (adbTvClientHolder is null)
             return false;
 
@@ -322,7 +323,7 @@ internal sealed partial class AdbWebSocketHandler(
                 if (alternateLookup.ContainsKey(baseIdentifier.Span))
                     return true;
 
-                var adbClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
+                var adbClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, false, cancellationToken);
                 if (adbClientHolder is null)
                 {
                     _logger.PopulateAppsYieldedNoApps(wsId, entityId);
@@ -369,7 +370,7 @@ internal sealed partial class AdbWebSocketHandler(
     {
         try
         {
-            var adbClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
+            var adbClientHolder = await TryGetAdbTvClientHolderAsync(wsId, entityId, false, cancellationToken);
             if (adbClientHolder is null)
                 return;
 
@@ -505,7 +506,7 @@ internal sealed partial class AdbWebSocketHandler(
     }
 
     protected override async ValueTask<bool> IsEntityReachableAsync(string wsId, string entityId, CancellationToken cancellationToken)
-        => await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken) is not null;
+        => await TryGetAdbTvClientHolderAsync(wsId, entityId, false, cancellationToken) is not null;
 
     protected override async ValueTask<EntityCommandResult> OnMediaPlayerCommandAsync(System.Net.WebSockets.WebSocket socket,
         MediaPlayerEntityCommandMsgData<AdbMediaPlayerCommandId> payload,
@@ -513,7 +514,7 @@ internal sealed partial class AdbWebSocketHandler(
         CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
     {
-        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, commandCancellationToken);
+        var adbTvClientHolder = await TryGetAdbTvClientHolderAsync(wsId, payload.MsgData.EntityId, false, commandCancellationToken);
         if (adbTvClientHolder is null)
             return EntityCommandResult.Failure;
 
@@ -546,7 +547,7 @@ internal sealed partial class AdbWebSocketHandler(
             // so package enumeration starts as soon as PackageManager is usable.
             for (var attempt = 0; attempt < 20 && !cancellationToken.IsCancellationRequested; attempt++)
             {
-                var holder = await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken);
+                var holder = await TryGetAdbTvClientHolderAsync(wsId, entityId, false, cancellationToken);
                 if (holder is not null && await GetPowerState(holder, cancellationToken) == PowerState.On)
                 {
                     await PopulateApps(wsId, entityId, cancellationToken);
@@ -583,10 +584,16 @@ internal sealed partial class AdbWebSocketHandler(
         => ValueTask.CompletedTask;
 
     protected override async ValueTask OnEnterStandbyAsync(EnterStandbyEvent payload, string wsId, CancellationToken cancellationToken)
-        => await AdbTvClientFactory.RemoveAllClients();
+    {
+        _isInStandby = true;
+        await AdbTvClientFactory.RemoveAllClients();
+    }
 
     protected override ValueTask OnExitStandbyAsync(ExitStandbyEvent payload, string wsId, CancellationToken cancellationToken)
-        => ValueTask.CompletedTask;
+    {
+        _isInStandby = false;
+        return ValueTask.CompletedTask;
+    }
 
     private readonly ConcurrentDictionary<string, PowerState> _reportedPowerStates = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, List<string>> _reportedApps = new(StringComparer.OrdinalIgnoreCase);
@@ -599,12 +606,16 @@ internal sealed partial class AdbWebSocketHandler(
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(timerPollingIntervalSeconds));
         do
         {
+            // Polling would reconnect the clients dropped on standby.
+            if (_isInStandby)
+                continue;
+
             await Parallel.ForEachAsync(subscribedEntitiesHolder.SubscribedEntities, cancellationToken,
                 async (group, token) =>
                 {
                     try
                     {
-                        await UpdateEntityGroupAsync(socket, wsId, group.Key, group.Value, false, token);
+                        await UpdateEntityGroupAsync(socket, wsId, group.Key, group.Value, false, true, token);
                     }
                     catch (OperationCanceledException) when (token.IsCancellationRequested)
                     {
@@ -639,9 +650,10 @@ internal sealed partial class AdbWebSocketHandler(
         string baseEntityId,
         HashSet<SubscribedEntity> subscribedEntities,
         bool forceEmit,
+        bool isBackground,
         CancellationToken cancellationToken)
     {
-        var holder = await TryGetAdbTvClientHolderAsync(wsId, baseEntityId, cancellationToken);
+        var holder = await TryGetAdbTvClientHolderAsync(wsId, baseEntityId, isBackground, cancellationToken);
         PowerState power;
         if (holder is null)
         {
@@ -658,7 +670,7 @@ internal sealed partial class AdbWebSocketHandler(
                 // Connection can fault mid-command - evict and retry once now instead of waiting for next poll tick.
                 _logger.PowerStateQueryFailedReconnecting(e, wsId, baseEntityId);
                 await _adbTvClientFactory.TryRemoveClientAsync(holder.ClientKey);
-                holder = await TryGetAdbTvClientHolderAsync(wsId, baseEntityId, cancellationToken);
+                holder = await TryGetAdbTvClientHolderAsync(wsId, baseEntityId, isBackground, cancellationToken);
                 power = holder is null
                     ? PowerState.Unknown
                     : await GetPowerState(holder, cancellationToken);
@@ -948,7 +960,7 @@ internal sealed partial class AdbWebSocketHandler(
                     var subs = entityIdGroup
                         .Select(static eid => new SubscribedEntity(eid, eid.AsSpan().GetEntityTypeFromIdentifier()))
                         .ToHashSet();
-                    await UpdateEntityGroupAsync(socket, wsId, entityIdGroup.Key.ToString(), subs, true, token);
+                    await UpdateEntityGroupAsync(socket, wsId, entityIdGroup.Key.ToString(), subs, true, false, token);
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
@@ -1254,7 +1266,7 @@ internal sealed partial class AdbWebSocketHandler(
 
     private async ValueTask<SetupDriverUserDataResult> GetSetupResultForClient(string wsId, string entityId, CancellationToken cancellationToken)
     {
-        if (await TryGetAdbTvClientHolderAsync(wsId, entityId, cancellationToken) is null)
+        if (await TryGetAdbTvClientHolderAsync(wsId, entityId, false, cancellationToken) is null)
         {
             _logger.DeviceNotOnlineDuringSetupResult(wsId, entityId);
             return SetupDriverUserDataResult.Error;
