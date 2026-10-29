@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Text;
@@ -48,6 +49,8 @@ internal sealed partial class AdbWebSocketHandler(
     private readonly ConcurrentDictionary<string, string> _entityIdActiveAppMap = new(StringComparer.OrdinalIgnoreCase);
     private volatile ushort _pollingIntervalSeconds = AdbTvServerConstants.DefaultPollingIntervalSeconds;
     private volatile bool _isInStandby;
+    private long _exitStandbyTimestamp;
+    private static readonly TimeSpan WakeUpConnectWindow = TimeSpan.FromSeconds(3);
 
     private sealed record AppReference(string Label, string PackageName, string DisplayName);
 
@@ -591,6 +594,7 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override ValueTask OnExitStandbyAsync(ExitStandbyEvent payload, string wsId, CancellationToken cancellationToken)
     {
+        Interlocked.Exchange(ref _exitStandbyTimestamp, Stopwatch.GetTimestamp());
         _isInStandby = false;
         return ValueTask.CompletedTask;
     }
@@ -610,12 +614,15 @@ internal sealed partial class AdbWebSocketHandler(
             if (_isInStandby)
                 continue;
 
+            // Right after wake-up the network can be missing for a short time.
+            // Use the full retry budget, so a failed first attempt does not start the back-off.
+            var isBackground = Stopwatch.GetElapsedTime(Interlocked.Read(ref _exitStandbyTimestamp)) > WakeUpConnectWindow;
             await Parallel.ForEachAsync(subscribedEntitiesHolder.SubscribedEntities, cancellationToken,
                 async (group, token) =>
                 {
                     try
                     {
-                        await UpdateEntityGroupAsync(socket, wsId, group.Key, group.Value, false, true, token);
+                        await UpdateEntityGroupAsync(socket, wsId, group.Key, group.Value, false, isBackground, token);
                     }
                     catch (OperationCanceledException) when (token.IsCancellationRequested)
                     {
