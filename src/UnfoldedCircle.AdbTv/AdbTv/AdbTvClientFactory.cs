@@ -21,6 +21,8 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
 
     private static readonly TimeSpan MaxWaitGetClientOperations = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan PerAttemptTimeout = TimeSpan.FromMilliseconds(800);
+    // Shorter, so an attempt lost while the network starts after wake-up fails fast
+    private static readonly TimeSpan FirstAttemptTimeout = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan BackoffBetweenAttempts = TimeSpan.FromMilliseconds(100);
     private const byte MaxAttempts = 8;
     private const byte SigOnlyAttemptsBeforePubkeyPush = 6;
@@ -163,7 +165,8 @@ public sealed class AdbTvClientFactory(ILogger<AdbTvClientFactory> logger, ILogg
                 }
 
                 using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                attemptCts.CancelAfter(PerAttemptTimeout);
+                // Single-attempt mode keeps the full timeout, it has no retry
+                attemptCts.CancelAfter(attempt == 0 && maxAttempts > 1 ? FirstAttemptTimeout : PerAttemptTimeout);
                 try
                 {
                     var options = attempt < sigOnlyAttempts
