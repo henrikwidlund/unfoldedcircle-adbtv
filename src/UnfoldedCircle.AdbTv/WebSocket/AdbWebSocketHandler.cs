@@ -808,16 +808,7 @@ internal sealed partial class AdbWebSocketHandler(
         var attrs = new DeltaMediaPlayerStateChangedEventMessageDataAttributes
         {
             State = powerChanged ? MapMediaPlayer(power) : null,
-            SourceList = appsChanged && apps is { Count: > 0 }
-                ?
-                [
-                    .. apps,
-                    AdbTvRemoteCommands.InputHdmi1,
-                    AdbTvRemoteCommands.InputHdmi2,
-                    AdbTvRemoteCommands.InputHdmi3,
-                    AdbTvRemoteCommands.InputHdmi4
-                ]
-                : null
+            SourceList = appsChanged && apps is { Count: > 0 } ? GetSourceList(apps) : null
         };
 
         return SendMessageAsync(socket,
@@ -848,6 +839,15 @@ internal sealed partial class AdbWebSocketHandler(
             ResponsePayloadHelpers.CreateSelectStateChangedPayload(attrs, entityId, AdbTvServerConstants.AppListSelectSuffix),
             wsId, cancellationToken);
     }
+
+    private static string[] GetSourceList(List<string> apps) =>
+    [
+        .. apps,
+        AdbTvRemoteCommands.InputHdmi1,
+        AdbTvRemoteCommands.InputHdmi2,
+        AdbTvRemoteCommands.InputHdmi3,
+        AdbTvRemoteCommands.InputHdmi4
+    ];
 
     private static State MapMediaPlayer(PowerState power) => power switch
     {
@@ -1035,8 +1035,51 @@ internal sealed partial class AdbWebSocketHandler(
 
     protected override async ValueTask<EntityStateChanged[]> OnGetEntityStatesAsync(GetEntityStatesMsg payload, string wsId, CancellationToken cancellationToken)
         => await GetEntitiesAsync(wsId, cancellationToken) is { } entities
-            ? [.. AdbTvResponsePayloadHelpers.GetEntityStates(entities.Select(static x => x.EntityId))]
+            ? [.. GetEntityStates(entities.Select(static x => x.EntityId))]
             : [];
+
+    /// <summary>
+    /// Last sent states. Entities without a known state are not included.
+    /// </summary>
+    private IEnumerable<EntityStateChanged> GetEntityStates(IEnumerable<string> entityIds)
+    {
+        foreach (var entityId in entityIds)
+        {
+            if (!_reportedPowerStates.TryGetValue(entityId, out var power))
+                continue;
+
+            var apps = _reportedApps.TryGetValue(entityId, out var reportedApps) && reportedApps.Count > 0 ? reportedApps : null;
+
+            yield return new RemoteEntityStateChanged
+            {
+                EntityId = entityId.GetIdentifier(EntityType.Remote),
+                EntityType = EntityType.Remote,
+                Attributes = new RemoteStateChangedEventMessageDataAttributes { State = MapRemote(power) }
+            };
+
+            yield return new SelectEntityStateChanged
+            {
+                EntityId = entityId.GetIdentifier(EntityType.Select, AdbTvServerConstants.AppListSelectSuffix),
+                EntityType = EntityType.Select,
+                Attributes = new SelectStateChangedEventMessageDataAttributes
+                {
+                    State = MapSelect(power),
+                    Options = apps is null ? null : [.. apps]
+                }
+            };
+
+            yield return new MediaPlayerEntityStateChanged
+            {
+                EntityId = entityId.GetIdentifier(EntityType.MediaPlayer),
+                EntityType = EntityType.MediaPlayer,
+                Attributes = new DeltaMediaPlayerStateChangedEventMessageDataAttributes
+                {
+                    State = MapMediaPlayer(power),
+                    SourceList = apps is null ? null : GetSourceList(apps)
+                }
+            };
+        }
+    }
 
     protected override ValueTask<SetupDriverUserDataResult> OnSetupDriverUserDataConfirmAsync(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
         => ValueTask.FromResult(SetupDriverUserDataResult.Finalized);
