@@ -60,7 +60,7 @@
         <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="11.0.0-rc.3.26522.148" />
         <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta21" />
         <PackageReference Include="Theodicean.SharpAdb" Version="0.0.9-pre03" />
-        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.20-pre008" />
+        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.20-pre009" />
     </ItemGroup>
 
 </Project>
