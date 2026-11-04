@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/actions/workflow/status/henrikwidlund/unfoldedcircle-adbtv/github-release.yml?label=Release&logo=github)](https://github.com/henrikwidlund/unfoldedcircle-adbtv/actions/workflows/github-release.yml)
 [![CI](https://img.shields.io/github/actions/workflow/status/henrikwidlund/unfoldedcircle-adbtv/ci.yml?label=CI&logo=github)](https://github.com/henrikwidlund/unfoldedcircle-adbtv/actions/workflows/ci.yml)
-![Sonar Quality Gate](https://img.shields.io/sonar/quality_gate/henrikwidlund_unfoldedcircle-firetv?server=https%3A%2F%2Fsonarcloud.io&label=Sonar%20Quality%20Gate&logo=sonarqube)
+![Sonar Quality Gate](https://img.shields.io/sonar/quality_gate/henrikwidlund_unfoldedcircle-adbtv?server=https%3A%2F%2Fsonarcloud.io&label=Sonar%20Quality%20Gate&logo=sonarqube)
 [![Qodana](https://img.shields.io/github/actions/workflow/status/henrikwidlund/unfoldedcircle-adbtv/qodana_code_quality.yml?branch=main&label=Qodana&logo=github)](https://github.com/henrikwidlund/unfoldedcircle-adbtv/actions/workflows/qodana_code_quality.yml)
 [![Docker](https://img.shields.io/github/actions/workflow/status/henrikwidlund/unfoldedcircle-adbtv/docker.yml?label=Docker&logo=docker)](https://github.com/henrikwidlund/unfoldedcircle-adbtv/actions/workflows/docker.yml)
 
