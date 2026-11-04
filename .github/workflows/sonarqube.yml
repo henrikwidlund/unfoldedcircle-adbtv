@@ -5,6 +5,10 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     if: github.actor != 'dependabot[bot]'
@@ -50,6 +54,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
         run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"henrikwidlund_unfoldedcircle-firetv" /o:"henrikwidlund" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.coverage.exclusions=**/*
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"henrikwidlund_unfoldedcircle-adbtv" /o:"henrikwidlund" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.coverage.exclusions=**/*
           dotnet build
           ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
