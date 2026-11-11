@@ -51,6 +51,21 @@ Instead of enabling USB/network debugging and approving the on-device prompt, yo
 
 As noted under Limitations, this path has been validated against an Android Emulator, but is not supported on macOS for the connection step itself (pairing works fine there).
 
+### Launching apps
+
+The integration lists the apps installed on the device (third-party apps from `pm list packages -3`).
+The list is shown in two places:
+- The **App select** entity (Select Entity). Add it to a page or activity to choose an app from a dropdown. It supports select option, first, last, next and previous.
+- The **source list** of the Media Player entity.
+
+Select an option to start the app on the device.
+
+- Apps are shown with their application name, for example `YouTube`, and not with the package name, for example `com.google.android.youtube.tv`.
+- The application names are read from the device with a small helper that is uploaded to the device on first use. Until the names are ready, or if the helper fails, the package name is shown instead.
+- The list is loaded when the device is on.
+- Select option accepts the application name, the package name or `Application name (package.name)`.
+- Apps that are not in the list can be started with the `APP:` command, see below.
+
 ### Additional commands
 
 You can send any `input keyevent` command with the remote entity if it's added to an activity.
